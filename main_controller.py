@@ -2,6 +2,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtNetwork import *
+from PyQt5 import uic
 
 import sys
 import os
@@ -27,8 +28,9 @@ class Controller(QMainWindow):
         self.input_port = QLineEdit()
         self.input_port.setText("9999")
 
-        start_server = QPushButton("Start server")
-        close_server = QPushButton("Close server")
+        self.start_server = QPushButton("Start server")
+        self.close_server = QPushButton("Close server")
+        self.close_server.setDisabled(True)
 
         self.textbox = QPlainTextEdit()
         self.textbox.setReadOnly(True)
@@ -36,8 +38,8 @@ class Controller(QMainWindow):
         layout = QVBoxLayout()
         layout.addWidget(self.input_ip)
         layout.addWidget(self.input_port)
-        layout.addWidget(start_server)
-        layout.addWidget(close_server)
+        layout.addWidget(self.start_server)
+        layout.addWidget(self.close_server)
         layout.addWidget(self.textbox)
 
         central_widget = QWidget()
@@ -52,9 +54,11 @@ class Controller(QMainWindow):
         menu.addAction(ip_dialog_action)
         menu.addAction(settings_pane_action)
 
+        self.resize(800, 600)
+
         # signals & slots
-        start_server.clicked.connect(lambda x: self.start_tcp_server(self.input_ip.text(), self.input_port.text()))
-        close_server.clicked.connect(lambda x: self.stop_tcp_server())
+        self.start_server.clicked.connect(lambda x: self.start_tcp_server(self.input_ip.text(), self.input_port.text()))
+        self.close_server.clicked.connect(lambda x: self.stop_tcp_server())
         ip_dialog_action.triggered.connect(lambda x: self.show_ip_dialog())
         settings_pane_action.triggered.connect(lambda x: self.show_settings_pane())
 
@@ -70,15 +74,23 @@ class Controller(QMainWindow):
             self.log("Failed to start server: " + self.tcp_server.errorString())
         else:
             self.log("Server is running on ip %s and port %s" % (ip, port))
+            self.start_server.setDisabled(True)
+            self.close_server.setDisabled(False)
 
     def stop_tcp_server(self):
         self.tcp_server.close()
+        self.log("Server is closed")
+        self.start_server.setDisabled(False)
+        self.close_server.setDisabled(True)
 
     def show_ip_dialog(self):
         text, okPressed = QInputDialog.getText(self, "External ip lookup", "Your external ip is:", QLineEdit.Normal, self.get_ip())
 
     def show_settings_pane(self):
-        self.log("settings pane to be implemented")
+        settings_pane = uic.loadUi("settings_pane.ui")
+        settings_pane.exec_()
+
+
 
 class TcpServer(QTcpServer):
 
