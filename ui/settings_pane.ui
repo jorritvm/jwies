@@ -48,7 +48,7 @@
        </widget>
       </item>
       <item row="1" column="1">
-       <widget class="QCheckBox" name="check_misere_beats_troel">
+       <widget class="QCheckBox" name="check_misere_beats_trull">
         <property name="text">
          <string/>
         </property>
@@ -252,7 +252,7 @@
  </widget>
  <tabstops>
   <tabstop>check_dealer_shuffle</tabstop>
-  <tabstop>check_misere_beats_troel</tabstop>
+  <tabstop>check_misere_beats_trull</tabstop>
   <tabstop>spin_split_minimum</tabstop>
   <tabstop>spin_split_maximum</tabstop>
   <tabstop>spin_points_exact</tabstop>
