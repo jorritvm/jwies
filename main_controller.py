@@ -10,6 +10,8 @@ import os
 import requests
 import time
 
+from staticvar import *
+
 class Controller(QMainWindow):
 
     def __init__(self, *args, **kwargs):
@@ -152,10 +154,14 @@ class Socket(QTcpSocket):
     def __init__(self,  *args, **kwargs):
         super(Socket, self).__init__( *args, **kwargs)
 
+        self.readyRead.connect(lambda x: self.read_request())
         # self.readyRead.connect()
         # self.connect(self, SIGNAL("readyRead()"), self.readRequest)
         # self.connect(self, SIGNAL("disconnected()"), self.deleteLater)
         # self.nextBlockSize = 0
+
+
+    def read_request(self):
 
 
 app = QApplication(sys.argv)

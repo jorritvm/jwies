@@ -9,14 +9,27 @@ import sys
 import os
 import time
 
+from staticvar import *
+
 class Player(QMainWindow):
 
     def __init__(self, *args, **kwargs):
         super(Player, self).__init__(*args, **kwargs)
 
+        # init GUI and settings
         self.setup_gui()
         self.settings = self.load_settings()
         self.log("Wies player initiated")  # self.connect_to_a_game()
+
+        # init TCP related stuff
+        self.socket = QTcpSocket()
+        self.nextBlockSize = 0
+        # self.request = None
+        self.socket.connected.connect(lambda x: self.connected_handler())
+        self.socket.readyRead.connect(lambda x: self.read_response())
+        self.socket.disconnected.connect(lambda x: self.server_has_stopped())
+        self.socket.error.connect(lambda x: self.server_has_error(x))
+
 
     def setup_gui(self):
         # gui elements
@@ -104,7 +117,67 @@ class Player(QMainWindow):
             with open(os.path.join("settings", "player.ini"), "w") as settings_file:
                 self.settings.write(settings_file)
 
-            self.log("Player settings saved")
+            self.log("Player connections settings saved")
+
+            # connect to the server
+            self.log("Connecting to server...")
+            self.socket.connectToHost(self.settings["last_connection"]["host"], self.settings["last_connection"]["port"])
+
+
+    def assemble_request(self, mtype, mcontent):
+        request = QByteArray()
+        stream = QDataStream(self.request, QIODevice.WriteOnly)
+        stream.setVersion(QDATASTREAMVERSION)
+        stream.writeUInt16(0)
+        stream << mtype << mcontent
+        stream.device().seek(0)
+        stream.writeUInt16(self.request.size() - SIZEOF_UINT16)
+        return(request)
+
+    def connected_handler(self):
+        request = self.assemble_request("logon", self.settings["last_connection"]["name"])
+        self.send_request(request)
+
+    def send_request(self, request):
+        self.responseLabel.setText("Sending logon details...")
+        self.nextBlockSize = 0
+        self.socket.write(request)
+
+    def read_response(self):
+        stream = QDataStream(self.socket)
+        stream.setVersion(QDATASTREAMVERSION)
+
+        while True:
+            if self.nextBlockSize == 0:
+                if self.socket.bytesAvailable() < SIZEOF_UINT16:
+                    break
+                self.nextBlockSize = stream.readUInt16()
+            if self.socket.bytesAvailable() < self.nextBlockSize:
+                break
+            mtype = QString()
+            mcontent = QString()
+            stream >> mtype >> mcontent
+
+            if mtype == "WELCOME":
+                    self.log("Connection to server successfull")
+            # elif action == "BOOK":
+            #     msg = QString("Booked room %1 for %2").arg(room) \
+            #         .arg(date.toString(Qt.ISODate))
+            # elif action == "UNBOOK":
+            #     msg = QString("Unbooked room %1 for %2").arg(room) \
+            #         .arg(date.toString(Qt.ISODate))
+            self.responseLabel.setText(msg)
+            self.nextBlockSize = 0
+
+    def server_has_stopped(self):
+        self.log("Error: Connection closed by server")
+        self.socket.close()
+
+    def server_has_error(self, error):
+        self.log("Socket error: %s" % (self.socket.errorString()))
+        self.socket.close()
+
+
 
 app = QApplication(sys.argv)
 main = Player()
