@@ -11,6 +11,7 @@ import requests
 import time
 
 from staticvar import *
+from random import randint
 
 class Controller(QMainWindow):
 
@@ -21,13 +22,18 @@ class Controller(QMainWindow):
         self.settings = self.load_settings()
         self.log("Wies controller initiated")
 
+        self.tcp_server = QTcpServer(self)
+        self.next_block_size = 0 # maybe this should be a list of 4 to avoid racing issues?
+        self.playersockets = list()
+
+
     def setup_gui(self):
         # gui elements
         self.setWindowTitle("jwies - controller screen")
         self.setWindowIcon(QIcon(os.path.join("icons", "server.png")))
 
         self.input_ip = QLineEdit()
-        self.input_ip.setText("localhost")
+        self.input_ip.setText("127.0.0.1")
 
         self.input_port = QLineEdit()
         self.input_port.setText("9999")
@@ -62,39 +68,29 @@ class Controller(QMainWindow):
 
         # signals & slots
         self.start_server.clicked.connect(lambda x: self.start_tcp_server(self.input_ip.text(), self.input_port.text()))
-        self.close_server.clicked.connect(lambda x: self.stop_tcp_server())
+        self.close_server.clicked.connect(lambda x: self.stop_tcp_server)
         ip_dialog_action.triggered.connect(lambda x: self.show_ip_dialog())
         settings_pane_action.triggered.connect(lambda x: self.show_settings_pane())
+
 
     def load_settings(self):
         settings = configparser.ConfigParser()
         settings.read(os.path.join("settings", "controller.ini"))
         return(settings)
 
+
     def log(self, txt):
         msg = "(%s) %s" % (time.strftime('%H:%M:%S'), txt)
         self.textbox.appendPlainText(msg)
 
+
     def get_ip(self):
         return(requests.get('https://api.ipify.org').text)
 
-    def start_tcp_server(self, ip, port):
-        self.tcp_server = TcpServer(self)
-        if not self.tcp_server.listen(QHostAddress(ip), int(port)):
-            self.log("Failed to start server: " + self.tcp_server.errorString())
-        else:
-            self.log("Server is running on ip %s and port %s" % (ip, port))
-            self.start_server.setDisabled(True)
-            self.close_server.setDisabled(False)
-
-    def stop_tcp_server(self):
-        self.tcp_server.close()
-        self.log("Server is closed")
-        self.start_server.setDisabled(False)
-        self.close_server.setDisabled(True)
 
     def show_ip_dialog(self):
         text, okPressed = QInputDialog.getText(self, "External ip lookup", "Your external ip is:", QLineEdit.Normal, self.get_ip())
+
 
     def show_settings_pane(self):
         settings_pane = uic.loadUi(os.path.join("ui", "settings_pane.ui"))
@@ -139,29 +135,108 @@ class Controller(QMainWindow):
             self.log("Controller settings saved")
 
 
-class TcpServer(QTcpServer):
-
-    def __init__(self, *args, **kwargs):
-        super(TcpServer, self).__init__(*args, **kwargs)
-
-    def incomingConnection(self, socketId):
-        socket = Socket(self)
-        socket.setSocketDescriptor(socketId)
-
-
-class Socket(QTcpSocket):
-
-    def __init__(self,  *args, **kwargs):
-        super(Socket, self).__init__( *args, **kwargs)
-
-        self.readyRead.connect(lambda x: self.read_request())
-        # self.readyRead.connect()
-        # self.connect(self, SIGNAL("readyRead()"), self.readRequest)
-        # self.connect(self, SIGNAL("disconnected()"), self.deleteLater)
-        # self.nextBlockSize = 0
+    def start_tcp_server(self, ip, port):
+        print("starting server for listening")
+        if not self.tcp_server.listen(QHostAddress(ip), int(port)):
+            self.log("Failed to start server: " + self.tcp_server.errorString())
+        else:
+            self.log("Server is running on ip %s and port %s" % (ip, port))
+            self.start_server.setDisabled(True)
+            self.close_server.setDisabled(False)
+            self.tcp_server.newConnection.connect(self.accept_new_player)
 
 
-    def read_request(self):
+    def stop_tcp_server(self):
+        self.tcp_server.close()
+        self.log("Server is closed")
+        self.start_server.setDisabled(False)
+        self.close_server.setDisabled(True)
+
+
+    def accept_new_player(self):
+        print("accepting new player")
+        socket = self.tcp_server.nextPendingConnection()
+        if (socket is None):
+            print("this socket sucks")
+            self.log("Error: got invalid pending connection!")
+        else:
+            self.playersockets.append(socket)
+            # set up unique player id here and pass it every time something is read from the socket
+            player_id = len(self.playersockets) - 1
+            print("created playerid %s" % str(player_id))
+            socket.readyRead.connect(lambda: self.read_player_message(player_id))
+            socket.disconnected.connect(socket.deleteLater)
+            self.log("hooked up a new player")
+
+
+    def read_player_message(self, player_id):
+        print("reading player message with id: ")
+        print(player_id)
+        # use the tcpsocket of the correct player as IO device for the qdatastream
+        socket = self.playersockets[player_id]
+        print("bytesavailable")
+        print(socket.bytesAvailable())
+        print("next block size")
+        print(self.next_block_size)
+
+        stream = QDataStream(socket)
+        stream.setVersion(QDATASTREAMVERSION)
+
+        if self.next_block_size == 0:
+            if socket.bytesAvailable() < SIZEOF_UINT16:
+                return
+            self.next_block_size = stream.readUInt16()
+        if socket.bytesAvailable() < self.next_block_size:
+            return
+
+        print("blocksize")
+        print(self.next_block_size)
+
+        mtype = stream.readQString()
+        mcontent = stream.readQString()
+
+        print("player x just said ...")
+        print(player_id)
+        print(mtype)
+        print(mcontent)
+
+        self.next_block_size = 0
+
+        if mtype == "LOGON":
+            msg = self.assemble_server_message("ASKNAME", "name_X")
+            self.send_server_message(player_id, msg)
+        else:
+            self.log("Unrecognized request %s" % mtype)
+
+
+    def assemble_server_message(self, mtype, mcontent):
+        print("assembling server message")
+        msg = QByteArray()
+        stream = QDataStream(msg, QIODevice.WriteOnly)
+        stream.setVersion(QDATASTREAMVERSION)
+        stream.writeUInt16(0)
+        stream.writeQString(mtype)
+        stream.writeQString(mcontent)
+        stream.device().seek(0)
+        stream.writeUInt16(msg.size() - SIZEOF_UINT16)
+        return (msg)
+
+
+    def send_server_message(self, player_id, msg):
+        print("sending server message")
+        self.log("Sending reply details...")
+        socket = self.playersockets[player_id]
+        socket.write(msg)
+
+
+
+
+
+# class PlayerSocket(QTcpSocket):
+#
+#     def __init__(self,  *args, **kwargs):
+#         super(Socket, self).__init__( *args, **kwargs)
+#         self.name = "john doe %i" % randint(0,100)
 
 
 app = QApplication(sys.argv)
