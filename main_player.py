@@ -24,7 +24,6 @@ class Player(QMainWindow):
         # init TCP related stuff
         self.socket = QTcpSocket()
         self.next_block_size = 0
-        # self.request = None
         self.socket.connected.connect(self.connected_handler)
         self.socket.readyRead.connect(self.read_server_message)
         self.socket.disconnected.connect(self.server_has_stopped)
@@ -47,7 +46,7 @@ class Player(QMainWindow):
         self.textbox.setReadOnly(True)
 
         # chat input window
-        self.inputbox = QPlainTextEdit()
+        self.input_line = QLineEdit()
 
         # layouts
         layoutleft = QVBoxLayout()
@@ -60,7 +59,7 @@ class Player(QMainWindow):
         rightsplitter = QSplitter()
         rightsplitter.setOrientation(Qt.Vertical)
         rightsplitter.addWidget(self.textbox)
-        rightsplitter.addWidget(self.inputbox)
+        rightsplitter.addWidget(self.input_line)
 
         centralsplitter = QSplitter()
         centralsplitter.addWidget(leftwidget)
@@ -86,7 +85,7 @@ class Player(QMainWindow):
 
         # signals & slots
         connect_action.triggered.connect(lambda x: self.connect_to_a_game())
-
+        self.input_line.returnPressed.connect(self.send_chat)
 
     def log(self, txt):
         msg = "(%s) %s" % (time.strftime('%H:%M:%S'), txt)
@@ -142,8 +141,7 @@ class Player(QMainWindow):
 
 
     def send_player_message(self, msg):
-        self.log("Sending logon details...")
-        self.next_block_size = 0
+        # self.next_block_size = 0
         self.socket.write(msg)
 
 
@@ -164,12 +162,8 @@ class Player(QMainWindow):
 
         self.next_block_size = 0
 
-        if mtype == "ASKNAME":
-            self.log("Connection to server successfull - server now asking for my name")
-            print(mtype)
-            print(mcontent)
-
-
+        if mtype == "CHAT":
+            self.textbox.appendPlainText(self.timestamp_it(mcontent))
 
 
     def server_has_stopped(self):
@@ -181,6 +175,22 @@ class Player(QMainWindow):
         self.log("Socket error: %s" % (self.socket.errorString()))
         self.socket.close()
 
+
+    def receive_chat(self, mcontent):
+        msg = "" + mcontent
+        self.textbox.appendPlainText(mcontent)
+
+
+    def timestamp_it(self, s):
+        x = "(" + time.strftime('%H:%M:%S') + ") " + s
+        return(x)
+
+
+    def send_chat(self):
+        txt = self.input_line.text()
+        msg = self.assemble_player_message("CHAT", txt)
+        self.send_player_message(msg)
+        self.input_line.clear()
 
 
 app = QApplication(sys.argv)

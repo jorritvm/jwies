@@ -25,6 +25,7 @@ class Controller(QMainWindow):
         self.tcp_server = QTcpServer(self)
         self.next_block_size = 0 # maybe this should be a list of 4 to avoid racing issues?
         self.playersockets = list()
+        self.playernames = ["alpha", "beta", "gamma", "delta"]
 
 
     def setup_gui(self):
@@ -73,15 +74,15 @@ class Controller(QMainWindow):
         settings_pane_action.triggered.connect(lambda x: self.show_settings_pane())
 
 
+    def log(self, txt):
+        msg = "(%s) %s" % (time.strftime('%H:%M:%S'), txt)
+        self.textbox.appendPlainText(msg)
+
+
     def load_settings(self):
         settings = configparser.ConfigParser()
         settings.read(os.path.join("settings", "controller.ini"))
         return(settings)
-
-
-    def log(self, txt):
-        msg = "(%s) %s" % (time.strftime('%H:%M:%S'), txt)
-        self.textbox.appendPlainText(msg)
 
 
     def get_ip(self):
@@ -160,6 +161,7 @@ class Controller(QMainWindow):
             print("this socket sucks")
             self.log("Error: got invalid pending connection!")
         else:
+            # todo: reject >4 players
             self.playersockets.append(socket)
             # set up unique player id here and pass it every time something is read from the socket
             player_id = len(self.playersockets) - 1
@@ -203,8 +205,13 @@ class Controller(QMainWindow):
         self.next_block_size = 0
 
         if mtype == "LOGON":
-            msg = self.assemble_server_message("ASKNAME", "name_X")
-            self.send_server_message(player_id, msg)
+            self.playernames[player_id] = mcontent
+            msg = self.assemble_server_message("CHAT", "Controller: welcome " + mcontent)
+            self.broadcast_server_message(msg)
+        elif mtype == "CHAT":
+            playername = self.playernames[player_id]
+            msg = self.assemble_server_message("CHAT", playername + ": " + mcontent)
+            self.broadcast_server_message(msg)
         else:
             self.log("Unrecognized request %s" % mtype)
 
@@ -229,14 +236,10 @@ class Controller(QMainWindow):
         socket.write(msg)
 
 
+    def broadcast_server_message(self, msg):
+        for socket in self.playersockets:
+            socket.write(msg)
 
-
-
-# class PlayerSocket(QTcpSocket):
-#
-#     def __init__(self,  *args, **kwargs):
-#         super(Socket, self).__init__( *args, **kwargs)
-#         self.name = "john doe %i" % randint(0,100)
 
 
 app = QApplication(sys.argv)
