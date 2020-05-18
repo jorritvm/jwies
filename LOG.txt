@@ -1,4 +1,5 @@
-2020-05-10
+ENVIRONMEENT
+
 install python 3.8
 install pycharm commnity edition
 create repository on github
@@ -8,11 +9,4 @@ pip install wheel
 pip install PyQt5
 pip install PyQt5-tools -> binaries in site_packages ... bin are not OK -> use python/scripts folder for exe's.
 pip install requests
-setup controller qmainwindow and tcp server
-commit -> get it working
-push -> get it working
-
-2020-05-11
-setup controller settings pane, save in ini files with configparser
-setup player main windows, set up connection dialog with last settings in ini files with configparser
-
+pip install pydealer

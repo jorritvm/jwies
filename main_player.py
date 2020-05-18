@@ -11,10 +11,11 @@ import time
 
 from staticvar import *
 
-class Player(QMainWindow):
+
+class PlayerClient(QMainWindow):
 
     def __init__(self, *args, **kwargs):
-        super(Player, self).__init__(*args, **kwargs)
+        super(PlayerClient, self).__init__(*args, **kwargs)
 
         # init GUI and settings
         self.setup_gui()
@@ -26,6 +27,7 @@ class Player(QMainWindow):
         self.next_block_size = 0
         self.socket.connected.connect(self.connected_handler)
         self.socket.readyRead.connect(self.read_server_message)
+        self.socket.readyRead.connect(self.debug)
         self.socket.disconnected.connect(self.server_has_stopped)
         self.socket.error.connect(lambda x: self.server_has_error(x))
 
@@ -74,11 +76,13 @@ class Player(QMainWindow):
         # actions
         connect_action = QAction("Connect", self)
         about_action = QAction("About", self)
+        debug_action = QAction("debug", self)
 
         menubar = self.menuBar()
         menu = menubar.addMenu("&Menu")
         menu.addAction(connect_action)
         menu.addAction(about_action)
+        menu.addAction(debug_action)
 
         # size
         self.resize(800, 600)
@@ -86,6 +90,7 @@ class Player(QMainWindow):
         # signals & slots
         connect_action.triggered.connect(lambda x: self.connect_to_a_game())
         self.input_line.returnPressed.connect(self.send_chat)
+        debug_action.triggered.connect(lambda x: self.debug())
 
     def log(self, txt):
         msg = "(%s) %s" % (time.strftime('%H:%M:%S'), txt)
@@ -146,24 +151,27 @@ class Player(QMainWindow):
 
 
     def read_server_message(self):
+        print("now in function read server messages, bytes available:")
+        print(self.socket.bytesAvailable())
         stream = QDataStream(self.socket)
         stream.setVersion(QDATASTREAMVERSION)
 
-        #while True: # wrap everything in a while loop or not?
-        if self.next_block_size == 0:
-            if self.socket.bytesAvailable() < SIZEOF_UINT16:
-                return
-            self.next_block_size = stream.readUInt16()
-        if self.socket.bytesAvailable() < self.next_block_size:
-            return
+        # use a loop as multiple messages can be buffered onto the TCP socket already...
+        while True:
+            if self.next_block_size == 0:
+                if self.socket.bytesAvailable() < SIZEOF_UINT16:
+                    break
+                self.next_block_size = stream.readUInt16()
+            if self.socket.bytesAvailable() < self.next_block_size:
+                break
 
-        mtype = stream.readQString()
-        mcontent = stream.readQString()
+            mtype = stream.readQString()
+            mcontent = stream.readQString()
 
-        self.next_block_size = 0
+            self.next_block_size = 0
 
-        if mtype == "CHAT":
-            self.textbox.appendPlainText(self.timestamp_it(mcontent))
+            if mtype == "CHAT":
+                self.textbox.appendPlainText(self.timestamp_it(mcontent))
 
 
     def server_has_stopped(self):
@@ -176,9 +184,9 @@ class Player(QMainWindow):
         self.socket.close()
 
 
-    def receive_chat(self, mcontent):
-        msg = "" + mcontent
-        self.textbox.appendPlainText(mcontent)
+    # def receive_chat(self, mcontent):
+    #     msg = "" + mcontent
+    #     self.textbox.appendPlainText(mcontent)
 
 
     def timestamp_it(self, s):
@@ -192,8 +200,12 @@ class Player(QMainWindow):
         self.send_player_message(msg)
         self.input_line.clear()
 
+    def debug(self):
+        print("readyread signal received")
+        print(self.socket.bytesAvailable())
+        pass
 
 app = QApplication(sys.argv)
-main = Player()
+main = PlayerClient()
 main.show()
 app.exec_()

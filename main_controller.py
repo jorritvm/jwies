@@ -4,11 +4,13 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtNetwork import *
 from PyQt5 import uic
 import configparser
+import pydealer as pd
+import requests
 
 import sys
 import os
-import requests
 import time
+import random
 
 from staticvar import *
 from random import randint
@@ -24,8 +26,9 @@ class Controller(QMainWindow):
 
         self.tcp_server = QTcpServer(self)
         self.next_block_size = 0 # maybe this should be a list of 4 to avoid racing issues?
-        self.playersockets = list()
-        self.playernames = ["alpha", "beta", "gamma", "delta"]
+
+        self.table = Table()
+        self.players = list()
 
 
     def setup_gui(self):
@@ -155,17 +158,19 @@ class Controller(QMainWindow):
 
 
     def accept_new_player(self):
-        print("accepting new player")
+        # print("accepting new player")
         socket = self.tcp_server.nextPendingConnection()
         if (socket is None):
-            print("this socket sucks")
+            # print("this socket sucks")
             self.log("Error: got invalid pending connection!")
         else:
             # todo: reject >4 players
-            self.playersockets.append(socket)
-            # set up unique player id here and pass it every time something is read from the socket
-            player_id = len(self.playersockets) - 1
-            print("created playerid %s" % str(player_id))
+            player_id = len(self.players)
+            player = Player(player_id)
+            self.players.append(player)
+            player.socket = socket
+
+            # print("created playerid %s" % str(player_id))
             socket.readyRead.connect(lambda: self.read_player_message(player_id))
             socket.disconnected.connect(socket.deleteLater)
             self.log("hooked up a new player")
@@ -175,49 +180,53 @@ class Controller(QMainWindow):
         print("reading player message with id: ")
         print(player_id)
         # use the tcpsocket of the correct player as IO device for the qdatastream
-        socket = self.playersockets[player_id]
+        player = self.players[player_id]
+        socket = player.socket
         print("bytesavailable")
         print(socket.bytesAvailable())
         print("next block size")
-        print(self.next_block_size)
+        print(player.next_block_size)
 
         stream = QDataStream(socket)
         stream.setVersion(QDATASTREAMVERSION)
 
-        if self.next_block_size == 0:
-            if socket.bytesAvailable() < SIZEOF_UINT16:
+        # use a loop as multiple messages can be buffered onto the TCP socket already...
+        while True:
+            if player.next_block_size == 0:
+                if socket.bytesAvailable() < SIZEOF_UINT16:
+                    return
+                player.next_block_size = stream.readUInt16()
+            if socket.bytesAvailable() < player.next_block_size:
                 return
-            self.next_block_size = stream.readUInt16()
-        if socket.bytesAvailable() < self.next_block_size:
-            return
 
-        print("blocksize")
-        print(self.next_block_size)
+            print("blocksize")
+            print(player.next_block_size)
 
-        mtype = stream.readQString()
-        mcontent = stream.readQString()
+            mtype = stream.readQString()
+            mcontent = stream.readQString()
 
-        print("player x just said ...")
-        print(player_id)
-        print(mtype)
-        print(mcontent)
+            print("player x just said ...")
+            print(player_id)
+            print(mtype)
+            print(mcontent)
 
-        self.next_block_size = 0
+            player.next_block_size = 0
 
-        if mtype == "LOGON":
-            self.playernames[player_id] = mcontent
-            msg = self.assemble_server_message("CHAT", "Controller: welcome " + mcontent)
-            self.broadcast_server_message(msg)
-        elif mtype == "CHAT":
-            playername = self.playernames[player_id]
-            msg = self.assemble_server_message("CHAT", playername + ": " + mcontent)
-            self.broadcast_server_message(msg)
-        else:
-            self.log("Unrecognized request %s" % mtype)
+            if mtype == "LOGON":
+                self.welcome_player(player, mcontent)
+                self.check_if_enough_players_are_connected()
+
+            elif mtype == "CHAT":
+                msg = self.assemble_server_message("CHAT", player.name + ": " + mcontent)
+                self.broadcast_server_message(msg)
+            else:
+                self.log("Unrecognized request %s" % mtype)
 
 
     def assemble_server_message(self, mtype, mcontent):
         print("assembling server message")
+        print(mtype)
+        print(mcontent)
         msg = QByteArray()
         stream = QDataStream(msg, QIODevice.WriteOnly)
         stream.setVersion(QDATASTREAMVERSION)
@@ -232,14 +241,69 @@ class Controller(QMainWindow):
     def send_server_message(self, player_id, msg):
         print("sending server message")
         self.log("Sending reply details...")
-        socket = self.playersockets[player_id]
+        socket = self.players[player_id].socket
         socket.write(msg)
 
 
     def broadcast_server_message(self, msg):
-        for socket in self.playersockets:
-            socket.write(msg)
+        print("broadcasting")
+        for player in self.players:
+            print(player.socket.write(msg))
 
+
+    def welcome_player(self, player, playername):
+        player.name = playername
+        msg = self.assemble_server_message("CHAT", "Controller: welcome " + playername)
+        self.broadcast_server_message(msg)
+
+
+    def check_if_enough_players_are_connected(self):
+        print("checking if we are 4")
+        i = len(self.players)
+        if i < 4:
+            msgtxt = "Controller: %i out of 4 are players connected, waiting for more players to start the game." % i
+            msg = self.assemble_server_message("CHAT", msgtxt)
+            self.broadcast_server_message(msg)
+        elif i == 4:
+            self.prepare_first_game()
+        else:
+            self.log("Too many sockets connected, restart the controller application and start over")
+
+    def prepare_first_game(self):
+        # give everyone a random seat and start the first round
+        random.shuffle(self.table.seats)
+        self.start_game(self.playerseats[0])
+
+
+    def start_game(self, dealer):
+        # divide the cards
+        pass
+
+
+class Player:
+
+    def __init__(self, id):
+        self.id = id
+        self.name = None
+        self.socket = None
+        self.hand = pd.Stack()
+        self.next_block_size = 0
+
+
+class Table:
+
+    def __init__(self):
+        self.seats = list()
+
+        # create a shuffled deck of 52 cards
+        self.deck = pd.Deck()
+        self.deck.shuffle()
+
+        # trick contains the card that players have played in the trick
+        self.trick = pd.Stack()
+
+    def addplayer(self, player):
+        self.seats.append(player)
 
 
 app = QApplication(sys.argv)
