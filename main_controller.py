@@ -72,7 +72,7 @@ class Controller(QMainWindow):
 
         # signals & slots
         self.start_server.clicked.connect(lambda x: self.start_tcp_server(self.input_ip.text(), self.input_port.text()))
-        self.close_server.clicked.connect(lambda x: self.stop_tcp_server)
+        self.close_server.clicked.connect(lambda x: self.stop_tcp_server())
         ip_dialog_action.triggered.connect(lambda x: self.show_ip_dialog())
         settings_pane_action.triggered.connect(lambda x: self.show_settings_pane())
 
@@ -105,6 +105,10 @@ class Controller(QMainWindow):
         settings_pane.check_misere_beats_trull.setChecked(self.settings.getboolean('game', 'misere_ouverte_beats_trull'))
         settings_pane.spin_split_minimum.setValue(self.settings.getint('game', 'minimum_cards_to_cut'))
         settings_pane.spin_split_maximum.setValue(self.settings.getint('game', 'maximum_cards_to_cut'))
+        settings_pane.spin_deal_1.setValue(self.settings.getint('game', 'deal_1'))
+        settings_pane.spin_deal_2.setValue(self.settings.getint('game', 'deal_2'))
+        settings_pane.spin_deal_3.setValue(self.settings.getint('game', 'deal_3'))
+        settings_pane.spin_deal_4.setValue(self.settings.getint('game', 'deal_4'))
 
         settings_pane.spin_points_exact.setValue(self.settings.getint('points', 'exact_amount_of_tricks'))
         settings_pane.spin_points_surpass.setValue(self.settings.getfloat('points', 'extra_trick'))
@@ -122,6 +126,10 @@ class Controller(QMainWindow):
             self.settings["game"]["misere_ouverte_beats_trull"] = "True" if settings_pane.check_misere_beats_trull.isChecked() else "False"
             self.settings["game"]["minimum_cards_to_cut"] = str(settings_pane.spin_split_minimum.value())
             self.settings["game"]["maximum_cards_to_cut"] = str(settings_pane.spin_split_maximum.value())
+            self.settings["game"]["deal_1"] = str(settings_pane.spin_deal_1.value())
+            self.settings["game"]["deal_2"] = str(settings_pane.spin_deal_2.value())
+            self.settings["game"]["deal_3"] = str(settings_pane.spin_deal_3.value())
+            self.settings["game"]["deal_4"] = str(settings_pane.spin_deal_4.value())
 
             self.settings["points"]["exact_amount_of_tricks"] = str(settings_pane.spin_points_exact.value())
             self.settings["points"]["extra_trick"] = str(settings_pane.spin_points_surpass.value())
@@ -151,6 +159,7 @@ class Controller(QMainWindow):
 
 
     def stop_tcp_server(self):
+        print("inside def stop server")
         self.tcp_server.close()
         self.log("Server is closed")
         self.start_server.setDisabled(False)
@@ -251,34 +260,50 @@ class Controller(QMainWindow):
             print(player.socket.write(msg))
 
 
+    def serverchat(self, txt):
+        msgtxt = "Controller: " + txt
+        msg = self.assemble_server_message("CHAT", msgtxt)
+        self.broadcast_server_message(msg)
+
+
     def welcome_player(self, player, playername):
         player.name = playername
-        msg = self.assemble_server_message("CHAT", "Controller: welcome " + playername)
-        self.broadcast_server_message(msg)
+        self.serverchat("welcome " + playername)
 
 
     def check_if_enough_players_are_connected(self):
         print("checking if we are 4")
         i = len(self.players)
         if i < 4:
-            msgtxt = "Controller: %i out of 4 are players connected, waiting for more players to start the game." % i
-            msg = self.assemble_server_message("CHAT", msgtxt)
-            self.broadcast_server_message(msg)
+            self.serverchat("%i out of 4 are players connected, waiting for more players to start the game." % i)
         elif i == 4:
             self.prepare_first_game()
         else:
             self.log("Too many sockets connected, restart the controller application and start over")
 
+
     def prepare_first_game(self):
         # give everyone a random seat and start the first round
-        random.shuffle(self.table.seats)
-        self.start_game(self.playerseats[0])
+        self.table.seats = self.players.copy()
+        self.table.shuffle_seats()
+        self.serverchat("Starting a new game. Sending everyone table layout now")
+        for player in self.players:
+            for direction in ("WEST", "NORTH", "EAST"):
+                txt = self.table.neighbouring_player_info(player, direction)
+                print("layout for player " + player.name)
+                print("SEAT" + direction + " - " + txt)
+                msg = self.assemble_server_message("SEAT" + direction, txt)
+                self.send_server_message(player.id, msg)
 
 
     def start_game(self, dealer):
         # divide the cards
         pass
+        self.settings.getint('game', 'deal_3')
 
+
+    def dbug(self):
+        print("close server clicked")
 
 class Player:
 
@@ -288,12 +313,14 @@ class Player:
         self.socket = None
         self.hand = pd.Stack()
         self.next_block_size = 0
+        # self.is_dealer = False
 
 
 class Table:
 
     def __init__(self):
-        self.seats = list()
+        self.seats = list() # a list of player instances
+        self.dealer_seat = 0
 
         # create a shuffled deck of 52 cards
         self.deck = pd.Deck()
@@ -302,8 +329,31 @@ class Table:
         # trick contains the card that players have played in the trick
         self.trick = pd.Stack()
 
-    def addplayer(self, player):
-        self.seats.append(player)
+
+    def shuffle_seats(self):
+        random.shuffle(self.seats)
+
+
+    def neighbouring_player_info(self, player_pov, relative_position):
+        i = 0
+        for seat in self.seats:
+            if player_pov is seat:
+                break
+            i += 1
+        if relative_position == "WEST":
+            neighbour = self.seats[(i + 1) % 4]
+        elif relative_position == "NORTH":
+            neighbour = self.seats[(i + 2) % 4]
+        elif relative_position == "EAST":
+            neighbour = self.seats[(i + 3) % 4]
+        returnstr = "%i,%s" % (neighbour.id, neighbour.name)
+        return(returnstr)
+
+
+    def divide_cards(self, r1, r2, r3, r4):
+
+
+
 
 
 app = QApplication(sys.argv)

@@ -1,13 +1,16 @@
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
+from PyQt5.QtSvg import *
 from PyQt5.QtNetwork import *
+
 from PyQt5 import uic
 import configparser
 
 import sys
 import os
 import time
+import random
 
 from staticvar import *
 
@@ -16,6 +19,8 @@ class PlayerClient(QMainWindow):
 
     def __init__(self, *args, **kwargs):
         super(PlayerClient, self).__init__(*args, **kwargs)
+
+        self.oponents = list()
 
         # init GUI and settings
         self.setup_gui()
@@ -31,17 +36,42 @@ class PlayerClient(QMainWindow):
         self.socket.disconnected.connect(self.server_has_stopped)
         self.socket.error.connect(lambda x: self.server_has_error(x))
 
+        self.connect_to_a_game() # debug
+
 
     def setup_gui(self):
+        # sizing policies
+        fixed_policy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        minimum_policy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+
         # gui elements
         self.setWindowTitle("jwies - player screen")
         self.setWindowIcon(QIcon(os.path.join("icons", "playing-card.png")))
 
-        # table
-        self.table = QLabel("playing field placeholder")
+        # set up the playing field
+        self.scene = QGraphicsScene()
+        self.scene.setBackgroundBrush(Qt.darkGreen)
+        self.scene.setSceneRect(0, 0, 800, 600)
+        self.svgrenderer = QSvgRenderer("svg/svg-cards.svg")
+        self.view = QGraphicsView()
+        self.view.setScene(self.scene)
+        # self.timer = QTimeLine(1000)
+        # self.timer.setCurveShape(QTimeLine.LinearCurve)
+        # self.animation = QGraphicsItemAnimation();
+        # self.animation.setTimeLine(self.timer)
 
         # bidoptions
-        self.bidoptions = QLabel("bidoptions placeholder")
+        self.btn1 = QPushButton("1")
+        self.btn2 = QPushButton("2")
+        self.btn3 = QPushButton("3")
+        self.btn4 = QPushButton("4")
+        self.buttonbox_layout = QGridLayout()
+        self.buttonbox_layout.addWidget(self.btn1, 0, 0)
+        self.buttonbox_layout.addWidget(self.btn2, 0, 1)
+        self.buttonbox_layout.addWidget(self.btn3, 1, 0)
+        self.buttonbox_layout.addWidget(self.btn4, 1, 1)
+        self.buttonbox = QWidget()
+        self.buttonbox.setLayout(self.buttonbox_layout)
 
         # chat window
         self.textbox = QPlainTextEdit()
@@ -51,26 +81,21 @@ class PlayerClient(QMainWindow):
         self.input_line = QLineEdit()
 
         # layouts
-        layoutleft = QVBoxLayout()
-        layoutleft.addWidget(self.table)
-        layoutleft.addWidget(self.bidoptions)
-        leftwidget = QWidget()
-        leftwidget.setLayout(layoutleft)
+        central_layout = QGridLayout()
+        central_layout.addWidget(self.view, 0,0)
+        central_layout.addWidget(self.buttonbox, 1, 0)
+        central_layout.addWidget(self.textbox, 0, 1)
+        central_layout.addWidget(self.input_line, 1, 1)
 
-        # layoutright = QVBoxLayout()
-        rightsplitter = QSplitter()
-        rightsplitter.setOrientation(Qt.Vertical)
-        rightsplitter.addWidget(self.textbox)
-        rightsplitter.addWidget(self.input_line)
+        self.btn1.setSizePolicy(minimum_policy)
+        self.btn2.setSizePolicy(minimum_policy)
+        self.btn3.setSizePolicy(minimum_policy)
+        self.btn4.setSizePolicy(minimum_policy)
+        self.input_line.setSizePolicy(minimum_policy)
+        self.view.setSizePolicy(fixed_policy)
 
-        centralsplitter = QSplitter()
-        centralsplitter.addWidget(leftwidget)
-        centralsplitter.addWidget(rightsplitter)
-
-        centrallayout = QHBoxLayout()
-        centrallayout.addWidget(centralsplitter)
         central_widget = QWidget()
-        central_widget.setLayout(centrallayout)
+        central_widget.setLayout(central_layout)
         self.setCentralWidget(central_widget)
 
         # actions
@@ -84,13 +109,11 @@ class PlayerClient(QMainWindow):
         menu.addAction(about_action)
         menu.addAction(debug_action)
 
-        # size
-        self.resize(800, 600)
-
         # signals & slots
         connect_action.triggered.connect(lambda x: self.connect_to_a_game())
         self.input_line.returnPressed.connect(self.send_chat)
         debug_action.triggered.connect(lambda x: self.debug())
+
 
     def log(self, txt):
         msg = "(%s) %s" % (time.strftime('%H:%M:%S'), txt)
@@ -109,6 +132,7 @@ class PlayerClient(QMainWindow):
 
         # set initial value for dialog box
         connect_pane.line_name.setText(self.settings['last_connection']['name'])
+        connect_pane.line_name.setText("player"+str(random.randint(1, 1000))) # for debug
         connect_pane.line_host.setText(self.settings['last_connection']['host'])
         connect_pane.spin_port.setValue(self.settings.getint('last_connection', 'port'))
 
@@ -147,6 +171,7 @@ class PlayerClient(QMainWindow):
 
     def send_player_message(self, msg):
         # self.next_block_size = 0
+        print("writing my bytearray of size " + str(msg.size()))
         self.socket.write(msg)
 
 
@@ -168,10 +193,20 @@ class PlayerClient(QMainWindow):
             mtype = stream.readQString()
             mcontent = stream.readQString()
 
+            print(mtype)
+            print(mcontent)
+
             self.next_block_size = 0
 
             if mtype == "CHAT":
                 self.textbox.appendPlainText(self.timestamp_it(mcontent))
+            if mtype.startswith("SEAT"):
+                id = "mcontent".split(",")[0]
+                name = "mcontent".split(",")[1]
+                seat = mtype.replace("SEAT","") # WEST NORTH EAST
+                self.oponents.append(Oponent(id, name, seat, self.scene, self.svgrenderer))
+
+        print("i have left the loop")
 
 
     def server_has_stopped(self):
@@ -182,11 +217,6 @@ class PlayerClient(QMainWindow):
     def server_has_error(self, error):
         self.log("Socket error: %s" % (self.socket.errorString()))
         self.socket.close()
-
-
-    # def receive_chat(self, mcontent):
-    #     msg = "" + mcontent
-    #     self.textbox.appendPlainText(mcontent)
 
 
     def timestamp_it(self, s):
@@ -200,10 +230,77 @@ class PlayerClient(QMainWindow):
         self.send_player_message(msg)
         self.input_line.clear()
 
+
     def debug(self):
-        print("readyread signal received")
-        print(self.socket.bytesAvailable())
-        pass
+        self.oponents.append(Oponent(0, "testname", "WEST", self.scene, self.svgrenderer))
+
+
+class Oponent():
+
+    def __init__(self, id, name, seat, scene, svgrenderer):
+        self.id = id
+        self.name = name
+        self.seat = seat
+        self.scene = scene
+        self.svgrenderer = svgrenderer
+        self.cards = list()
+
+        self.draw_cards_facedown(seat)
+
+
+    def draw_cards_facedown(self, seat):
+        if seat == "WEST":
+            x = 150
+            y = 160
+            xincrement = 0
+            yincrement = 15
+        elif seat == "NORTH":
+            x = 160
+            y = 450
+            xincrement = 20
+            yincrement = 0
+        elif seat == "EAST":
+            x = 440
+            y = 150
+            xincrement = 0
+            yincrement = 15
+        for z in range(13):
+            card = Graphic_Card(52, z, self.svgrenderer)
+            card.scale(0.594)
+            card.setX(x + z * xincrement)
+            card.setY(y + z * yincrement)
+            if seat == "WEST":
+                card.rotate(90)
+            elif seat == "NORTH":
+                card.rotate(180)
+            elif seat == "EAST":
+                card.rotate(270)
+            if seat in ["WEST", "EAST"]:
+                card.rotate(90)
+            self.cards.append(card)
+            self.scene.addItem(card)
+
+
+class Graphic_Card(QGraphicsSvgItem):
+
+
+    def __init__(self, index, zvalue, svgrenderer, *args, **kwargs):
+        super(Graphic_Card, self).__init__(*args, **kwargs)
+
+        card_click = pyqtSignal(str)
+
+        self.setSharedRenderer(svgrenderer)
+        self.setZValue(zvalue)
+
+        if index == 52:
+            self.svgdescription = "back"
+            self.setElementId(self.svgdescription)
+
+
+    def mousePressEvent(self, event):
+        self.card_click.emit(str(self.index))
+        print("clicked mouse on card " + str(self.index))
+
 
 app = QApplication(sys.argv)
 main = PlayerClient()
