@@ -295,15 +295,28 @@ class Controller(QMainWindow):
                 msg = self.assemble_server_message("SEAT" + direction, txt)
                 self.send_server_message(player.id, msg)
 
+        self.start_game()
 
-    def start_game(self, dealer):
+
+    def start_game(self):
         # divide the cards
-        pass
-        self.settings.getint('game', 'deal_3')
+        r1 = self.settings.getint('game', 'deal_1')
+        r2 = self.settings.getint('game', 'deal_2')
+        r3 = self.settings.getint('game', 'deal_3')
+        r4 = self.settings.getint('game', 'deal_4')
+        self.table.divide_cards([r1,r2,r3,r4])
 
+        # tell every player about their hand
+        for player in self.players:
+            player_hand_txt = ""
+            for i in range(13):
+                player_hand_txt += player.hand[i].abbrev + ","
+                msg = self.assemble_server_message("HAND", player_hand_txt)
+                self.send_server_message(player.id, msg)
 
     def dbug(self):
         print("close server clicked")
+
 
 class Player:
 
@@ -350,8 +363,12 @@ class Table:
         return(returnstr)
 
 
-    def divide_cards(self, r1, r2, r3, r4):
-
+    def divide_cards(self, roundsize):
+        last_card_in_the_deck = self.deck[51]
+        for i in range(roundsize):
+            cards_to_deal_this_round = roundsize[i]
+            for i in range(4):
+                self.seat[self.dealer_seat + i + 1 % 4].hand.add(self.deck.deal(cards_to_deal_this_round))
 
 
 
