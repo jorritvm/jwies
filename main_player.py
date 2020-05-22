@@ -21,7 +21,7 @@ class PlayerClient(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(PlayerClient, self).__init__(*args, **kwargs)
 
-        self.oponents = list()
+        self.players = list()
 
         # init GUI and settings
         self.setup_gui()
@@ -205,13 +205,16 @@ class PlayerClient(QMainWindow):
 
             self.next_block_size = 0
 
+            if mtype == "YOUR_ID":
+                id = int(mcontent)
+                self.players.append(Player(id, self.settings["last_connection"]["name"] , "SOUTH", self.scene, self.svgrenderer))
             if mtype == "CHAT":
                 self.textbox.appendPlainText(self.timestamp_it(mcontent))
             if mtype.startswith("SEAT"):
                 id = mcontent.split(",")[0]
                 name = mcontent.split(",")[1]
                 seat = mtype.replace("SEAT","") # WEST NORTH EAST
-                self.oponents.append(Oponent(id, name, seat, self.scene, self.svgrenderer))
+                self.players.append(Player(id, name, seat, self.scene, self.svgrenderer))
             if mtype == "HAND":
                 hand = mcontent.split(",")[0:13]
 
@@ -240,89 +243,74 @@ class PlayerClient(QMainWindow):
         self.input_line.clear()
 
 
-    def abbrev_to_sorted_pydealer_card(self, abbrev_list):
-        deck = pd.deck.Deck()
-        stack = pd.stack.Stack(cards = deck.get_list(abbrev_list))
-        stack.sort()
-        return(stack)
-
 
     def debug(self):
         pass
 
     def debug1(self):
-        self.oponents.append(Oponent(0, "ALFA", "WEST", self.scene, self.svgrenderer))
+        pass
 
     def debug2(self):
-        self.oponents.append(Oponent(0, "BETA", "NORTH", self.scene, self.svgrenderer))
+        pass
 
     def debug3(self):
-        self.oponents.append(Oponent(0, "GAMMA", "EAST", self.scene, self.svgrenderer))
+        pass
 
     def debug4(self):
         pass
 
 
-class Oponent():
+class Player():
 
     def __init__(self, id, name, seat, scene, svgrenderer):
-        self.id = id
+        self.id = id # this is the id the server has for the player
         self.name = name
-        self.seat = seat
+        self.seat = seat # this is the seat relative to where you are sitting (south)
         self.scene = scene
         self.svgrenderer = svgrenderer
-        self.cards = list()
+        self.hand = list()
 
-        self.draw_cards_facedown(seat)
+        self.setup_default_cards(seat)
         self.draw_name(seat, name)
 
-    def draw_cards_facedown(self, seat):
-        if seat == "WEST":
-            x = WEST_X
-            y = WEST_Y
-            xincrement = 0
-            yincrement = Y_INCREMENT
-        elif seat == "NORTH":
-            x = NORTH_X
-            y = NORTH_Y
-            xincrement = X_INCREMENT
-            yincrement = 0
-        elif seat == "EAST":
-            x = EAST_X
-            y = EAST_Y
-            xincrement = 0
-            yincrement = -Y_INCREMENT
-        else:
-            return
+
+    def setup_default_cards(self, seat):
         for z in range(13):
-            transformation = QTransform()
-            transformation.scale(CARDSCALE, CARDSCALE)
-            card = Graphic_Card(52, z, self.svgrenderer)
-            # card.scale(0.5) # CARDSCALE
-            card.setX(x + z * xincrement)
-            card.setY(y + z * yincrement)
-            if seat == "WEST":
-                transformation.rotate(90)
-            elif seat == "NORTH":
-                transformation.rotate(180)
-            elif seat == "EAST":
-                transformation.rotate(270)
-            card.setTransform(transformation)
-            self.cards.append(card)
-            self.scene.addItem(card)
+            card = Graphic_Card("back", z, self.svgrenderer)
+            self.hand.append(card)
 
 
     def draw_name(self, seat, name):
         name_label = self.scene.addText(name)
-        if seat == "WEST":
-            name_label.setX(WESTNAME_X)
-            name_label.setY(WESTNAME_Y)
-        elif seat == "NORTH":
-            name_label.setX(NORTHNAME_X)
-            name_label.setY(NORTHNAME_Y)
-        elif seat == "EAST":
-            name_label.setX(EASTNAME_X)
-            name_label.setY(EASTNAME_Y)
+        name_label.setX(X_NAME[seat])
+        name_label.setY(Y_NAME[seat])
+
+
+    def receive_cards(self, card_abbreviation_list):
+        # todo: remove dummy cards from the scene
+
+        # sort the received cards and put them on my hand
+        deck = pd.deck.Deck()
+        stack = pd.stack.Stack(cards=deck.get_list(card_abbreviation_list))
+        stack.sort()
+        for pdcard in stack:
+            card = Graphic_Card(pdcard.abbrev, z, self.svgrenderer)
+            self.hand.append(card)
+
+        # draw them on the board
+        self.draw_hand
+
+
+    def draw_hand(self):
+        seat = self.seat
+        for  card in self.hand:
+            transformation = QTransform()
+            transformation.scale(CARDSCALE, CARDSCALE)
+            card.setX(X_CARD[seat] + z * XINC_CARD[seat])
+            card.setY(Y_CARD[seat] + z * YINC_CARD[seat])
+            transformation.rotate(CARD_ROTATE[seat])
+            card.setTransform(transformation)
+            self.scene.addItem(card)
 
 
 class Graphic_Card(QGraphicsSvgItem):
@@ -338,19 +326,21 @@ class Graphic_Card(QGraphicsSvgItem):
         self.zvalue = zvalue
         self.abbrev = abbrev
 
-        deck = pd.deck.Deck()
-        self.pydealer_card = pd.tools.get_card(deck, abbrev)[1][0]
-        self.suit = self.pydealer_card.suit
-        self.value = self.pydealer_card.value
-
-        if index == 52:
+        if abbrev == "back":
             self.svgdescription = "back"
+            self.setElementId(self.svgdescription)
+        else:
+            deck = pd.deck.Deck()
+            self.pydealer_card = pd.tools.get_card(deck, abbrev)[1][0]
+            self.suit = self.pydealer_card.suit
+            self.value = self.pydealer_card.value
+            self.svgdescription = self.get_svg_description()
             self.setElementId(self.svgdescription)
 
 
     def get_svg_description(self):
         v = self.value.lower()
-        if v = "ace":
+        if v == "ace":
             v = "1"
         s = self.suit.lower()
         s = s[0:len(s)-1]
@@ -359,8 +349,9 @@ class Graphic_Card(QGraphicsSvgItem):
 
 
     def mousePressEvent(self, event):
-        print("clicked mouse on card " + str(self.zvalue))
-        #self.card_click.emit(str(self.zvalue))
+        if self.svgdescription != "back":
+            print("clicked mouse on card " + str(self.zvalue))
+            #self.card_click.emit(str(self.zvalue))
 
 
 
