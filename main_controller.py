@@ -309,12 +309,34 @@ class Controller(QMainWindow):
         self.table.divide_cards([r1,r2,r3,r4])
 
         # tell every player about their hand
+        self.serverchat("Dealer for this round: %s" % self.table.get_dealer().name)
+        self.serverchat("Dealing the cards...")
         for player in self.players:
             player_hand_txt = ""
             for i in range(13):
                 player_hand_txt += player.hand[i].abbrev + ","
-                msg = self.assemble_server_message("HAND", player_hand_txt)
-                self.send_server_message(player.id, msg)
+            msg = self.assemble_server_message("HAND", player_hand_txt)
+            self.send_server_message(player.id, msg)
+
+        # check for trull
+        if self.table.check_for_trull():
+            # set up trull game
+            self.serverchat("Trull!!!")
+            # todo werk dit verder uit
+            pass
+        else:
+            self.serverchat("No trull...")
+            # show this game's trump card (last card dealt)
+            dealer_id = self.table.get_dealer().id
+            trump_card = self.table.last_card_before_dealing.abbrev
+            msg = self.assemble_server_message("TRUMPCARD", str(dealer_id) + "," + trump_card)
+            self.broadcast_server_message(msg)
+
+            # start bidding
+
+
+        # ask action from player
+
 
     def dbug(self):
         print("close server clicked")
@@ -329,6 +351,14 @@ class Player:
         self.hand = pd.Stack()
         self.next_block_size = 0
         # self.is_dealer = False
+
+
+    def amount_of_aces_on_hand(self):
+        i = 0
+        for card in self.hand:
+            if card.value == "Ace":
+                i+=1
+        return(i)
 
 
 class Table:
@@ -366,14 +396,22 @@ class Table:
 
 
     def divide_cards(self, roundsize):
-        last_card_in_the_deck = self.deck[51]
-        for i in range(roundsize):
-            cards_to_deal_this_round = roundsize[i]
+        self.last_card_before_dealing = self.deck[51]
+        for cards_to_deal_this_round in roundsize:
             for i in range(4):
-                self.seat[self.dealer_seat + i + 1 % 4].hand.add(self.deck.deal(cards_to_deal_this_round))
+                self.seats[(self.dealer_seat + i + 1) % 4].hand.add(self.deck.deal(cards_to_deal_this_round))
 
 
+    def check_for_trull(self):
+        trull = False
+        for player in self.seats:
+            if player.amount_of_aces_on_hand() > 2:
+                trull = True
+        return(trull)
 
+
+    def get_dealer(self):
+        return(self.seats[self.dealer_seat])
 
 app = QApplication(sys.argv)
 main = Controller()

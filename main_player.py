@@ -21,7 +21,7 @@ class PlayerClient(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(PlayerClient, self).__init__(*args, **kwargs)
 
-        self.players = list()
+        self.players = list() # contains player objects as defined in this module
 
         # init GUI and settings
         self.setup_gui()
@@ -60,18 +60,42 @@ class PlayerClient(QMainWindow):
         # self.timer.setCurveShape(QTimeLine.LinearCurve)
         # self.animation = QGraphicsItemAnimation();
         # self.animation.setTimeLine(self.timer)
-        pass
 
         # set up the bidoptions
+        self.btnpass = QPushButton("Passen")
+        self.btnask = QPushButton("Vragen")
+        self.btnjoin = QPushButton("Meegaan")
+        self.btnabondance = QPushButton("Abondance")
+        self.btnmisere = QPushButton("Miserie")
+        self.btnalone = QPushButton("Alleen gaan")
+        self.btnlasttrike = QPushButton("Toon laatste slag")
+        self.playcard = QPushButton("Speel kaart")
+
+        self.buttonbox_layout = QGridLayout()
+        self.buttonbox_layout.addWidget(self.btnpass, 0, 0)
+        self.buttonbox_layout.addWidget(self.btnask, 1, 0)
+        self.buttonbox_layout.addWidget(self.btnjoin, 0, 1)
+        self.buttonbox_layout.addWidget(self.btnabondance, 1, 1)
+        self.buttonbox_layout.addWidget(self.btnmisere, 0, 2)
+        self.buttonbox_layout.addWidget(self.btnalone, 1, 2)
+        self.buttonbox_layout.addWidget(self.btnlasttrike, 0, 3)
+        self.buttonbox_layout.addWidget(self.playcard, 1, 3)
+
+        # ----- debug
         self.btn1 = QPushButton("1")
         self.btn2 = QPushButton("2")
         self.btn3 = QPushButton("3")
         self.btn4 = QPushButton("4")
-        self.buttonbox_layout = QGridLayout()
-        self.buttonbox_layout.addWidget(self.btn1, 0, 0)
-        self.buttonbox_layout.addWidget(self.btn2, 0, 1)
-        self.buttonbox_layout.addWidget(self.btn3, 1, 0)
-        self.buttonbox_layout.addWidget(self.btn4, 1, 1)
+        self.buttonbox_layout.addWidget(self.btn1, 2, 0)
+        self.buttonbox_layout.addWidget(self.btn2, 2, 1)
+        self.buttonbox_layout.addWidget(self.btn3, 2, 2)
+        self.buttonbox_layout.addWidget(self.btn4, 2, 3)
+        self.btn1.clicked.connect(lambda x: self.debug1())
+        self.btn2.clicked.connect(lambda x: self.debug2())
+        self.btn3.clicked.connect(lambda x: self.debug3())
+        self.btn4.clicked.connect(lambda x: self.debug4())
+        # ----- debug
+
         self.buttonbox = QWidget()
         self.buttonbox.setLayout(self.buttonbox_layout)
 
@@ -115,11 +139,6 @@ class PlayerClient(QMainWindow):
         connect_action.triggered.connect(lambda x: self.connect_to_a_game())
         self.input_line.returnPressed.connect(self.send_chat)
         debug_action.triggered.connect(lambda x: self.debug())
-
-        self.btn1.clicked.connect(lambda x: self.debug1())
-        self.btn2.clicked.connect(lambda x: self.debug2())
-        self.btn3.clicked.connect(lambda x: self.debug3())
-        self.btn4.clicked.connect(lambda x: self.debug4())
 
 
     def log(self, txt):
@@ -207,7 +226,7 @@ class PlayerClient(QMainWindow):
 
             if mtype == "YOUR_ID":
                 id = int(mcontent)
-                self.players.append(Player(id, self.settings["last_connection"]["name"] , "SOUTH", self.scene, self.svgrenderer))
+                self.players.append(Player(id, self.settings["last_connection"]["name"], "SOUTH", self.scene, self.svgrenderer))
             if mtype == "CHAT":
                 self.textbox.appendPlainText(self.timestamp_it(mcontent))
             if mtype.startswith("SEAT"):
@@ -217,6 +236,13 @@ class PlayerClient(QMainWindow):
                 self.players.append(Player(id, name, seat, self.scene, self.svgrenderer))
             if mtype == "HAND":
                 hand = mcontent.split(",")[0:13]
+                print(hand)
+                self.players[0].receive_cards(hand)
+            if mtype == "TRUMPCARD":
+                dealer_id = mcontent.split(",")[0]
+                trump_card_abbrev = mcontent.split(",")[1]
+                dealer = self.get_player_using_id(int(dealer_id))
+                dealer.draw_trump_card(trump_card_abbrev)
 
         print("i have left the loop")
 
@@ -243,15 +269,25 @@ class PlayerClient(QMainWindow):
         self.input_line.clear()
 
 
+    def get_player_using_id(self, id):
+        for player in self.players:
+            if player.id == id:
+                break
+
+        return(player)
 
     def debug(self):
         pass
 
     def debug1(self):
-        pass
+        print("it's_a_meeee")
 
     def debug2(self):
-        pass
+        for player in self.players:
+            print("player listing:")
+            print(str(player.id))
+            print(player.name)
+            print(player.seat)
 
     def debug3(self):
         pass
@@ -263,20 +299,24 @@ class PlayerClient(QMainWindow):
 class Player():
 
     def __init__(self, id, name, seat, scene, svgrenderer):
-        self.id = id # this is the id the server has for the player
+        print("creating player with id " + str(id))
+        self.id = int(id) # this is the id the server has for the player
         self.name = name
         self.seat = seat # this is the seat relative to where you are sitting (south)
         self.scene = scene
         self.svgrenderer = svgrenderer
-        self.hand = list()
+        self.hand = list() # list of Graphic_Card objects
 
         self.setup_default_cards(seat)
         self.draw_name(seat, name)
+        self.draw_hand()
+
+        self.trumpcard = None
 
 
     def setup_default_cards(self, seat):
         for z in range(13):
-            card = Graphic_Card("back", z, self.svgrenderer)
+            card = Graphic_Card("back", z + 10, self.svgrenderer)
             self.hand.append(card)
 
 
@@ -288,42 +328,86 @@ class Player():
 
     def receive_cards(self, card_abbreviation_list):
         # todo: remove dummy cards from the scene
+        for card in self.hand:
+            self.scene.removeItem(card)
 
         # sort the received cards and put them on my hand
         deck = pd.deck.Deck()
-        stack = pd.stack.Stack(cards=deck.get_list(card_abbreviation_list))
-        stack.sort()
+        stack = pd.stack.Stack(cards = deck.get_list(card_abbreviation_list))
+        stack = self.sort_pdstack_on_hand(stack)
+        z = 10
         for pdcard in stack:
             card = Graphic_Card(pdcard.abbrev, z, self.svgrenderer)
             self.hand.append(card)
+            z += 1
 
         # draw them on the board
-        self.draw_hand
+        self.draw_hand()
 
 
     def draw_hand(self):
         seat = self.seat
-        for  card in self.hand:
+        for card in self.hand:
             transformation = QTransform()
             transformation.scale(CARDSCALE, CARDSCALE)
-            card.setX(X_CARD[seat] + z * XINC_CARD[seat])
-            card.setY(Y_CARD[seat] + z * YINC_CARD[seat])
+            card.setX(X_CARD[seat] + (card.z - 10) * XINC_CARD[seat])
+            card.setY(Y_CARD[seat] + (card.z - 10) * YINC_CARD[seat])
             transformation.rotate(CARD_ROTATE[seat])
             card.setTransform(transformation)
             self.scene.addItem(card)
 
 
+    def sort_pdstack_on_hand(self, stack):
+        seq = list()
+        for card in stack:
+            v = 0
+            if card.suit == "Diamonds":
+                v += 100
+            elif card.suit == "Spades":
+                v += 200
+            elif card.suit == "Hearts":
+                v += 300
+            if card.value == "Jack":
+                v += 11
+            elif card.value == "Queen":
+                v += 12
+            elif card.value == "King":
+                v += 13
+            elif card.value == "Ace":
+                v += 14
+            else:
+                v += int(card.value) # 2 - 10
+            seq.append(v)
+        sorted_indices = sorted(range(len(seq)), key=seq.__getitem__)
+        card_list = [stack[i] for i in sorted_indices]
+        return_stack = pd.stack.Stack()
+        return_stack.insert_list(card_list)
+        return(return_stack)
+
+
+    def draw_trump_card(self, abbrev):
+        card = Graphic_Card(abbrev, 0, self.svgrenderer)
+        transformation = QTransform()
+        transformation.scale(CARDSCALE, CARDSCALE)
+        card.setX(X_TRUMPCARD[self.seat])
+        card.setY(Y_TRUMPCARD[self.seat])
+        transformation.rotate(CARD_ROTATE[self.seat])
+        card.setTransform(transformation)
+        self.scene.addItem(card)
+        self.trumpcard = card
+
+
 class Graphic_Card(QGraphicsSvgItem):
 
-    def __init__(self, abbrev, zvalue, svgrenderer, *args, **kwargs):
+    def __init__(self, abbrev, z, svgrenderer, *args, **kwargs):
         super(Graphic_Card, self).__init__(*args, **kwargs)
 
         self.card_click = pyqtSignal(str)
 
         self.setSharedRenderer(svgrenderer)
-        self.setZValue(zvalue)
+        self.setZValue(z)
 
-        self.zvalue = zvalue
+        self.z = z
         self.abbrev = abbrev
 
         if abbrev == "back":
@@ -350,8 +434,8 @@ class Graphic_Card(QGraphicsSvgItem):
 
     def mousePressEvent(self, event):
         if self.svgdescription != "back":
-            print("clicked mouse on card " + str(self.zvalue))
-            #self.card_click.emit(str(self.zvalue))
+            print("clicked mouse on card " + str(self.z))
+            #self.card_click.emit(str(self.z))
 
 
 

@@ -11,13 +11,13 @@ X_CARD = {
     "WEST": 150,
     "NORTH": 335,
     "EAST": 650,
-    "SOUTH": 353
+    "SOUTH": 230
 }
 Y_CARD = {
     "WEST": 160,
     "NORTH": 150,
     "EAST": 440,
-    "SOUTH": 450
+    "SOUTH": 440
 }
 X_NAME = {
     "WEST": 10,
@@ -29,7 +29,7 @@ Y_NAME = {
     "WEST": 135,
     "NORTH": 155,
     "EAST": 135,
-    "SOUTH": 435
+    "SOUTH": 415
 }
 XINC_CARD = {
     "WEST": 0,
@@ -48,4 +48,16 @@ CARD_ROTATE = {
     "NORTH": 180,
     "EAST": 270,
     "SOUTH": 0
+}
+X_TRUMPCARD = {
+    "WEST": 180,
+    "NORTH": 335,
+    "EAST": 620,
+    "SOUTH": 230
+}
+Y_TRUMPCARD = {
+    "WEST": 160,
+    "NORTH": 180,
+    "EAST": 440,
+    "SOUTH": 410
 }
