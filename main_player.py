@@ -62,22 +62,21 @@ class PlayerClient(QMainWindow):
         # self.animation.setTimeLine(self.timer)
 
         # set up the bidoptions
-        self.btnpass = QPushButton("Passen")
-        self.btnask = QPushButton("Vragen")
-        self.btnjoin = QPushButton("Meegaan")
-        self.btnabondance = QPushButton("Abondance")
-        self.btnmisere = QPushButton("Miserie")
-        self.btnalone = QPushButton("Alleen gaan")
+        self.btn_bidoptions = {"pass": QPushButton("Passen"),
+                               "ask": QPushButton("Vragen"),
+                               "join": QPushButton("Meegaan"),
+                               "abondance": QPushButton("Abondance"),
+                               "misere": QPushButton("Miserie"),
+                               "alone": QPushButton("Alleen gaan")
+                               }
         self.btnlasttrike = QPushButton("Toon laatste slag")
         self.playcard = QPushButton("Speel kaart")
 
         self.buttonbox_layout = QGridLayout()
-        self.buttonbox_layout.addWidget(self.btnpass, 0, 0)
-        self.buttonbox_layout.addWidget(self.btnask, 1, 0)
-        self.buttonbox_layout.addWidget(self.btnjoin, 0, 1)
-        self.buttonbox_layout.addWidget(self.btnabondance, 1, 1)
-        self.buttonbox_layout.addWidget(self.btnmisere, 0, 2)
-        self.buttonbox_layout.addWidget(self.btnalone, 1, 2)
+        i = 0
+        for btn in self.btn_bidoptions.values():
+            self.buttonbox_layout.addWidget(btn, i % 2, i // 2)
+            i += 1
         self.buttonbox_layout.addWidget(self.btnlasttrike, 0, 3)
         self.buttonbox_layout.addWidget(self.playcard, 1, 3)
 
@@ -139,6 +138,11 @@ class PlayerClient(QMainWindow):
         connect_action.triggered.connect(lambda x: self.connect_to_a_game())
         self.input_line.returnPressed.connect(self.send_chat)
         debug_action.triggered.connect(lambda x: self.debug())
+        # todo this always send bid(alone)
+        for item in self.btn_bidoptions.items():
+            action = item[0]
+            btn = item[1]
+            btn.clicked.connect(lambda x: self.bid(action))
 
 
     def log(self, txt):
@@ -243,6 +247,9 @@ class PlayerClient(QMainWindow):
                 trump_card_abbrev = mcontent.split(",")[1]
                 dealer = self.get_player_using_id(int(dealer_id))
                 dealer.draw_trump_card(trump_card_abbrev)
+            if mtype == "ASKBID":
+                bidoptions = mcontent.split(",")
+                self.enable_bid_options(bidoptions)
 
         print("i have left the loop")
 
@@ -264,17 +271,84 @@ class PlayerClient(QMainWindow):
 
     def send_chat(self):
         txt = self.input_line.text()
-        msg = self.assemble_player_message("CHAT", txt)
-        self.send_player_message(msg)
+        self.send_chat_txt(txt)
         self.input_line.clear()
 
+    def send_chat_txt(self, txt):
+        msg = self.assemble_player_message("CHAT", txt)
+        self.send_player_message(msg)
 
     def get_player_using_id(self, id):
         for player in self.players:
             if player.id == id:
                 break
-
         return(player)
+
+
+    def enable_bid_options(self, bidoptions):
+        if "ask" in bidoptions:
+            self.btnask.setEnabled(True)
+        if "pass" in bidoptions:
+            self.btnpass.setEnabled(True)
+        if "join" in bidoptions:
+            self.btnjoin.setEnabled(True)
+        if "abondance" in bidoptions:
+            self.btnabondance.setEnabled(True)
+        if "misere" in bidoptions:
+            self.btnmisere.setEnabled(True)
+        if "alone" in bidoptions:
+            self.btnalone.setEnabled(True)
+
+
+    def bid(self, bid):
+        # suit = self.players[0].trumpcard.suit # could be problem for trull
+        suit = "Clubs" # debug
+
+        if bid == "abondance":
+            suit = self.choose_suit_pre_bid()
+            if suit is None:
+                return
+
+        if suit == "Clubs":
+            troef = "KLAVEREN"
+        elif suit == "Diamonds":
+            troef = "KOEKEN"
+        elif suit == "Spades":
+            troef = "SCHOPPEN"
+        elif suit == "Hearts":
+            troef = "HARTEN"
+
+        if bid == "ask":
+            txt = "IK GA " + troef + " VRAGEN"
+        elif bid == "pass":
+            txt = "IK GA PASSEN"
+        elif bid == "join":
+            txt = "IK GA MEE IN " + troef
+        elif bid == "abondance":
+            txt = "IK GA ABONDANCE IN DE " + troef
+        elif bid == "misere":
+            txt = "IK GA MISERIE"
+        elif bid == "alone":
+            txt = "IK GA ALLEEN GAAN"
+        elif bid == "pass":
+            txt = "IK GA PASSEN"
+
+        # complete with server message
+        self.send_chat_txt(txt)
+
+
+    def choose_suit_pre_bid(self):
+        dlg = Choose_suit_dialog(self)
+        if dlg.exec_():
+            for i in range(4):
+                if dlg.suitbuttons[i].isChecked():
+                    break
+            suit = ["Clubs", "Diamonds", "Spades", "Hearts"][i]
+            return(suit)
+        else:
+            return(None)
+
+
 
     def debug(self):
         pass
@@ -293,7 +367,16 @@ class PlayerClient(QMainWindow):
         pass
 
     def debug4(self):
-        pass
+        dlg = Choose_suit_dialog(self)
+        if dlg.exec_():
+            for i in range(4):
+                if dlg.suitbuttons[i].isChecked():
+                    break
+            suit = ["Clubs", "Diamonds", "Spades", "Hearts"][i]
+            print("Success!")
+            print(suit)
+        else:
+            print("Cancel!")
 
 
 class Player():
@@ -437,6 +520,38 @@ class Graphic_Card(QGraphicsSvgItem):
             print("clicked mouse on card " + str(self.z))
             #self.card_click.emit(str(self.z))
 
+
+class Choose_suit_dialog(QDialog):
+
+    def __init__(self, *args, **kwargs):
+        super(Choose_suit_dialog, self).__init__(*args, **kwargs)
+
+        self.setWindowTitle("Choose the suit you want for Trump...")
+
+        suits = ["clubs", "diamonds", "spades", "hearts"]
+        self.suitbuttons = list()
+        for suit in suits:
+            btn = QPushButton()
+            pm = QPixmap(os.path.join("icons", suit + ".png"))
+            qi = QIcon(pm)
+            btn.setIcon(qi)
+            btn.setIconSize(QSize(50,50))
+            btn.setCheckable(True)
+            self.suitbuttons.append(btn)
+        suits_layout = QHBoxLayout()
+        for btn in self.suitbuttons:
+            suits_layout.addWidget(btn)
+        topwidget = QWidget()
+        topwidget.setLayout(suits_layout)
+
+        QBtn = QDialogButtonBox.Ok
+        self.buttonBox = QDialogButtonBox(QBtn)
+        self.buttonBox.accepted.connect(self.accept)
+
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(topwidget)
+        self.layout.addWidget(self.buttonBox)
+        self.setLayout(self.layout)
 
 
 app = QApplication(sys.argv)

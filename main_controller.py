@@ -332,8 +332,12 @@ class Controller(QMainWindow):
             msg = self.assemble_server_message("TRUMPCARD", str(dealer_id) + "," + trump_card)
             self.broadcast_server_message(msg)
 
-            # start bidding
-
+            # start bidding round
+            player_to_bid = self.table.get_player_to_bid()
+            bid_options = self.table.get_remaining_bid_options()
+            self.serverchat("Start bidding round. Please bid, %s" % player_to_bid.name)
+            msg = self.assemble_server_message("ASKBID", bid_options)
+            self.send_server_message(player_to_bid.id, msg)
 
         # ask action from player
 
@@ -371,8 +375,11 @@ class Table:
         self.deck = pd.Deck()
         self.deck.shuffle()
 
-        # trick contains the card that players have played in the trick
+        # trick info
+        self.seat_to_bid = (self.dealer_seat + 1) % 4 # left from dealer start to bid
+        self.trickbids = list()
         self.trick = pd.Stack()
+        self.tricknumber = 0
 
 
     def shuffle_seats(self):
@@ -412,6 +419,22 @@ class Table:
 
     def get_dealer(self):
         return(self.seats[self.dealer_seat])
+
+
+    def get_player_to_bid(self):
+        return (self.seats[self.seat_to_bid])
+
+
+    def get_remaining_bid_options(self):
+        if len(self.trickbids) == 0:
+            options = "pass,ask,abondance,misere"
+
+        return(options)
+
+
+
+
+
 
 app = QApplication(sys.argv)
 main = Controller()
