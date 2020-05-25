@@ -69,8 +69,12 @@ class PlayerClient(QMainWindow):
                                "misere": QPushButton("Miserie"),
                                "alone": QPushButton("Alleen gaan")
                                }
+        for btn in self.btn_bidoptions.values():
+            btn.setEnabled(False)
         self.btnlasttrike = QPushButton("Toon laatste slag")
+        self.btnlasttrike.setEnabled(False)
         self.playcard = QPushButton("Speel kaart")
+        self.playcard.setEnabled(False)
 
         self.buttonbox_layout = QGridLayout()
         i = 0
@@ -79,21 +83,6 @@ class PlayerClient(QMainWindow):
             i += 1
         self.buttonbox_layout.addWidget(self.btnlasttrike, 0, 3)
         self.buttonbox_layout.addWidget(self.playcard, 1, 3)
-
-        # ----- debug
-        self.btn1 = QPushButton("1")
-        self.btn2 = QPushButton("2")
-        self.btn3 = QPushButton("3")
-        self.btn4 = QPushButton("4")
-        self.buttonbox_layout.addWidget(self.btn1, 2, 0)
-        self.buttonbox_layout.addWidget(self.btn2, 2, 1)
-        self.buttonbox_layout.addWidget(self.btn3, 2, 2)
-        self.buttonbox_layout.addWidget(self.btn4, 2, 3)
-        self.btn1.clicked.connect(lambda x: self.debug1())
-        self.btn2.clicked.connect(lambda x: self.debug2())
-        self.btn3.clicked.connect(lambda x: self.debug3())
-        self.btn4.clicked.connect(lambda x: self.debug4())
-        # ----- debug
 
         self.buttonbox = QWidget()
         self.buttonbox.setLayout(self.buttonbox_layout)
@@ -112,10 +101,9 @@ class PlayerClient(QMainWindow):
         central_layout.addWidget(self.textbox, 0, 1)
         central_layout.addWidget(self.input_line, 1, 1)
 
-        self.btn1.setSizePolicy(minimum_policy)
-        self.btn2.setSizePolicy(minimum_policy)
-        self.btn3.setSizePolicy(minimum_policy)
-        self.btn4.setSizePolicy(minimum_policy)
+        for btn in self.btn_bidoptions.values():
+            btn.setSizePolicy(minimum_policy)
+
         self.input_line.setSizePolicy(minimum_policy)
         self.view.setSizePolicy(fixed_policy)
 
@@ -126,23 +114,38 @@ class PlayerClient(QMainWindow):
         # actions
         connect_action = QAction("Connect", self)
         about_action = QAction("About", self)
-        debug_action = QAction("debug", self)
 
         menubar = self.menuBar()
         menu = menubar.addMenu("&Menu")
         menu.addAction(connect_action)
         menu.addAction(about_action)
-        menu.addAction(debug_action)
 
         # signals & slots
         connect_action.triggered.connect(lambda x: self.connect_to_a_game())
         self.input_line.returnPressed.connect(self.send_chat)
-        debug_action.triggered.connect(lambda x: self.debug())
-        # todo this always send bid(alone)
         for item in self.btn_bidoptions.items():
             action = item[0]
             btn = item[1]
-            btn.clicked.connect(lambda x: self.bid(action))
+            btn.clicked.connect(lambda x, action=action: self.bid(action)) # special lambda parameter action
+
+        # ----- debug
+        debug_action = QAction("debug", self)
+        menu.addAction(debug_action)
+        debug_action.triggered.connect(lambda x: self.debug())
+
+        self.btn1 = QPushButton("1")
+        self.btn2 = QPushButton("2")
+        self.btn3 = QPushButton("3")
+        self.btn4 = QPushButton("4")
+        self.buttonbox_layout.addWidget(self.btn1, 2, 0)
+        self.buttonbox_layout.addWidget(self.btn2, 2, 1)
+        self.buttonbox_layout.addWidget(self.btn3, 2, 2)
+        self.buttonbox_layout.addWidget(self.btn4, 2, 3)
+        self.btn1.clicked.connect(lambda x: self.debug1())
+        self.btn2.clicked.connect(lambda x: self.debug2())
+        self.btn3.clicked.connect(lambda x: self.debug3())
+        self.btn4.clicked.connect(lambda x: self.debug4())
+        # ----- end debug
 
 
     def log(self, txt):
@@ -284,25 +287,24 @@ class PlayerClient(QMainWindow):
                 break
         return(player)
 
+    def get_dealer_player(self):
+        for player in self.players:
+            if player.is_dealer:
+                break
+        return(player)
+
 
     def enable_bid_options(self, bidoptions):
-        if "ask" in bidoptions:
-            self.btnask.setEnabled(True)
-        if "pass" in bidoptions:
-            self.btnpass.setEnabled(True)
-        if "join" in bidoptions:
-            self.btnjoin.setEnabled(True)
-        if "abondance" in bidoptions:
-            self.btnabondance.setEnabled(True)
-        if "misere" in bidoptions:
-            self.btnmisere.setEnabled(True)
-        if "alone" in bidoptions:
-            self.btnalone.setEnabled(True)
+        opts = ["pass","ask","join","abondance","misere","alone"]
+        for opt in opts:
+            if opt in bidoptions:
+                self.btn_bidoptions[opt].setEnabled(True)
 
 
     def bid(self, bid):
-        # suit = self.players[0].trumpcard.suit # could be problem for trull
-        suit = "Clubs" # debug
+        dealer = self.get_dealer_player()
+        suit = dealer.trumpcard.suit # could be problem for trull
+        # suit = "Clubs" # debug
 
         if bid == "abondance":
             suit = self.choose_suit_pre_bid()
@@ -335,26 +337,49 @@ class PlayerClient(QMainWindow):
 
         # complete with server message
         self.send_chat_txt(txt)
+        msg = self.assemble_player_message("BID", "%s,%s" % (bid,suit))
+        self.send_player_message(msg)
+
+        # reset de knoppen
+        for btn in self.btn_bidoptions.values():
+            btn.setEnabled(False)
 
 
     def choose_suit_pre_bid(self):
         dlg = Choose_suit_dialog(self)
         if dlg.exec_():
+            index = 0
+            total = 0
             for i in range(4):
                 if dlg.suitbuttons[i].isChecked():
-                    break
-            suit = ["Clubs", "Diamonds", "Spades", "Hearts"][i]
-            return(suit)
-        else:
-            return(None)
+                    index = i
+                    total += 1
+            if total == 1:
+                suit = ["Clubs", "Diamonds", "Spades", "Hearts"][index]
+                return(suit)
+            else:
+                return(None)
 
 
 
     def debug(self):
+        # for btn in self.btn_bidoptions.values():
+        #     btn.setEnabled(True)
         pass
 
+
     def debug1(self):
-        print("it's_a_meeee")
+        # for btn in self.btn_bidoptions.values():
+        #     btn.setEnabled(False)
+        print("debug1")
+        dealer = self.get_dealer_player()
+        print(dealer)
+        print(dealer.name)
+        print(dealer.__dict__)
+        print(dealer.trumpcard)
+        print(dealer.trumpcard.__dict__)
+        print(dealer.trumpcard.suit)  # could be problem for trull
+
 
     def debug2(self):
         for player in self.players:
@@ -363,8 +388,10 @@ class PlayerClient(QMainWindow):
             print(player.name)
             print(player.seat)
 
+
     def debug3(self):
-        pass
+        print("dit is button pass")
+
 
     def debug4(self):
         dlg = Choose_suit_dialog(self)
@@ -394,6 +421,7 @@ class Player():
         self.draw_name(seat, name)
         self.draw_hand()
 
+        self.is_dealer = False
         self.trumpcard = None
 
 
@@ -478,6 +506,7 @@ class Player():
         card.setTransform(transformation)
         self.scene.addItem(card)
         self.trumpcard = card
+        self.is_dealer = True
 
 
 class Graphic_Card(QGraphicsSvgItem):

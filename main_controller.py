@@ -186,15 +186,14 @@ class Controller(QMainWindow):
 
 
     def read_player_message(self, player_id):
-        print("reading player message with id: ")
-        print(player_id)
+        # print("msg received from player: %i " % player_id)
         # use the tcpsocket of the correct player as IO device for the qdatastream
         player = self.players[player_id]
         socket = player.socket
-        print("bytesavailable")
-        print(socket.bytesAvailable())
-        print("next block size")
-        print(player.next_block_size)
+        # print("bytesavailable")
+        # print(socket.bytesAvailable())
+        # print("next block size")
+        # print(player.next_block_size)
 
         stream = QDataStream(socket)
         stream.setVersion(QDATASTREAMVERSION)
@@ -208,14 +207,13 @@ class Controller(QMainWindow):
             if socket.bytesAvailable() < player.next_block_size:
                 return
 
-            print("blocksize")
-            print(player.next_block_size)
+            # print("blocksize")
+            # print(player.next_block_size)
 
             mtype = stream.readQString()
             mcontent = stream.readQString()
 
-            print("player x just said ...")
-            print(player_id)
+            print("player %i just said ..." % player_id)
             print(mtype)
             print(mcontent)
 
@@ -224,10 +222,22 @@ class Controller(QMainWindow):
             if mtype == "LOGON":
                 self.welcome_player(player, mcontent)
                 self.check_if_enough_players_are_connected()
-
             elif mtype == "CHAT":
                 msg = self.assemble_server_message("CHAT", player.name + ": " + mcontent)
                 self.broadcast_server_message(msg)
+            elif mtype == "BID":
+                newbid = mcontent.split(",")
+                self.table.add_bid(newbid)
+                player_to_bid = self.table.get_player_to_bid() # player object
+                if player_to_bid is None:
+                    self.serverchat("BIDDING IS OVER")
+                    # start the game, bidding is over
+                else:
+                    bid_options = self.table.get_remaining_bid_options()
+                    self.serverchat("Please bid, %s" % player_to_bid.name)
+                    msg = self.assemble_server_message("ASKBID", bid_options)
+                    self.send_server_message(player_to_bid.id, msg)
+
             else:
                 self.log("Unrecognized request %s" % mtype)
 
@@ -377,7 +387,7 @@ class Table:
 
         # trick info
         self.seat_to_bid = (self.dealer_seat + 1) % 4 # left from dealer start to bid
-        self.trickbids = list()
+        self.trickbids = [list(), list()]
         self.trick = pd.Stack()
         self.tricknumber = 0
 
@@ -422,18 +432,50 @@ class Table:
 
 
     def get_player_to_bid(self):
-        return (self.seats[self.seat_to_bid])
+        cnt = len(self.trickbids[0])
+        if cnt < 4:
+            return (self.seats[self.seat_to_bid])
+        elif cnt == 4:
+            opts = self.get_remaining_bid_options()
+            if opts is None:
+                return(None)
+            else:
+                return (self.seats[self.seat_to_bid])
+        else:
+            return(None)
 
 
     def get_remaining_bid_options(self):
-        if len(self.trickbids) == 0:
-            options = "pass,ask,abondance,misere"
-
+        bidcount = len(self.trickbids[0])
+        if bidcount < 4:
+            if "misere" in self.trickbids[0]:
+                options = "pass"
+            elif "abondance" in self.trickbids[0]:
+                options = "pass,misere"
+            elif "join" in self.trickbids[0]:
+                options = "pass,abondance,misere"
+            elif "ask" in self.trickbids[0]:
+                options = "pass,join,abondance,misere"
+            else:
+                options = "pass,ask,abondance,misere"
+        else:
+            if "ask" in self.trickbids[0] \
+                and "misere" not in self.trickbids[0] \
+                and "abondance" not in self.trickbids[0] \
+                and "join" not in self.trickbids[0]:
+                options = "pass,alone"
+            else:
+                options = None
         return(options)
 
 
+    def add_bid(self, newbid):
+        action = newbid[0]
+        suit = newbid[1]
+        self.trickbids[0].append(action)
+        self.trickbids[1].append(suit)
 
-
+        self.seat_to_bid = (self.seat_to_bid + 1) % 4
 
 
 app = QApplication(sys.argv)
