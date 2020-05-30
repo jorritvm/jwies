@@ -88,6 +88,7 @@ class PlayerClient(QMainWindow):
         self.btnlasttrike.setEnabled(False)
         self.btnplaycard = QPushButton("Speel kaart")
         self.btnplaycard.setEnabled(False)
+        self.btnplaycard.setMinimumHeight(40)
         buttonbox_layout.addWidget(self.btnlasttrike)
         buttonbox_layout.addWidget(self.btnplaycard)
 
@@ -156,19 +157,17 @@ class PlayerClient(QMainWindow):
         self.btn3.clicked.connect(lambda x: self.debug3())
         self.btn4.clicked.connect(lambda x: self.debug4())
 
-        self.resize(1200,600)
+        self.resize(1100,600)
         # ----- end debug
 
     def log(self, txt):
         msg = self.timestamp_it(txt)
         self.textbox.appendPlainText(msg)
 
-
     def load_settings(self):
         settings = configparser.ConfigParser()
         settings.read(os.path.join("settings", "player.ini"))
         return (settings)
-
 
     def connect_to_a_game(self):
         connect_pane = uic.loadUi(os.path.join("ui", "connect_pane.ui"))
@@ -195,11 +194,9 @@ class PlayerClient(QMainWindow):
             self.log("Connecting to server...")
             self.socket.connectToHost(self.settings["last_connection"]["host"], int(self.settings["last_connection"]["port"]))
 
-
     def connected_handler(self):
         msg = self.assemble_player_message("LOGON", self.settings["last_connection"]["name"])
         self.send_player_message(msg)
-
 
     def assemble_player_message(self, mtype, mcontent):
         msg = QByteArray()
@@ -212,16 +209,10 @@ class PlayerClient(QMainWindow):
         stream.writeUInt16(msg.size() - SIZEOF_UINT16)
         return(msg)
 
-
     def send_player_message(self, msg):
-        # self.next_block_size = 0
-        print("writing my bytearray of size " + str(msg.size()))
         self.socket.write(msg)
 
-
     def read_server_message(self):
-        print("now in function read server messages, bytes available:")
-        print(self.socket.bytesAvailable())
         stream = QDataStream(self.socket)
         stream.setVersion(QDATASTREAMVERSION)
 
@@ -237,9 +228,6 @@ class PlayerClient(QMainWindow):
             mtype = stream.readQString()
             mcontent = stream.readQString()
 
-            print(mtype)
-            print(mcontent)
-
             self.next_block_size = 0
 
             if mtype == "YOUR_ID":
@@ -252,6 +240,15 @@ class PlayerClient(QMainWindow):
                 name = mcontent.split(",")[1]
                 seat = mtype.replace("SEAT","") # WEST NORTH EAST
                 self.players.append(Player(id, name, seat, self.scene, self.svgrenderer))
+            if mtype == "DEALERID":
+                for player in self.players:
+                    player.set_dealer(False)
+                dealer = self.get_player_using_id(int(mcontent))
+                dealer.set_dealer(True)
+            if mtype == "SHUFFLEDECK":
+                self.answer_to_shuffle_deck()
+            if mtype == "CUTDECK":
+                self.answer_to_cut_deck(mcontent.split(","))
             if mtype == "HAND":
                 hand = mcontent.split(",")[0:13]
                 print(hand)
@@ -265,23 +262,17 @@ class PlayerClient(QMainWindow):
                 bidoptions = mcontent.split(",")
                 self.enable_bid_options(bidoptions)
 
-        print("i have left the loop")
-
-
     def server_has_stopped(self):
         self.log("Socket error: Connection closed by server")
         self.socket.close()
-
 
     def server_has_error(self, error):
         self.log("Socket error: %s" % (self.socket.errorString()))
         self.socket.close()
 
-
     def timestamp_it(self, s):
         x = "(" + time.strftime('%H:%M:%S') + ") " + s
-        return(x)
-
+        return x
 
     def send_chat(self):
         txt = self.input_line.text()
@@ -296,29 +287,62 @@ class PlayerClient(QMainWindow):
         for player in self.players:
             if player.id == id:
                 break
-        return(player)
+        return player
 
     def get_dealer_player(self):
         for player in self.players:
             if player.is_dealer:
                 break
-        return(player)
+        return player
 
+    def answer_to_shuffle_deck(self):
+        msgbox = QMessageBox()
+        msgbox.setIcon(QMessageBox.Question)
+        msgbox.setText("Do you want to reshuffle the deck?")
+        msgbox.setWindowTitle("Do you want to reshuffle the deck?")
+        msgbox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        reply = msgbox.exec()
+        if reply == QMessageBox.Yes:
+            self.send_chat_txt("Yes, reshuffle the deck.")
+            msg = self.assemble_player_message("RESHUFFLE", "YES")
+        else:
+            self.send_chat_txt("No, do not reshuffle the deck.")
+            msg = self.assemble_player_message("RESHUFFLE", "NO")
+        self.send_player_message(msg)
+
+    def answer_to_cut_deck(self, minmax):
+        mincut = int(minmax[0])
+        maxcut = int(minmax[1])
+        num,ok = QInputDialog.getInt(self,
+                                    "Cut deck",
+                                    "How many cards do you want to slide under the deck?",
+                                    random.randint(mincut,maxcut),
+                                    mincut,
+                                    maxcut)
+        if ok:
+            msg = self.assemble_player_message("CUT", str(num))
+            self.send_player_message(msg)
+            self.send_chat_txt("Cutting %i cards" % num)
+        else:
+            self.answer_to_cut_deck(minmax)
 
     def enable_bid_options(self, bidoptions):
-        opts = ["pass","ask","join","abondance","misere","alone"]
+        opts = ["pass","ask","join","abon9","misere","abon10","abon11","abon12","misere_ouverte","solo","soloslim","alone"]
         for opt in opts:
             if opt in bidoptions:
                 self.btn_bidoptions[opt].setEnabled(True)
-
 
     def bid(self, bid):
         dealer = self.get_dealer_player()
         suit = dealer.trumpcard.suit # could be problem for trull
         # suit = "Clubs" # debug
 
-        if bid == "abondance":
-            suit = self.choose_suit_pre_bid()
+        if bid in ["abon9", "abon10", "abon11", "abon12"]:
+            suit = self.choose_suit_pre_bid(False)
+            if suit is None:
+                return
+        if bid == "solo":
+            suit = self.choose_suit_pre_bid(True)
             if suit is None:
                 return
 
@@ -330,6 +354,8 @@ class PlayerClient(QMainWindow):
             troef = "SCHOPPEN"
         elif suit == "Hearts":
             troef = "HARTEN"
+        elif suit == "no_trump":
+            troef = "ZONDER TROEF"
 
         if bid == "ask":
             txt = "IK GA " + troef + " VRAGEN"
@@ -337,10 +363,22 @@ class PlayerClient(QMainWindow):
             txt = "IK GA PASSEN"
         elif bid == "join":
             txt = "IK GA MEE IN " + troef
-        elif bid == "abondance":
-            txt = "IK GA ABONDANCE IN DE " + troef
+        elif bid == "abon9":
+            txt = "IK GA ABONDANCE 9 SLAGEN IN DE " + troef
         elif bid == "misere":
             txt = "IK GA MISERIE"
+        elif bid == "misere_ouvere":
+            txt = "IK GA MISERIE BLOOT"
+        elif bid == "abon10":
+            txt = "IK GA ABONDANCE 10 SLAGEN IN DE " + troef
+        elif bid == "abon11":
+            txt = "IK GA ABONDANCE 11 SLAGEN IN DE " + troef
+        elif bid == "abon12":
+            txt = "IK GA ABONDANCE 12 SLAGEN IN DE " + troef
+        elif bid == "solo":
+            txt = "IK GA SOLO IN DE " + troef
+        elif bid == "soloslim":
+            txt = "IK GA SOLO SLIM (troef: %s)" % troef
         elif bid == "alone":
             txt = "IK GA ALLEEN GAAN"
         elif bid == "pass":
@@ -355,23 +393,24 @@ class PlayerClient(QMainWindow):
         for btn in self.btn_bidoptions.values():
             btn.setEnabled(False)
 
-
-    def choose_suit_pre_bid(self):
-        dlg = Choose_suit_dialog(self)
+    def choose_suit_pre_bid(self, allow_no_trump):
+        """open suit selection dialog box and return the selected suit"""
+        dlg = Choose_suit_dialog(allow_no_trump, self)
         if dlg.exec_():
             index = 0
             total = 0
-            for i in range(4):
+            for i in range(4 + int(allow_no_trump)):
                 if dlg.suitbuttons[i].isChecked():
                     index = i
                     total += 1
             if total == 1:
-                suit = ["Clubs", "Diamonds", "Spades", "Hearts"][index]
+                suits = ["Clubs", "Diamonds", "Spades", "Hearts"]
+                if allow_no_trump:
+                    suits.append("no_trump")
+                suit = suits[index]
                 return(suit)
             else:
                 return(None)
-
-
 
     def debug(self):
         # for btn in self.btn_bidoptions.values():
@@ -408,29 +447,12 @@ class PlayerClient(QMainWindow):
         self.scene.addItem(self.c)
 
     def debug3(self):
-        self.scene.removeItem(self.c)
+        pass
+        suit = self.choose_suit_pre_bid(False)
+        self.log(suit)
 
     def debug4(self):
-        pass
-        # dlg = Choose_suit_dialog(self)
-        # if dlg.exec_():
-        #     for i in range(4):
-        #         if dlg.suitbuttons[i].isChecked():
-        #             break
-        #     suit = ["Clubs", "Diamonds", "Spades", "Hearts"][i]
-        #     print("Success!")
-        #     print(suit)
-        # else:
-        #     print("Cancel!")
-
-class MyGraphicsView(QGraphicsView):
-
-    def __init__(self, fieldrect, *args, **kwargs):
-        super(MyGraphicsView, self).__init__(*args, **kwargs)
-        self.fieldrect = fieldrect
-
-    def resizeEvent(self, event):
-        self.fitInView(self.fieldrect, Qt.KeepAspectRatio)
+        self.answer_to_cut_deck([10,30])
 
 
 app = QApplication(sys.argv)

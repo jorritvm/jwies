@@ -31,15 +31,22 @@ class Player():
             card = Graphic_Card("back", z + 10, self.svgrenderer)
             self.hand.append(card)
 
-
     def draw_name(self, seat, name):
-        name_label = self.scene.addText(name)
-        name_label.setX(X_NAME[seat])
-        name_label.setY(Y_NAME[seat])
+        self.name_label = self.scene.addText(name)
+        self.name_label.setX(X_NAME[seat])
+        self.name_label.setY(Y_NAME[seat])
 
+    def set_dealer(self, is_dealer):
+        self.is_dealer = is_dealer
+        self.scene.removeItem(self.name_label)
+        if is_dealer:
+            name = "Dealer: " + self.name
+        else:
+            name = self.name
+        self.draw_name(self.seat, name)
 
     def receive_cards(self, card_abbreviation_list):
-        # todo: remove dummy cards from the scene
+        # delete the backside up cards first
         for card in self.hand:
             self.scene.removeItem(card)
 
@@ -56,7 +63,6 @@ class Player():
         # draw them on the board
         self.draw_hand()
 
-
     def draw_hand(self):
         seat = self.seat
         for card in self.hand:
@@ -67,7 +73,6 @@ class Player():
             transformation.rotate(CARD_ROTATE[seat])
             card.setTransform(transformation)
             self.scene.addItem(card)
-
 
     def sort_pdstack_on_hand(self, stack):
         seq = list()
@@ -88,14 +93,13 @@ class Player():
             elif card.value == "Ace":
                 v += 14
             else:
-                v += int(card.value) # 2 - 10
+                v += int(card.value)  # 2 - 10
             seq.append(v)
         sorted_indices = sorted(range(len(seq)), key=seq.__getitem__)
         card_list = [stack[i] for i in sorted_indices]
         return_stack = pd.stack.Stack()
         return_stack.insert_list(card_list)
-        return(return_stack)
-
+        return return_stack
 
     def draw_trump_card(self, abbrev):
         card = Graphic_Card(abbrev, 0, self.svgrenderer)
@@ -115,7 +119,7 @@ class Graphic_Card(QGraphicsSvgItem):
     def __init__(self, abbrev, z, svgrenderer, *args, **kwargs):
         super(Graphic_Card, self).__init__(*args, **kwargs)
 
-        self.card_click = pyqtSignal(str)
+        # self.card_click = pyqtSignal(str)
 
         self.setSharedRenderer(svgrenderer)
         self.setZValue(z)
@@ -134,40 +138,45 @@ class Graphic_Card(QGraphicsSvgItem):
             self.svgdescription = self.get_svg_description()
             self.setElementId(self.svgdescription)
 
-
     def get_svg_description(self):
+        """translate pydealer suit and value into svg card descriptor"""
         v = self.value.lower()
         if v == "ace":
             v = "1"
         s = self.suit.lower()
         s = s[0:len(s)-1]
         desc = "%s_%s" % (v, s)
-        return(desc)
-
+        return desc
 
     def mousePressEvent(self, event):
         if self.svgdescription != "back":
             print("clicked mouse on card " + str(self.z))
-            print(self.sceneBoundingRect().topLeft().x(), self.sceneBoundingRect().topLeft().y())
-            print(self.sceneBoundingRect().bottomRight().x(), self.sceneBoundingRect().bottomRight().y())
+            # print(self.sceneBoundingRect().topLeft().x(), self.sceneBoundingRect().topLeft().y())
+            # print(self.sceneBoundingRect().bottomRight().x(), self.sceneBoundingRect().bottomRight().y())
             #self.card_click.emit(str(self.z))
 
 
 class Choose_suit_dialog(QDialog):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, allow_no_trump, *args, **kwargs):
         super(Choose_suit_dialog, self).__init__(*args, **kwargs)
+        # super(Choose_suit_dialog, self).__init__(parent = None)
 
         self.setWindowTitle("Choose the suit you want for Trump...")
 
         suits = ["clubs", "diamonds", "spades", "hearts"]
+        if allow_no_trump:
+            suits.append(None)
         self.suitbuttons = list()
         for suit in suits:
             btn = QPushButton()
-            pm = QPixmap(os.path.join("icons", suit + ".png"))
-            qi = QIcon(pm)
-            btn.setIcon(qi)
-            btn.setIconSize(QSize(50,50))
+            if suit is not None:
+                pm = QPixmap(os.path.join("icons", suit + ".png"))
+                qi = QIcon(pm)
+                btn.setIcon(qi)
+                btn.setIconSize(QSize(50,50))
+            else:
+                btn.setText("Geen troef")
             btn.setCheckable(True)
             self.suitbuttons.append(btn)
         suits_layout = QHBoxLayout()
@@ -185,3 +194,12 @@ class Choose_suit_dialog(QDialog):
         self.layout.addWidget(self.buttonBox)
         self.setLayout(self.layout)
 
+
+class MyGraphicsView(QGraphicsView):
+
+    def __init__(self, fieldrect, *args, **kwargs):
+        super(MyGraphicsView, self).__init__(*args, **kwargs)
+        self.fieldrect = fieldrect
+
+    def resizeEvent(self, event):
+        self.fitInView(self.fieldrect, Qt.KeepAspectRatio)

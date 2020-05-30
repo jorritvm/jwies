@@ -60,6 +60,9 @@ class Table:
         returnstr = "%i,%s" % (neighbour.id, neighbour.name)
         return returnstr
 
+    def cut_deck(self, num):
+        self.deck = pd.stack.Stack(cards=self.deck[num:52] + self.deck[0:num])
+
     def divide_cards(self, roundsize):
         self.last_card_before_dealing = self.deck[51]
         for cards_to_deal_this_round in roundsize:
@@ -77,17 +80,18 @@ class Table:
         return trull
 
     def get_player_to_bid(self):
-        cnt = len(self.trickbids[0])
-        if cnt < 4:
-            return (self.seats[self.seat_to_bid])
-        elif cnt == 4:
-            opts = self.get_remaining_bid_options()
-            if opts is None:
-                return (None)
+        """ the next player to bid is simply the one to the left, and, if one asked, and three passed
+        he who asked has a final say"""
+        bids = self.trickbids[0]
+        if len(bids) < 4:
+            return self.seats[self.seat_to_bid]
+        elif len(bids) == 4:
+            if "ask" in bids and bids.count("pass") == 3:
+                return self.trickbids[2][bids.index("ask")]
             else:
-                return (self.seats[self.seat_to_bid])
+                return None
         else:
-            return (None)
+            return None
 
     def get_remaining_bid_options(self):
         bids = self.trickbids[0]
@@ -131,42 +135,91 @@ class Table:
     def add_bid(self, newbid):
         action = newbid[0]
         suit = newbid[1]
+        player = newbid[2]
+        # even if a player already bid, and has to do a final bid, we append it! (so trickbids > 4)
         self.trickbids[0].append(action)  # what type of bid was made?
         self.trickbids[1].append(suit)  # if a specific suit was given, log it
-        self.trickbids[2].append(self.seats[self.seat_to_bid])  # who made the bid
+        self.trickbids[2].append(player)  # who made the bid
         self.seat_to_bid = (self.seat_to_bid + 1) % 4
 
     def divide_teams(self):
         self.attackers = list()
         self.defenders = list()
 
+        bids =  self.trickbids[0]
+        trumps = self.trickbids[1]
+        bidders = self.trickbids[2]
+
+        self.ready_to_start_game = True
+
         i = 0
-        if "misere" in self.trickbids[0]:
-            bidder = self.trickbids[2][self.trickbids[0].index("misere")]
+        if "soloslim" in bids:
+            bidder = bidders[bids.index("soloslim")]
+            self.attackers.append(bidder)
+            self.defenders = [player for player in self.seats if player not in self.attackers]
+            self.trump = trumps[bids.index("soloslim")]
+            if self.trump == "no_trump":
+                self.trump = None
+            self.player_to_play_card = bidder
+        elif "solo" in bids:
+            bidder = bidders[bids.index("solo")]
+            self.attackers.append(bidder)
+            self.defenders = [player for player in self.seats if player not in self.attackers]
+            self.trump = trumps[bids.index("solo")]
+        if "misere_ouverte" in bids:
+            bidder = bidders[bids.index("misere_ouverte")]
             self.attackers.append(bidder)
             self.defenders = [player for player in self.seats if player not in self.attackers]
             self.trump = None
-        elif "abondance" in self.trickbids[0]:
-            bidder = self.trickbids[2][self.trickbids[0].index("abondance")]
+        elif "abon12" in bids:
+            bidder = bidders[bids.index("abon12")]
             self.attackers.append(bidder)
             self.defenders = [player for player in self.seats if player not in self.attackers]
-            self.trump = self.trickbids[1][self.trickbids[0].index("abondance")]
-        elif "join" in self.trickbids[0]:
-            bidder = self.trickbids[2][self.trickbids[0].index("join")]
-            self.attackers.append(bidder)
-            bidder = self.trickbids[2][self.trickbids[0].index("ask")]
+            self.trump = trumps[bids.index("abon12")]
+        elif "abon11" in bids:
+            bidder = bidders[bids.index("abon11")]
             self.attackers.append(bidder)
             self.defenders = [player for player in self.seats if player not in self.attackers]
-            self.trump = self.trickbids[1][self.trickbids[0].index("ask")]
-        elif "alone" in self.trickbids[0]:
-            bidder = self.trickbids[2][self.trickbids[0].index("ask")]
+            self.trump = trumps[bids.index("abon11")]
+        elif "abon10" in bids:
+            bidder = bidders[bids.index("abon10")]
             self.attackers.append(bidder)
             self.defenders = [player for player in self.seats if player not in self.attackers]
-            self.trump = self.trickbids[1][self.trickbids[0].index("alone")]
-        elif "ask" in self.trickbids[0]:
-            # a player asked, nobody joined, and finally he did not go alone, we should redeal and let
-            # the next player redeal
+            self.trump = trumps[bids.index("abon10")]
+        elif "misere" in bids:
+            bidder = bidders[bids.index("misere")]
+            self.attackers.append(bidder)
+            self.defenders = [player for player in self.seats if player not in self.attackers]
+            self.trump = None
+        elif "abon9" in bids:
+            bidder = bidders[bids.index("abon9")]
+            self.attackers.append(bidder)
+            self.defenders = [player for player in self.seats if player not in self.attackers]
+            self.trump = trumps[bids.index("abon9")]
+        elif "join" in bids:
+            bidder = bidders[bids.index("join")]
+            self.attackers.append(bidder)
+            bidder = bidders[bids.index("ask")]
+            self.attackers.append(bidder)
+            self.defenders = [player for player in self.seats if player not in self.attackers]
+            self.trump = trumps[bids.index("ask")]
+        elif "alone" in bids:
+            bidder = bidders[bids.index("alone")]
+            self.attackers.append(bidder)
+            self.defenders = [player for player in self.seats if player not in self.attackers]
+            self.trump = trumps[bids.index("alone")]
+        elif bids.count("pass") == 4 & "ask" in bids:
+            # a player asked, nobody joined, and finally he did not go alone, the next player should redeal
+            self.serverchat("One player asked, nobody joined, player did not go alone, next player will redeal.")
+            self.ready_to_start_game = False
+            # NEWROUND
             pass
         else:
-            # everyone just passed, we should redeal
+            # everyone just passed, same dealer should redeal
+            self.serverchat("Everyone passed, same dealer will redeal.")
+            # NEWROUND
+            self.ready_to_start_game = False
             pass
+
+    def get_player_to_play_card(self):
+        pass

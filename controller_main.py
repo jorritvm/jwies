@@ -205,8 +205,16 @@ class Controller(QMainWindow):
             elif mtype == "CHAT":
                 msg = self.assemble_server_message("CHAT", player.name + ": " + mcontent)
                 self.broadcast_server_message(msg)
+            elif mtype == "RESHUFFLE":
+                if mcontent == "YES":
+                    self.table.deck.shuffle()
+                self.ask_to_cut_deck()
+            elif mtype == "CUT":
+                self.table.cut_deck(int(mcontent))
+                self.divide_cards()
             elif mtype == "BID":
                 newbid = mcontent.split(",")
+                newbid.append(self.players[int(player_id)])
                 self.table.add_bid(newbid)
                 player_to_bid = self.table.get_player_to_bid() # player object
                 if player_to_bid is None:
@@ -217,7 +225,6 @@ class Controller(QMainWindow):
                     self.serverchat("Please bid, %s" % player_to_bid.name)
                     msg = self.assemble_server_message("ASKBID", bid_options)
                     self.send_server_message(player_to_bid.id, msg)
-
             else:
                 self.log("Unrecognized request %s" % mtype)
 
@@ -276,15 +283,41 @@ class Controller(QMainWindow):
         self.start_game()
 
     def start_game(self):
+        dealer = self.table.get_dealer()
+        # tell all players who the dealer is
+        self.serverchat("The dealer for this round is: %s" % dealer.name)
+        msg = self.assemble_server_message("DEALERID", str(dealer.id))
+        self.broadcast_server_message(msg)
+
+        # check if the dealer wants to shuffle
+        if self.settings["game"]["dealer_can_shuffle"] == "True":
+            self.serverchat("Asking dealer " + dealer.name + " if he wishes to shuffle the deck of cards.")
+            msg = self.assemble_server_message("SHUFFLEDECK", "no_message")
+            self.send_server_message(dealer.id, msg)
+        else:
+            self.ask_to_cut_deck()
+
+    def ask_to_cut_deck(self):
+        cutter_seat = self.table.dealer_seat - 1
+        cutter = self.table.seats[cutter_seat]
+
+        mincut = str(self.settings["game"]["minimum_cards_to_cut"])
+        maxcut = str(self.settings["game"]["maximum_cards_to_cut"])
+
+        self.serverchat("Player %s can now cut the deck by taking between %s and %s cards" % (cutter.name, mincut, maxcut))
+        msg = self.assemble_server_message("CUTDECK", "%s,%s" % (mincut, maxcut))
+        self.send_server_message(cutter.id, msg)
+
+    def divide_cards(self):
         # divide the cards
         r1 = self.settings.getint('game', 'deal_1')
         r2 = self.settings.getint('game', 'deal_2')
         r3 = self.settings.getint('game', 'deal_3')
         r4 = self.settings.getint('game', 'deal_4')
+        self.serverchat("Dealer will now deal cards as follows: %i-%i-%i-%i" % (r1,r2,r3,r4))
         self.table.divide_cards([r1,r2,r3,r4])
 
         # tell every player about their hand
-        self.serverchat("The dealer for this round is: %s" % self.table.get_dealer().name)
         for player in self.players:
             player_hand_txt = ""
             for i in range(13):
@@ -316,10 +349,7 @@ class Controller(QMainWindow):
     def dbug(self):
         print("close server clicked")
 
-
-
 app = QApplication(sys.argv)
 main = Controller()
 main.show()
 app.exec_()
-
