@@ -253,6 +253,10 @@ class PlayerClient(QMainWindow):
                 hand = mcontent.split(",")[0:13]
                 print(hand)
                 self.players[0].receive_cards(hand)
+                if self.players[0].amount_of_aces_on_hand() >= 3:
+                    self.send_chat_txt("Troel!")
+                else:
+                    self.send_chat_txt("Pas troel!")
             if mtype == "TRUMPCARD":
                 dealer_id = mcontent.split(",")[0]
                 trump_card_abbrev = mcontent.split(",")[1]
@@ -261,6 +265,9 @@ class PlayerClient(QMainWindow):
             if mtype == "ASKBID":
                 bidoptions = mcontent.split(",")
                 self.enable_bid_options(bidoptions)
+            if mtype == "REDEAL":
+                for player in self.players:
+                    player.reset()
 
     def server_has_stopped(self):
         self.log("Socket error: Connection closed by server")
@@ -320,9 +327,9 @@ class PlayerClient(QMainWindow):
                                     mincut,
                                     maxcut)
         if ok:
+            self.send_chat_txt("Cutting %i cards" % num)
             msg = self.assemble_player_message("CUT", str(num))
             self.send_player_message(msg)
-            self.send_chat_txt("Cutting %i cards" % num)
         else:
             self.answer_to_cut_deck(minmax)
 
@@ -389,7 +396,7 @@ class PlayerClient(QMainWindow):
         msg = self.assemble_player_message("BID", "%s,%s" % (bid,suit))
         self.send_player_message(msg)
 
-        # reset de knoppen
+        # reset the gui buttons
         for btn in self.btn_bidoptions.values():
             btn.setEnabled(False)
 

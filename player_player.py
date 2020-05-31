@@ -50,6 +50,8 @@ class Player():
         for card in self.hand:
             self.scene.removeItem(card)
 
+        self.hand = list()
+
         # sort the received cards and put them on my hand
         deck = pd.deck.Deck()
         stack = pd.stack.Stack(cards = deck.get_list(card_abbreviation_list))
@@ -62,6 +64,21 @@ class Player():
 
         # draw them on the board
         self.draw_hand()
+
+        print("content of my hand")
+        for card in self.hand:
+            print(card.abbrev)
+
+    def amount_of_aces_on_hand(self):
+        print("checking how many aces are on my hand")
+        # if i have three aces i let people know it is trull
+        aces = 0
+        for card in self.hand:
+            print(card.abbrev)
+            if card.value == "Ace":
+                aces += 1
+        return aces
+
 
     def draw_hand(self):
         seat = self.seat
@@ -112,6 +129,18 @@ class Player():
         self.scene.addItem(card)
         self.trumpcard = card
         self.is_dealer = True
+
+    def reset(self):
+        for card in self.hand:
+            self.scene.removeItem(card)
+        self.hand = list() # list of Graphic_Card objects
+        self.setup_default_cards(self.seat)
+        self.draw_hand()
+
+        self.scene.removeItem(self.name_label)
+        self.draw_name(self.seat, name)
+
+        self.trumpcard = None
 
 
 class Graphic_Card(QGraphicsSvgItem):

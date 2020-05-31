@@ -571,7 +571,7 @@
      <string/>
     </property>
    </widget>
-   <widget class="QCheckBox" name="check_solosslim_beats_trull">
+   <widget class="QCheckBox" name="check_soloslim_beats_trull">
     <property name="geometry">
      <rect>
       <x>570</x>
@@ -623,7 +623,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Miserie gaat boven troel</string>
+     <string>Miserie bloot gaat boven troel</string>
     </property>
    </widget>
    <widget class="QLabel" name="label_34">

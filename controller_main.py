@@ -21,7 +21,7 @@ class Controller(QMainWindow):
 
         self.tcp_server = QTcpServer(self)
 
-        self.table = Table()
+        self.table = Table(self.settings)
         self.players = list()  # list of user defined player objects
 
     def setup_gui(self):
@@ -90,14 +90,23 @@ class Controller(QMainWindow):
         settings_pane.setWindowIcon(QIcon(os.path.join("icons", "network-hub.png")))
 
         # set initial value for dialog box
-        settings_pane.check_dealer_shuffle.setChecked(self.settings.getboolean('game', 'dealer_can_shuffle'))
-        settings_pane.check_misere_beats_trull.setChecked(self.settings.getboolean('game', 'misere_ouverte_beats_trull'))
-        settings_pane.spin_split_minimum.setValue(self.settings.getint('game', 'minimum_cards_to_cut'))
-        settings_pane.spin_split_maximum.setValue(self.settings.getint('game', 'maximum_cards_to_cut'))
-        settings_pane.spin_deal_1.setValue(self.settings.getint('game', 'deal_1'))
-        settings_pane.spin_deal_2.setValue(self.settings.getint('game', 'deal_2'))
-        settings_pane.spin_deal_3.setValue(self.settings.getint('game', 'deal_3'))
-        settings_pane.spin_deal_4.setValue(self.settings.getint('game', 'deal_4'))
+        settings_pane.check_dealer_shuffle.setChecked(self.settings.getboolean('deal', 'dealer_can_shuffle'))
+        settings_pane.spin_split_minimum.setValue(self.settings.getint('deal', 'minimum_cards_to_cut'))
+        settings_pane.spin_split_maximum.setValue(self.settings.getint('deal', 'maximum_cards_to_cut'))
+        settings_pane.spin_deal_1.setValue(self.settings.getint('deal', 'deal_1'))
+        settings_pane.spin_deal_2.setValue(self.settings.getint('deal', 'deal_2'))
+        settings_pane.spin_deal_3.setValue(self.settings.getint('deal', 'deal_3'))
+        settings_pane.spin_deal_4.setValue(self.settings.getint('deal', 'deal_4'))
+
+        settings_pane.check_soloslim_plays_first.setChecked(self.settings.getboolean('bid', 'soloslim_plays_first'))
+        settings_pane.check_solo_plays_first.setChecked(self.settings.getboolean('bid', 'solo_plays_first'))
+        settings_pane.check_misere_ouverte_plays_first.setChecked(self.settings.getboolean('bid', 'misere_ouverte_plays_first'))
+        settings_pane.check_misere_plays_first.setChecked(self.settings.getboolean('bid', 'misere_plays_first'))
+        settings_pane.check_abondance_plays_first.setChecked(self.settings.getboolean('bid', 'abondance_plays_first'))
+        settings_pane.check_trull_above_all_else.setChecked(self.settings.getboolean('bid', 'trull_above_all_else'))
+        settings_pane.check_soloslim_beats_trull.setChecked(self.settings.getboolean('bid', 'soloslim_beats_trull'))
+        settings_pane.check_solo_beats_trull.setChecked(self.settings.getboolean('bid', 'solo_beats_trull'))
+        settings_pane.check_misere_ouverte_beats_trull.setChecked(self.settings.getboolean('bid', 'misere_ouverte_beats_trull'))
 
         settings_pane.spin_points_exact.setValue(self.settings.getint('points', 'exact_amount_of_tricks'))
         settings_pane.spin_points_surpass.setValue(self.settings.getfloat('points', 'extra_trick'))
@@ -111,14 +120,23 @@ class Controller(QMainWindow):
 
         if settings_pane.exec_():
             # save new values in settings
-            self.settings["game"]["dealer_can_shuffle"] = "True" if settings_pane.check_dealer_shuffle.isChecked() else "False"
-            self.settings["game"]["misere_ouverte_beats_trull"] = "True" if settings_pane.check_misere_beats_trull.isChecked() else "False"
-            self.settings["game"]["minimum_cards_to_cut"] = str(settings_pane.spin_split_minimum.value())
-            self.settings["game"]["maximum_cards_to_cut"] = str(settings_pane.spin_split_maximum.value())
-            self.settings["game"]["deal_1"] = str(settings_pane.spin_deal_1.value())
-            self.settings["game"]["deal_2"] = str(settings_pane.spin_deal_2.value())
-            self.settings["game"]["deal_3"] = str(settings_pane.spin_deal_3.value())
-            self.settings["game"]["deal_4"] = str(settings_pane.spin_deal_4.value())
+            self.settings["deal"]["dealer_can_shuffle"] = "True" if settings_pane.check_dealer_shuffle.isChecked() else "False"
+            self.settings["deal"]["minimum_cards_to_cut"] = str(settings_pane.spin_split_minimum.value())
+            self.settings["deal"]["maximum_cards_to_cut"] = str(settings_pane.spin_split_maximum.value())
+            self.settings["deal"]["deal_1"] = str(settings_pane.spin_deal_1.value())
+            self.settings["deal"]["deal_2"] = str(settings_pane.spin_deal_2.value())
+            self.settings["deal"]["deal_3"] = str(settings_pane.spin_deal_3.value())
+            self.settings["deal"]["deal_4"] = str(settings_pane.spin_deal_4.value())
+
+            self.settings["bid"]["soloslim_plays_first"] = "True" if settings_pane.check_soloslim_plays_first.isChecked() else "False"
+            self.settings["bid"]["solo_plays_first"] = "True" if settings_pane.check_solo_plays_first.isChecked() else "False"
+            self.settings["bid"]["misere_ouverte_plays_first"] = "True" if settings_pane.check_misere_ouverte_plays_first.isChecked() else "False"
+            self.settings["bid"]["misere_plays_first"] = "True" if settings_pane.check_misere_plays_first.isChecked() else "False"
+            self.settings["bid"]["abondance_plays_first"] = "True" if settings_pane.check_abondance_plays_first.isChecked() else "False"
+            self.settings["bid"]["trull_above_all_else"] = "True" if settings_pane.check_trull_above_all_else.isChecked() else "False"
+            self.settings["bid"]["soloslim_beats_trull"] = "True" if settings_pane.check_soloslim_beats_trull.isChecked() else "False"
+            self.settings["bid"]["solo_beats_trull"] = "True" if settings_pane.check_solo_beats_trull.isChecked() else "False"
+            self.settings["bid"]["misere_ouverte_beats_trull"] = "True" if settings_pane.check_misere_ouverte_beats_trull.isChecked() else "False"
 
             self.settings["points"]["exact_amount_of_tricks"] = str(settings_pane.spin_points_exact.value())
             self.settings["points"]["extra_trick"] = str(settings_pane.spin_points_surpass.value())
@@ -219,7 +237,12 @@ class Controller(QMainWindow):
                 player_to_bid = self.table.get_player_to_bid() # player object
                 if player_to_bid is None:
                     self.serverchat("The bidding for this game is now over.")
-                    self.table.divide_teams()
+                    x = self.table.divide_teams()
+                    if x is not None:
+                        # need to redeal
+                        self.table.collect_cards(x)
+                        msg = self.assemble_server_message("REDEAL", "no_message")
+                        self.broadcast_server_message(msg)
                 else:
                     bid_options = self.table.get_remaining_bid_options()
                     self.serverchat("Please bid, %s" % player_to_bid.name)
@@ -290,7 +313,7 @@ class Controller(QMainWindow):
         self.broadcast_server_message(msg)
 
         # check if the dealer wants to shuffle
-        if self.settings["game"]["dealer_can_shuffle"] == "True":
+        if self.settings["deal"]["dealer_can_shuffle"] == "True":
             self.serverchat("Asking dealer " + dealer.name + " if he wishes to shuffle the deck of cards.")
             msg = self.assemble_server_message("SHUFFLEDECK", "no_message")
             self.send_server_message(dealer.id, msg)
@@ -301,8 +324,8 @@ class Controller(QMainWindow):
         cutter_seat = self.table.dealer_seat - 1
         cutter = self.table.seats[cutter_seat]
 
-        mincut = str(self.settings["game"]["minimum_cards_to_cut"])
-        maxcut = str(self.settings["game"]["maximum_cards_to_cut"])
+        mincut = str(self.settings["deal"]["minimum_cards_to_cut"])
+        maxcut = str(self.settings["deal"]["maximum_cards_to_cut"])
 
         self.serverchat("Player %s can now cut the deck by taking between %s and %s cards" % (cutter.name, mincut, maxcut))
         msg = self.assemble_server_message("CUTDECK", "%s,%s" % (mincut, maxcut))
@@ -310,10 +333,10 @@ class Controller(QMainWindow):
 
     def divide_cards(self):
         # divide the cards
-        r1 = self.settings.getint('game', 'deal_1')
-        r2 = self.settings.getint('game', 'deal_2')
-        r3 = self.settings.getint('game', 'deal_3')
-        r4 = self.settings.getint('game', 'deal_4')
+        r1 = self.settings.getint('deal', 'deal_1')
+        r2 = self.settings.getint('deal', 'deal_2')
+        r3 = self.settings.getint('deal', 'deal_3')
+        r4 = self.settings.getint('deal', 'deal_4')
         self.serverchat("Dealer will now deal cards as follows: %i-%i-%i-%i" % (r1,r2,r3,r4))
         self.table.divide_cards([r1,r2,r3,r4])
 
@@ -325,14 +348,25 @@ class Controller(QMainWindow):
             msg = self.assemble_server_message("HAND", player_hand_txt)
             self.send_server_message(player.id, msg)
 
-        # check for trull
         if self.table.check_for_trull():
-            # set up trull game
-            self.serverchat("TROEL!")
-            # todo werk dit verder uit
-            pass
+            self.table.add_default_trull_player_bids()
+            if self.settings["bid"]["trull_above_all_else"] == "True":
+                # trump goes above all else, there will be no more bidding so we don't show the trump card
+                pass
+            else:
+                # bids above trull are still allowed, show players trull card
+                dealer_id = self.table.get_dealer().id
+                trump_card = self.table.last_card_before_dealing.abbrev
+                msg = self.assemble_server_message("TRUMPCARD", str(dealer_id) + "," + trump_card)
+                self.broadcast_server_message(msg)
+
+                # start bidding round
+                player_to_bid = self.table.get_player_to_bid()
+                bid_options = self.table.get_remaining_bid_options()
+                self.serverchat("Start bidding round. Please bid, %s" % player_to_bid.name)
+                msg = self.assemble_server_message("ASKBID", bid_options)
+                self.send_server_message(player_to_bid.id, msg)
         else:
-            self.serverchat("No trull...")
             # show this game's trump card (last card dealt)
             dealer_id = self.table.get_dealer().id
             trump_card = self.table.last_card_before_dealing.abbrev
