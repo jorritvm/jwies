@@ -70,6 +70,13 @@ class Table:
         self.defenders = list()
         self.trump = None
 
+    def get_player_from_id(self, id):
+        x = None
+        for player in self.seats:
+            if player.id == id:
+                x = player
+        return x
+
     def handle_player_request(self, player, mtype, mcontent):
         if mtype == "RESHUFFLE":
             if mcontent == "YES":
@@ -89,7 +96,7 @@ class Table:
         self.seats = self.controller.players.copy()
         self.shuffle_seats()
         self.controller.serverchat("Starting a new game. Sending everyone table seat positions.")
-        for player in self.players:
+        for player in self.seats:
             for direction in ("WEST", "NORTH", "EAST"):
                 neighbour_info = self.neighbouring_player_info(player, direction)
                 txt = "%i,%s" % (neighbour_info[0], neighbour_info[1])
@@ -231,7 +238,8 @@ class Table:
                 return self.seats[self.seat_to_bid]
             elif len(bids) == 4:
                 if "ask" in bids and bids.count("pass") == 3:
-                    return self.trickbids[2][bids.index("ask")]
+                    id_of_player_to_bid = self.trickbids[2][bids.index("ask")]
+                    return self.get_player_from_id(id_of_player_to_bid)
                 else:
                     return None
             else:
@@ -254,7 +262,7 @@ class Table:
         if not default_trull_bid:
             self.seat_to_bid = (self.seat_to_bid + 1) % 4
 
-    def process_a_new_bid(self, player, mcontent)
+    def process_a_new_bid(self, player, mcontent):
         # process the received bid
         newbid = mcontent.split(",")  # 2 elements: bid and suit
         newbid.append(int(player.id))
@@ -269,7 +277,6 @@ class Table:
             self.send_server_message(player_to_bid.id, msg)
         else:
             self.serverchat("The bidding for this game is now over.")
-
             need_redeal = self.check_if_we_need_to_redeal()
             if need_redeal:
                 self.collect_cards()
@@ -279,16 +286,7 @@ class Table:
                 self.start_game()
             else:
                 x = self.table.divide_teams()
-
-                # start playing cards
-
-                else:
-
-                # need to redeal
-
-            else:
-                # we start playing
-                pass
+                self.log("we start playing cards now, first player to play is " + self.player_to_play_card.name) # debug
 
     def get_remaining_bid_options(self):
         bids = self.trickbids[0]
@@ -355,7 +353,7 @@ class Table:
 
     def cleanup_for_new_round(self):
         self.last_card_before_dealing = None
-        self.seat_to_bid = (self.table.dealer_seat + 1) % 4
+        self.seat_to_bid = (self.dealer_seat + 1) % 4
         self.trickbids = [list(), list(), list()]
         self.trick = pd.Stack()
         self.trump = None

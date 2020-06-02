@@ -253,7 +253,7 @@ class Controller(QMainWindow):
     def broadcast_server_message(self, msg):
         self.log("Broadcasting server message")
         for player in self.players:
-            print(player.socket.write(msg))
+            player.socket.write(msg)
 
     def serverchat(self, txt):
         msgtxt = "Controller: " + txt
