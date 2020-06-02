@@ -79,7 +79,6 @@ class Player():
                 aces += 1
         return aces
 
-
     def draw_hand(self):
         seat = self.seat
         for card in self.hand:
@@ -136,10 +135,8 @@ class Player():
         self.hand = list() # list of Graphic_Card objects
         self.setup_default_cards(self.seat)
         self.draw_hand()
-
-        self.scene.removeItem(self.name_label)
-        self.draw_name(self.seat, name)
-
+        self.set_dealer(False)
+        self.scene.removeItem(self.trumpcard)
         self.trumpcard = None
 
 

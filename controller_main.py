@@ -24,6 +24,8 @@ class Controller(QMainWindow):
         self.table = Table(self.settings)
         self.players = list()  # list of user defined player objects
 
+        self.start_tcp_server(self.input_ip.text(), self.input_port.text())  # debug
+
     def setup_gui(self):
         # gui elements
         self.setWindowTitle("jwies - controller screen")
@@ -239,10 +241,20 @@ class Controller(QMainWindow):
                     self.serverchat("The bidding for this game is now over.")
                     x = self.table.divide_teams()
                     if x is not None:
+                        if x:
+                            self.serverchat("Everyone passed, same dealer will redeal.")
+                        else:
+                            self.serverchat("One player asked, nobody joined, "
+                                            "player did not go alone, next player will redeal.")
                         # need to redeal
-                        self.table.collect_cards(x)
+                        self.table.collect_cards()
+                        self.cleanup_for_new_round()
                         msg = self.assemble_server_message("REDEAL", "no_message")
                         self.broadcast_server_message(msg)
+                        self.start_game()
+                    else:
+                        # we start playing
+                        pass
                 else:
                     bid_options = self.table.get_remaining_bid_options()
                     self.serverchat("Please bid, %s" % player_to_bid.name)
@@ -379,6 +391,13 @@ class Controller(QMainWindow):
             self.serverchat("Start bidding round. Please bid, %s" % player_to_bid.name)
             msg = self.assemble_server_message("ASKBID", bid_options)
             self.send_server_message(player_to_bid.id, msg)
+
+    def cleanup_for_new_round(self):
+        self.table.last_card_before_dealing = None
+        self.table.seat_to_bid = (self.table.dealer_seat + 1) % 4
+        self.table.trickbids = [list(), list(), list()]
+        self.table.trick = pd.Stack()
+        self.table.trump = None
 
     def dbug(self):
         print("close server clicked")

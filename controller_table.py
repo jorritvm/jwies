@@ -298,14 +298,13 @@ class Table:
             self.trump = trumps[bids.index("alone")]
         elif bids.count("pass") == 4 and "ask" in bids:
             # a player asked, nobody joined, and finally he did not go alone, the next player should redeal
-            # self.serverchat("One player asked, nobody joined, player did not go alone, next player will redeal.")
-             return False   # if we return false we need to redeal with the same dealer
-            pass
+            self.dealer_seat = (self.dealer_seat + 1) % 4
+            return False
         else:
             # everyone just passed, same dealer should redeal
-            # self.serverchat("Everyone passed, same dealer will redeal.")
-            return True  # if we return true we need to redeal with the next dealer
+            return True
 
+        #  debug
         print("dividing teams result:")
         print("attackers")
         for player in self.attackers:
@@ -320,16 +319,12 @@ class Table:
 
         return None  # if we return None we can start the game
 
-    def collect_cards(self, move_dealer):
+    def collect_cards(self):
         # collect cards from all hands starting with the person left from the dealer
         for i in range(4):
-            player = self.seats[self.dealer_seat + 1 + i]
+            player = self.seats[( self.dealer_seat + 1 + i ) % 4]
             self.deck = self.deck + player.hand
             player.hand = pd.Stack()
-
-        if move_dealer:
-            self.dealer_seat = (self.dealer_seat + 1) % 4
-
 
     def get_player_to_play_card(self):
         pass
