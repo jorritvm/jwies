@@ -116,11 +116,19 @@ class PlayerClient(QMainWindow):
         central_layout = QHBoxLayout()
         central_layout.addWidget(self.view)
         central_layout.addWidget(self.buttonbox)
-        central_layout.addWidget(self.chatbox)
+        left_widget = QWidget()
+        left_widget.setLayout(central_layout)
 
-        central_widget = QWidget()
-        central_widget.setLayout(central_layout)
-        self.setCentralWidget(central_widget)
+        # splitter
+        splitter = QSplitter()
+        splitter.addWidget(left_widget)
+        splitter.addWidget(self.chatbox)
+        # central_layout.addWidget(self.chatbox)
+
+        # central_widget = QWidget()
+        # central_widget.setLayout(central_layout)
+        # self.setCentralWidget(central_widget)
+        self.setCentralWidget(splitter)
 
         # menu bar
         connect_action = QAction("Connect", self)

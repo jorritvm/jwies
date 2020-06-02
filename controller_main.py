@@ -21,7 +21,7 @@ class Controller(QMainWindow):
 
         self.tcp_server = QTcpServer(self)
 
-        self.table = Table(self.settings)
+        self.table = Table(self)
         self.players = list()  # list of user defined player objects
 
         self.start_tcp_server(self.input_ip.text(), self.input_port.text())  # debug
@@ -219,49 +219,19 @@ class Controller(QMainWindow):
 
             player.next_block_size = 0
 
+            # here we capture the messages that are for the controller
             if mtype == "LOGON":
                 self.welcome_player(player, mcontent)
-                self.check_if_enough_players_are_connected()
+                enough = self.check_if_enough_players_are_connected()
+                if enough:
+                    self.table.prepare_first_game()
             elif mtype == "CHAT":
                 msg = self.assemble_server_message("CHAT", player.name + ": " + mcontent)
                 self.broadcast_server_message(msg)
-            elif mtype == "RESHUFFLE":
-                if mcontent == "YES":
-                    self.table.deck.shuffle()
-                self.ask_to_cut_deck()
-            elif mtype == "CUT":
-                self.table.cut_deck(int(mcontent))
-                self.divide_cards()
-            elif mtype == "BID":
-                newbid = mcontent.split(",")
-                newbid.append(self.players[int(player_id)])
-                self.table.add_bid(newbid)
-                player_to_bid = self.table.get_player_to_bid() # player object
-                if player_to_bid is None:
-                    self.serverchat("The bidding for this game is now over.")
-                    x = self.table.divide_teams()
-                    if x is not None:
-                        if x:
-                            self.serverchat("Everyone passed, same dealer will redeal.")
-                        else:
-                            self.serverchat("One player asked, nobody joined, "
-                                            "player did not go alone, next player will redeal.")
-                        # need to redeal
-                        self.table.collect_cards()
-                        self.cleanup_for_new_round()
-                        msg = self.assemble_server_message("REDEAL", "no_message")
-                        self.broadcast_server_message(msg)
-                        self.start_game()
-                    else:
-                        # we start playing
-                        pass
-                else:
-                    bid_options = self.table.get_remaining_bid_options()
-                    self.serverchat("Please bid, %s" % player_to_bid.name)
-                    msg = self.assemble_server_message("ASKBID", bid_options)
-                    self.send_server_message(player_to_bid.id, msg)
             else:
-                self.log("Unrecognized request %s" % mtype)
+                # here we pass all game related messages to the table
+                self.table.handle_player_request(player, mtype, mcontent)
+
 
     def assemble_server_message(self, mtype, mcontent):
         self.log("Assembled server message: [%s]-[%s]" % (mtype, mcontent))
@@ -298,106 +268,14 @@ class Controller(QMainWindow):
 
     def check_if_enough_players_are_connected(self):
         i = len(self.players)
+        enough = False
         if i < 4:
             self.serverchat("%i out of 4 are players connected, waiting for more players to start the game." % i)
         elif i == 4:
-            self.prepare_first_game()
+            enough = True
         else:
             self.log("Too many sockets connected, restart the controller application and start over")
-
-    def prepare_first_game(self):
-        # give everyone a random seat and start the first round
-        self.table.seats = self.players.copy()
-        self.table.shuffle_seats()
-        self.serverchat("Starting a new game. Sending everyone table seat positions.")
-        for player in self.players:
-            for direction in ("WEST", "NORTH", "EAST"):
-                txt = self.table.neighbouring_player_info(player, direction)
-                msg = self.assemble_server_message("SEAT" + direction, txt)
-                self.send_server_message(player.id, msg)
-        self.start_game()
-
-    def start_game(self):
-        dealer = self.table.get_dealer()
-        # tell all players who the dealer is
-        self.serverchat("The dealer for this round is: %s" % dealer.name)
-        msg = self.assemble_server_message("DEALERID", str(dealer.id))
-        self.broadcast_server_message(msg)
-
-        # check if the dealer wants to shuffle
-        if self.settings["deal"]["dealer_can_shuffle"] == "True":
-            self.serverchat("Asking dealer " + dealer.name + " if he wishes to shuffle the deck of cards.")
-            msg = self.assemble_server_message("SHUFFLEDECK", "no_message")
-            self.send_server_message(dealer.id, msg)
-        else:
-            self.ask_to_cut_deck()
-
-    def ask_to_cut_deck(self):
-        cutter_seat = self.table.dealer_seat - 1
-        cutter = self.table.seats[cutter_seat]
-
-        mincut = str(self.settings["deal"]["minimum_cards_to_cut"])
-        maxcut = str(self.settings["deal"]["maximum_cards_to_cut"])
-
-        self.serverchat("Player %s can now cut the deck by taking between %s and %s cards" % (cutter.name, mincut, maxcut))
-        msg = self.assemble_server_message("CUTDECK", "%s,%s" % (mincut, maxcut))
-        self.send_server_message(cutter.id, msg)
-
-    def divide_cards(self):
-        # divide the cards
-        r1 = self.settings.getint('deal', 'deal_1')
-        r2 = self.settings.getint('deal', 'deal_2')
-        r3 = self.settings.getint('deal', 'deal_3')
-        r4 = self.settings.getint('deal', 'deal_4')
-        self.serverchat("Dealer will now deal cards as follows: %i-%i-%i-%i" % (r1,r2,r3,r4))
-        self.table.divide_cards([r1,r2,r3,r4])
-
-        # tell every player about their hand
-        for player in self.players:
-            player_hand_txt = ""
-            for i in range(13):
-                player_hand_txt += player.hand[i].abbrev + ","
-            msg = self.assemble_server_message("HAND", player_hand_txt)
-            self.send_server_message(player.id, msg)
-
-        if self.table.check_for_trull():
-            self.table.add_default_trull_player_bids()
-            if self.settings["bid"]["trull_above_all_else"] == "True":
-                # trump goes above all else, there will be no more bidding so we don't show the trump card
-                pass
-            else:
-                # bids above trull are still allowed, show players trull card
-                dealer_id = self.table.get_dealer().id
-                trump_card = self.table.last_card_before_dealing.abbrev
-                msg = self.assemble_server_message("TRUMPCARD", str(dealer_id) + "," + trump_card)
-                self.broadcast_server_message(msg)
-
-                # start bidding round
-                player_to_bid = self.table.get_player_to_bid()
-                bid_options = self.table.get_remaining_bid_options()
-                self.serverchat("Start bidding round. Please bid, %s" % player_to_bid.name)
-                msg = self.assemble_server_message("ASKBID", bid_options)
-                self.send_server_message(player_to_bid.id, msg)
-        else:
-            # show this game's trump card (last card dealt)
-            dealer_id = self.table.get_dealer().id
-            trump_card = self.table.last_card_before_dealing.abbrev
-            msg = self.assemble_server_message("TRUMPCARD", str(dealer_id) + "," + trump_card)
-            self.broadcast_server_message(msg)
-
-            # start bidding round
-            player_to_bid = self.table.get_player_to_bid()
-            bid_options = self.table.get_remaining_bid_options()
-            self.serverchat("Start bidding round. Please bid, %s" % player_to_bid.name)
-            msg = self.assemble_server_message("ASKBID", bid_options)
-            self.send_server_message(player_to_bid.id, msg)
-
-    def cleanup_for_new_round(self):
-        self.table.last_card_before_dealing = None
-        self.table.seat_to_bid = (self.table.dealer_seat + 1) % 4
-        self.table.trickbids = [list(), list(), list()]
-        self.table.trick = pd.Stack()
-        self.table.trump = None
+        return enough
 
     def dbug(self):
         print("close server clicked")
