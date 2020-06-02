@@ -146,6 +146,7 @@ class PlayerClient(QMainWindow):
             action = item[0]
             btn = item[1]
             btn.clicked.connect(lambda x, action=action: self.bid(action)) # special lambda parameter action
+        self.btnplaycard.clicked.connect(lambda x : self.play_card())  # special lambda parameter action
 
         # ----- debug
         debug_action = QAction("debug", self)
@@ -276,6 +277,8 @@ class PlayerClient(QMainWindow):
             if mtype == "REDEAL":
                 for player in self.players:
                     player.reset()
+            if mtype == "PLEASEPLAY":
+                self.btnplaycard.setEnabled(True)
 
     def server_has_stopped(self):
         self.log("Socket error: Connection closed by server")
@@ -426,6 +429,19 @@ class PlayerClient(QMainWindow):
                 return(suit)
             else:
                 return(None)
+
+    def play_card(self):
+        print("playing card fct now ...")
+        i = 0
+        for card in self.players[0].hand:
+            if card.is_selected:
+                print("found a selected card on hadn:"+card.abbrev)
+                i += 1
+                abbrev = card.abbrev
+        if i == 1:
+            print("you have selected a card:"+abbrev)
+            msg = self.assemble_player_message("IPLAY", abbrev)
+            self.send_player_message(msg)
 
     def debug(self):
         # for btn in self.btn_bidoptions.values():

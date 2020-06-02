@@ -69,6 +69,7 @@ class Table:
         self.attackers = list()
         self.defenders = list()
         self.trump = None
+        self.type_of_game = None
 
     def get_player_from_id(self, id):
         x = None
@@ -90,6 +91,9 @@ class Table:
 
         elif mtype == "BID":
             self.process_a_new_bid(player, mcontent)
+
+        elif mtype == "IPLAY":
+            self.process_played_card(player, mcontent)
 
     def prepare_first_game(self):
         # give everyone a random seat and start the first round
@@ -197,6 +201,8 @@ class Table:
             self.serverchat("Start bidding round. Please bid, %s" % player_to_bid.name)
             msg = self.assemble_server_message("ASKBID", bid_options)
             self.send_server_message(player_to_bid.id, msg)
+        else:
+            self.initiate_playing_of_cards()
 
     def check_for_trull(self):
         it_is_trull = False
@@ -226,8 +232,8 @@ class Table:
                 second_player = KHplayer
             else:
                 second_player = QHplayer
-        self.add_bid(["trull1",trump_suit, lead_player.id])
-        self.add_bid(["trull2",trump_suit, second_player.id])
+        self.add_bid(["trull1",trump_suit, lead_player])
+        self.add_bid(["trull2",trump_suit, second_player])
 
     def get_player_to_bid(self):
         """ the next player to bid is simply the one to the left, and, if one asked, and three passed
@@ -258,14 +264,14 @@ class Table:
         # even if a player already bid, and has to do a final bid, we append it! (so trickbids > 4)
         self.trickbids[0].append(action)  # what type of bid was made?
         self.trickbids[1].append(suit)  # if a specific suit was given, log it
-        self.trickbids[2].append(player)  # who made the bid
+        self.trickbids[2].append(player)  # who made the bid - a Player object
         if not default_trull_bid:
             self.seat_to_bid = (self.seat_to_bid + 1) % 4
 
     def process_a_new_bid(self, player, mcontent):
         # process the received bid
         newbid = mcontent.split(",")  # 2 elements: bid and suit
-        newbid.append(int(player.id))
+        newbid.append(player)
         self.add_bid(newbid)
 
         # identify the next step to take
@@ -285,8 +291,7 @@ class Table:
                 self.broadcast_server_message(msg)
                 self.start_game()
             else:
-                x = self.table.divide_teams()
-                self.log("we start playing cards now, first player to play is " + self.player_to_play_card.name) # debug
+                self.initiate_playing_of_cards()
 
     def get_remaining_bid_options(self):
         bids = self.trickbids[0]
@@ -357,24 +362,26 @@ class Table:
         self.trickbids = [list(), list(), list()]
         self.trick = pd.Stack()
         self.trump = None
+        self.type_of_game = None
 
     def divide_teams(self):
         self.attackers = list()
         self.defenders = list()
 
-        bids =  self.trickbids[0]
+        bids = self.trickbids[0]
         trumps = self.trickbids[1]
         bidders = self.trickbids[2]
 
         self.player_to_play_card = self.seats[(self.dealer_seat + 1) % 4]  # left from dealer is the standard choice
 
         if "soloslim" in bids:
-            bidder = bidders[bids.index("soloslim")]
+            bidder = self.get_player_from_id(bidders[bids.index("soloslim")]) # todo check this!!!
             self.attackers.append(bidder)
             self.defenders = [player for player in self.seats if player not in self.attackers]
             self.trump = trumps[bids.index("soloslim")]
             if self.settings.getboolean('bid', 'soloslim_plays_first'):
                 self.player_to_play_card = bidder
+            self.type_of_game = "soloslim"
         elif "solo" in bids:
             bidder = bidders[bids.index("solo")]
             self.attackers.append(bidder)
@@ -384,6 +391,7 @@ class Table:
                 self.trump = None
             if self.settings.getboolean('bid', 'solo_plays_first'):
                 self.player_to_play_card = bidder
+            self.type_of_game = "solo"
         elif "misere_ouverte" in bids:
             bidder = bidders[bids.index("misere_ouverte")]
             self.attackers.append(bidder)
@@ -391,6 +399,7 @@ class Table:
             self.trump = None
             if self.settings.getboolean('bid', 'misere_ouverte_plays_first'):
                 self.player_to_play_card = bidder
+            self.type_of_game = "misere_ouverte"
         elif "trull1" in bids:
             bidder = bidders[bids.index("trull1")]
             self.attackers.append(bidder)
@@ -399,6 +408,7 @@ class Table:
             self.defenders = [player for player in self.seats if player not in self.attackers]
             self.trump = trumps[bids.index("trull2")]
             self.player_to_play_card = bidder  # trull 2 player is the one who starts the round
+            self.type_of_game = "trull"
         elif "abon12" in bids:
             bidder = bidders[bids.index("abon12")]
             self.attackers.append(bidder)
@@ -406,6 +416,7 @@ class Table:
             self.trump = trumps[bids.index("abon12")]
             if self.settings.getboolean('bid', 'abondance_plays_first'):
                 self.player_to_play_card = bidder
+            self.type_of_game = "abon12"
         elif "abon11" in bids:
             bidder = bidders[bids.index("abon11")]
             self.attackers.append(bidder)
@@ -413,6 +424,7 @@ class Table:
             self.trump = trumps[bids.index("abon11")]
             if self.settings.getboolean('bid', 'abondance_plays_first'):
                 self.player_to_play_card = bidder
+            self.type_of_game = "abon11"
         elif "abon10" in bids:
             bidder = bidders[bids.index("abon10")]
             self.attackers.append(bidder)
@@ -420,6 +432,7 @@ class Table:
             self.trump = trumps[bids.index("abon10")]
             if self.settings.getboolean('bid', 'abondance_plays_first'):
                 self.player_to_play_card = bidder
+            self.type_of_game = "abon10"
         elif "misere" in bids:
             bidder = bidders[bids.index("misere")]
             self.attackers.append(bidder)
@@ -427,11 +440,13 @@ class Table:
             self.trump = None
             if self.settings.getboolean('bid', 'misere_plays_first'):
                 self.player_to_play_card = bidder
+            self.type_of_game = "misere"
         elif "abon9" in bids:
             bidder = bidders[bids.index("abon9")]
             self.attackers.append(bidder)
             self.defenders = [player for player in self.seats if player not in self.attackers]
             self.trump = trumps[bids.index("abon9")]
+            self.type_of_game = "abon9"
         elif "join" in bids:
             bidder = bidders[bids.index("join")]
             self.attackers.append(bidder)
@@ -439,11 +454,13 @@ class Table:
             self.attackers.append(bidder)
             self.defenders = [player for player in self.seats if player not in self.attackers]
             self.trump = trumps[bids.index("ask")]
+            self.type_of_game = "together"
         elif "alone" in bids:
             bidder = bidders[bids.index("alone")]
             self.attackers.append(bidder)
             self.defenders = [player for player in self.seats if player not in self.attackers]
             self.trump = trumps[bids.index("alone")]
+            self.type_of_game = "alone"
         else:
             self.serverchat("Impossible for the controller to divide the teams")
 
@@ -454,6 +471,32 @@ class Table:
             self.deck = self.deck + player.hand
             player.hand = pd.Stack()
 
+    def initiate_playing_of_cards(self):
+        self.divide_teams()
+        self.broadcast_trick_information()
+        self.ask_to_play_card()
+
+    def broadcast_trick_information(self):
+        who_list = list()
+        for player in self.attackers:
+            who_list.append(player.name)
+        who = ",".join(who_list)
+        msg = who + " is/are playing a game of " + self.type_of_game
+        if self.trump is not None:
+            msg += " with " + self.trump + " for trump."
+        else:
+            msg += " without trump."
+        self.serverchat(msg)
+
+    def ask_to_play_card(self):
+        msg = self.assemble_server_message("PLEASEPLAY", "")
+        self.send_server_message(self.player_to_play_card.id, msg)
+
+    def process_played_card(self, player, abbrev):
+        # todo verify
+        self.serverchat(player.name + " plays card " + abbrev)
+
     def get_player_to_play_card(self):
         pass
+
 

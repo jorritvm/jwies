@@ -28,7 +28,7 @@ class Player():
 
     def setup_default_cards(self, seat):
         for z in range(13):
-            card = Graphic_Card("back", z + 10, self.svgrenderer)
+            card = Graphic_Card("back", z + 10, self.svgrenderer, self.hand)
             self.hand.append(card)
 
     def draw_name(self, seat, name):
@@ -58,7 +58,7 @@ class Player():
         stack = self.sort_pdstack_on_hand(stack)
         z = 10
         for pdcard in stack:
-            card = Graphic_Card(pdcard.abbrev, z, self.svgrenderer)
+            card = Graphic_Card(pdcard.abbrev, z, self.svgrenderer, self.hand)
             self.hand.append(card)
             z += 1
 
@@ -118,7 +118,7 @@ class Player():
         return return_stack
 
     def draw_trump_card(self, abbrev):
-        card = Graphic_Card(abbrev, 0, self.svgrenderer)
+        card = Graphic_Card(abbrev, 0, self.svgrenderer, self.hand)
         transformation = QTransform()
         transformation.scale(CARDSCALE, CARDSCALE)
         card.setX(X_TRUMPCARD[self.seat])
@@ -142,16 +142,19 @@ class Player():
 
 class Graphic_Card(QGraphicsSvgItem):
 
-    def __init__(self, abbrev, z, svgrenderer, *args, **kwargs):
+    def __init__(self, abbrev, z, svgrenderer, hand, *args, **kwargs):
         super(Graphic_Card, self).__init__(*args, **kwargs)
 
         # self.card_click = pyqtSignal(str)
+        self.hand = hand
 
         self.setSharedRenderer(svgrenderer)
         self.setZValue(z)
 
         self.z = z
         self.abbrev = abbrev
+
+        self.is_selected = False
 
         if abbrev == "back":
             self.svgdescription = "back"
@@ -177,8 +180,12 @@ class Graphic_Card(QGraphicsSvgItem):
     def mousePressEvent(self, event):
         if self.svgdescription != "back":
             print("clicked mouse on card " + str(self.z))
-            # print(self.sceneBoundingRect().topLeft().x(), self.sceneBoundingRect().topLeft().y())
-            # print(self.sceneBoundingRect().bottomRight().x(), self.sceneBoundingRect().bottomRight().y())
+            print("y:" + str(self.y))
+            for card in self.hand:
+                card.setY(Y_CARD["SOUTH"])
+                card.is_selected = False
+            self.setY(Y_CARD["SOUTH"] - 20)
+            self.is_selected = True
             #self.card_click.emit(str(self.z))
 
 
