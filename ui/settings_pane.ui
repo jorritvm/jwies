@@ -254,148 +254,306 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>510</y>
-     <width>308</width>
-     <height>247</height>
+     <y>468</y>
+     <width>681</width>
+     <height>291</height>
     </rect>
    </property>
    <property name="title">
     <string>Puntentelling</string>
    </property>
-   <layout class="QGridLayout" name="gridLayout">
-    <item row="7" column="1">
-     <widget class="QCheckBox" name="check_lose_double">
-      <property name="text">
-       <string/>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="1">
-     <widget class="QSpinBox" name="spin_points_exact">
-      <property name="value">
-       <number>1</number>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="1">
-     <widget class="QSpinBox" name="spin_points_misere">
-      <property name="value">
-       <number>5</number>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="1">
-     <widget class="QSpinBox" name="spin_points_abondance">
-      <property name="value">
-       <number>5</number>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="0">
-     <widget class="QLabel" name="label_2">
-      <property name="text">
-       <string>Punten per overslag</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="1">
-     <widget class="QDoubleSpinBox" name="spin_points_surpass">
-      <property name="decimals">
-       <number>1</number>
-      </property>
-      <property name="singleStep">
-       <double>0.500000000000000</double>
-      </property>
-      <property name="value">
-       <double>0.500000000000000</double>
-      </property>
-     </widget>
-    </item>
-    <item row="8" column="0">
-     <widget class="QLabel" name="label_9">
-      <property name="text">
-       <string>Na pasronde is het voor dubbele punten spelen</string>
-      </property>
-     </widget>
-    </item>
-    <item row="7" column="0">
-     <widget class="QLabel" name="label_8">
-      <property name="text">
-       <string>Verliezen is dubbel punten</string>
-      </property>
-     </widget>
-    </item>
-    <item row="8" column="1">
-     <widget class="QCheckBox" name="check_pass_double">
-      <property name="text">
-       <string/>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="0">
-     <widget class="QLabel" name="label">
-      <property name="text">
-       <string>Punten voor juist aantal slagen te halen</string>
-      </property>
-     </widget>
-    </item>
-    <item row="4" column="1">
-     <widget class="QSpinBox" name="spin_points_misere_ouverte">
-      <property name="value">
-       <number>10</number>
-      </property>
-     </widget>
-    </item>
-    <item row="5" column="1">
-     <widget class="QSpinBox" name="spin_points_solo">
-      <property name="value">
-       <number>20</number>
-      </property>
-     </widget>
-    </item>
-    <item row="5" column="0">
-     <widget class="QLabel" name="label_6">
-      <property name="text">
-       <string>Punten voor solo</string>
-      </property>
-     </widget>
-    </item>
-    <item row="4" column="0">
-     <widget class="QLabel" name="label_5">
-      <property name="text">
-       <string>Punten voor miserie bloot</string>
-      </property>
-     </widget>
-    </item>
-    <item row="6" column="0">
-     <widget class="QLabel" name="label_7">
-      <property name="text">
-       <string>Punten voor solo slim</string>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="0">
-     <widget class="QLabel" name="label_4">
-      <property name="text">
-       <string>Punten voor miserie</string>
-      </property>
-     </widget>
-    </item>
-    <item row="6" column="1">
-     <widget class="QSpinBox" name="spin_points_soloslim">
-      <property name="value">
-       <number>40</number>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="0">
-     <widget class="QLabel" name="label_3">
-      <property name="text">
-       <string>Punten voor abondance</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
+   <widget class="QDoubleSpinBox" name="spin_points_surpass">
+    <property name="geometry">
+     <rect>
+      <x>344</x>
+      <y>95</y>
+      <width>327</width>
+      <height>19</height>
+     </rect>
+    </property>
+    <property name="decimals">
+     <number>1</number>
+    </property>
+    <property name="singleStep">
+     <double>0.500000000000000</double>
+    </property>
+    <property name="value">
+     <double>0.500000000000000</double>
+    </property>
+   </widget>
+   <widget class="QSpinBox" name="spin_points_misere_ouverte">
+    <property name="geometry">
+     <rect>
+      <x>344</x>
+      <y>170</y>
+      <width>327</width>
+      <height>19</height>
+     </rect>
+    </property>
+    <property name="value">
+     <number>10</number>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_2">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>95</y>
+      <width>97</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Punten per overslag</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_3">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>120</y>
+      <width>115</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Punten voor abondance</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>69</y>
+      <width>191</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Punten voor juist aantal slagen te halen</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_6">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>195</y>
+      <width>81</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Punten voor solo</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="check_pass_double">
+    <property name="geometry">
+     <rect>
+      <x>344</x>
+      <y>264</y>
+      <width>16</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QSpinBox" name="spin_points_soloslim">
+    <property name="geometry">
+     <rect>
+      <x>344</x>
+      <y>220</y>
+      <width>327</width>
+      <height>19</height>
+     </rect>
+    </property>
+    <property name="value">
+     <number>40</number>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="check_lose_double">
+    <property name="geometry">
+     <rect>
+      <x>344</x>
+      <y>245</y>
+      <width>16</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_9">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>264</y>
+      <width>227</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Na pasronde is het voor dubbele punten spelen</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_7">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>220</y>
+      <width>101</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Punten voor solo slim</string>
+    </property>
+   </widget>
+   <widget class="QSpinBox" name="spin_points_abondance">
+    <property name="geometry">
+     <rect>
+      <x>344</x>
+      <y>120</y>
+      <width>327</width>
+      <height>19</height>
+     </rect>
+    </property>
+    <property name="value">
+     <number>5</number>
+    </property>
+   </widget>
+   <widget class="QSpinBox" name="spin_points_exact">
+    <property name="geometry">
+     <rect>
+      <x>344</x>
+      <y>69</y>
+      <width>39</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="value">
+     <number>1</number>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_5">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>170</y>
+      <width>122</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Punten voor miserie bloot</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_4">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>145</y>
+      <width>95</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Punten voor miserie</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_8">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>245</y>
+      <width>125</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Verliezen is dubbel punten</string>
+    </property>
+   </widget>
+   <widget class="QSpinBox" name="spin_points_solo">
+    <property name="geometry">
+     <rect>
+      <x>344</x>
+      <y>195</y>
+      <width>327</width>
+      <height>19</height>
+     </rect>
+    </property>
+    <property name="value">
+     <number>20</number>
+    </property>
+   </widget>
+   <widget class="QSpinBox" name="spin_points_misere">
+    <property name="geometry">
+     <rect>
+      <x>344</x>
+      <y>145</y>
+      <width>327</width>
+      <height>19</height>
+     </rect>
+    </property>
+    <property name="value">
+     <number>5</number>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_10">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>20</y>
+      <width>281</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Bij troel komt 2e speler troef uit en zijn 8 slagen nodig</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_11">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>40</y>
+      <width>301</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Bij troel komt 2e speler uit wat hij wil en zijn 9 slagen nodig</string>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="radio_trull_9">
+    <property name="geometry">
+     <rect>
+      <x>340</x>
+      <y>40</y>
+      <width>82</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="radio_trull_8">
+    <property name="geometry">
+     <rect>
+      <x>340</x>
+      <y>10</y>
+      <width>82</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
   </widget>
   <widget class="QDialogButtonBox" name="buttonBox">
    <property name="geometry">
@@ -419,7 +577,7 @@
      <x>10</x>
      <y>260</y>
      <width>781</width>
-     <height>231</height>
+     <height>191</height>
     </rect>
    </property>
    <property name="title">
@@ -672,6 +830,32 @@
       <y>120</y>
       <width>16</width>
       <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="radio_trull_not_above_all_else">
+    <property name="geometry">
+     <rect>
+      <x>700</x>
+      <y>50</y>
+      <width>82</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="radio_trull_above_all_else">
+    <property name="geometry">
+     <rect>
+      <x>700</x>
+      <y>20</y>
+      <width>82</width>
+      <height>17</height>
      </rect>
     </property>
     <property name="text">

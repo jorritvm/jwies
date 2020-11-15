@@ -6,17 +6,15 @@ import os
 from staticvar import *
 
 
-
-class Player():
-
+class Player:
     def __init__(self, id, name, seat, scene, svgrenderer):
         print("creating player with id " + str(id))
-        self.id = int(id) # this is the id the server has for the player
+        self.id = int(id)  # this is the id the server has for the player
         self.name = name
-        self.seat = seat # this is the seat relative to where you are sitting (south)
+        self.seat = seat  # this is the seat relative to where you are sitting (south)
         self.scene = scene
         self.svgrenderer = svgrenderer
-        self.hand = list() # list of Graphic_Card objects
+        self.hand = list()  # list of Graphic_Card objects
 
         self.setup_default_cards(seat)
         self.draw_name(seat, name)
@@ -24,7 +22,6 @@ class Player():
 
         self.is_dealer = False
         self.trumpcard = None
-
 
     def setup_default_cards(self, seat):
         for z in range(13):
@@ -54,7 +51,7 @@ class Player():
 
         # sort the received cards and put them on my hand
         deck = pd.deck.Deck()
-        stack = pd.stack.Stack(cards = deck.get_list(card_abbreviation_list))
+        stack = pd.stack.Stack(cards=deck.get_list(card_abbreviation_list))
         stack = self.sort_pdstack_on_hand(stack)
         z = 10
         for pdcard in stack:
@@ -129,10 +126,14 @@ class Player():
         self.trumpcard = card
         self.is_dealer = True
 
+    def hide_trump_card(self):
+        self.scene.removeItem(self.trumpcard)
+        self.trumpcard = None
+
     def reset(self):
         for card in self.hand:
             self.scene.removeItem(card)
-        self.hand = list() # list of Graphic_Card objects
+        self.hand = list()  # list of Graphic_Card objects
         self.setup_default_cards(self.seat)
         self.draw_hand()
         self.set_dealer(False)
@@ -141,7 +142,6 @@ class Player():
 
 
 class Graphic_Card(QGraphicsSvgItem):
-
     def __init__(self, abbrev, z, svgrenderer, hand, *args, **kwargs):
         super(Graphic_Card, self).__init__(*args, **kwargs)
 
@@ -173,24 +173,21 @@ class Graphic_Card(QGraphicsSvgItem):
         if v == "ace":
             v = "1"
         s = self.suit.lower()
-        s = s[0:len(s)-1]
+        s = s[0 : len(s) - 1]
         desc = "%s_%s" % (v, s)
         return desc
 
     def mousePressEvent(self, event):
         if self.svgdescription != "back":
-            print("clicked mouse on card " + str(self.z))
-            print("y:" + str(self.y))
             for card in self.hand:
                 card.setY(Y_CARD["SOUTH"])
                 card.is_selected = False
-            self.setY(Y_CARD["SOUTH"] - 20)
+            self.setY(Y_CARD["SOUTH"] - 40)
             self.is_selected = True
-            #self.card_click.emit(str(self.z))
+            # self.card_click.emit(str(self.z))
 
 
 class Choose_suit_dialog(QDialog):
-
     def __init__(self, allow_no_trump, *args, **kwargs):
         super(Choose_suit_dialog, self).__init__(*args, **kwargs)
         # super(Choose_suit_dialog, self).__init__(parent = None)
@@ -207,7 +204,7 @@ class Choose_suit_dialog(QDialog):
                 pm = QPixmap(os.path.join("icons", suit + ".png"))
                 qi = QIcon(pm)
                 btn.setIcon(qi)
-                btn.setIconSize(QSize(50,50))
+                btn.setIconSize(QSize(50, 50))
             else:
                 btn.setText("Geen troef")
             btn.setCheckable(True)
@@ -229,7 +226,6 @@ class Choose_suit_dialog(QDialog):
 
 
 class MyGraphicsView(QGraphicsView):
-
     def __init__(self, fieldrect, *args, **kwargs):
         super(MyGraphicsView, self).__init__(*args, **kwargs)
         self.fieldrect = fieldrect

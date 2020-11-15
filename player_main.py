@@ -6,12 +6,12 @@ import time
 import random
 from player_player import *
 
-class PlayerClient(QMainWindow):
 
+class PlayerClient(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(PlayerClient, self).__init__(*args, **kwargs)
 
-        self.players = list() # contains player objects as defined in this module
+        self.players = list()  # contains player objects as defined in this module
 
         # init GUI and settings
         self.setup_gui()
@@ -26,7 +26,7 @@ class PlayerClient(QMainWindow):
         self.socket.disconnected.connect(self.server_has_stopped)
         self.socket.error.connect(lambda x: self.server_has_error(x))
 
-        self.connect_to_a_game() # debug
+        self.connect_to_a_game()  # debug
 
     def setup_gui(self):
         # sizing policies
@@ -59,19 +59,20 @@ class PlayerClient(QMainWindow):
         # self.animation.setTimeLine(self.timer)
 
         # set up the buttonbox : bidoptions & play buttons
-        self.btn_bidoptions = {"pass": QPushButton("Passen"),
-                               "ask": QPushButton("Vragen"),
-                               "join": QPushButton("Meegaan"),
-                               "abon9": QPushButton("Abondance_9"),
-                               "misere": QPushButton("Miserie"),
-                               "abon10": QPushButton("Abondance_10"),
-                               "abon11": QPushButton("Abondance_11"),
-                               "abon12": QPushButton("Abondance_12"),
-                               "misere_ouverte": QPushButton("Miserie bloot"),
-                               "solo": QPushButton("Solo"),
-                               "soloslim": QPushButton("Solo slim"),
-                               "alone": QPushButton("Alleen gaan")
-                               }
+        self.btn_bidoptions = {
+            "pass": QPushButton("Passen"),
+            "ask": QPushButton("Vragen"),
+            "join": QPushButton("Meegaan"),
+            "abon9": QPushButton("Abondance_9"),
+            "misere": QPushButton("Miserie"),
+            "abon10": QPushButton("Abondance_10"),
+            "abon11": QPushButton("Abondance_11"),
+            "abon12": QPushButton("Abondance_12"),
+            "misere_ouverte": QPushButton("Miserie bloot"),
+            "solo": QPushButton("Solo"),
+            "soloslim": QPushButton("Solo slim"),
+            "alone": QPushButton("Alleen gaan"),
+        }
         for btn in self.btn_bidoptions.values():
             btn.setEnabled(False)
 
@@ -104,7 +105,6 @@ class PlayerClient(QMainWindow):
         self.textbox.setSizePolicy(preferred_policy)
         self.input_line = QLineEdit()
         self.input_line.setSizePolicy(minimum_policy)
-
 
         chat_layout = QVBoxLayout()
         chat_layout.addWidget(self.textbox)
@@ -145,8 +145,12 @@ class PlayerClient(QMainWindow):
         for item in self.btn_bidoptions.items():
             action = item[0]
             btn = item[1]
-            btn.clicked.connect(lambda x, action=action: self.bid(action)) # special lambda parameter action
-        self.btnplaycard.clicked.connect(lambda x : self.play_card())  # special lambda parameter action
+            btn.clicked.connect(
+                lambda x, action=action: self.bid(action)
+            )  # special lambda parameter action
+        self.btnplaycard.clicked.connect(
+            lambda x: self.play_card()
+        )  # special lambda parameter action
 
         # ----- debug
         debug_action = QAction("debug", self)
@@ -166,7 +170,7 @@ class PlayerClient(QMainWindow):
         self.btn3.clicked.connect(lambda x: self.debug3())
         self.btn4.clicked.connect(lambda x: self.debug4())
 
-        self.resize(1100,600)
+        self.resize(1100, 600)
         # ----- end debug
 
     def log(self, txt):
@@ -176,23 +180,27 @@ class PlayerClient(QMainWindow):
     def load_settings(self):
         settings = configparser.ConfigParser()
         settings.read(os.path.join("settings", "player.ini"))
-        return (settings)
+        return settings
 
     def connect_to_a_game(self):
         connect_pane = uic.loadUi(os.path.join("ui", "connect_pane.ui"))
         connect_pane.setWindowIcon(QIcon(os.path.join("icons", "network-hub.png")))
 
         # set initial value for dialog box
-        connect_pane.line_name.setText(self.settings['last_connection']['name'])
-        connect_pane.line_name.setText("player"+str(random.randint(1, 1000))) # for debug
-        connect_pane.line_host.setText(self.settings['last_connection']['host'])
-        connect_pane.spin_port.setValue(self.settings.getint('last_connection', 'port'))
+        connect_pane.line_name.setText(self.settings["last_connection"]["name"])
+        connect_pane.line_name.setText(
+            "player" + str(random.randint(1, 1000))
+        )  # for debug
+        connect_pane.line_host.setText(self.settings["last_connection"]["host"])
+        connect_pane.spin_port.setValue(self.settings.getint("last_connection", "port"))
 
         if connect_pane.exec_():
             # save new values in settings
             self.settings["last_connection"]["name"] = connect_pane.line_name.text()
             self.settings["last_connection"]["host"] = connect_pane.line_host.text()
-            self.settings["last_connection"]["port"] = str(connect_pane.spin_port.value())
+            self.settings["last_connection"]["port"] = str(
+                connect_pane.spin_port.value()
+            )
 
             with open(os.path.join("settings", "player.ini"), "w") as settings_file:
                 self.settings.write(settings_file)
@@ -201,10 +209,15 @@ class PlayerClient(QMainWindow):
 
             # connect to the server
             self.log("Connecting to server...")
-            self.socket.connectToHost(self.settings["last_connection"]["host"], int(self.settings["last_connection"]["port"]))
+            self.socket.connectToHost(
+                self.settings["last_connection"]["host"],
+                int(self.settings["last_connection"]["port"]),
+            )
 
     def connected_handler(self):
-        msg = self.assemble_player_message("LOGON", self.settings["last_connection"]["name"])
+        msg = self.assemble_player_message(
+            "LOGON", self.settings["last_connection"]["name"]
+        )
         self.send_player_message(msg)
 
     def assemble_player_message(self, mtype, mcontent):
@@ -216,7 +229,7 @@ class PlayerClient(QMainWindow):
         stream.writeQString(mcontent)
         stream.device().seek(0)
         stream.writeUInt16(msg.size() - SIZEOF_UINT16)
-        return(msg)
+        return msg
 
     def send_player_message(self, msg):
         self.socket.write(msg)
@@ -241,14 +254,24 @@ class PlayerClient(QMainWindow):
 
             if mtype == "YOUR_ID":
                 id = int(mcontent)
-                self.players.append(Player(id, self.settings["last_connection"]["name"], "SOUTH", self.scene, self.svgrenderer))
+                self.players.append(
+                    Player(
+                        id,
+                        self.settings["last_connection"]["name"],
+                        "SOUTH",
+                        self.scene,
+                        self.svgrenderer,
+                    )
+                )
             if mtype == "CHAT":
                 self.textbox.appendPlainText(self.timestamp_it(mcontent))
             if mtype.startswith("SEAT"):
                 id = mcontent.split(",")[0]
                 name = mcontent.split(",")[1]
-                seat = mtype.replace("SEAT","") # WEST NORTH EAST
-                self.players.append(Player(id, name, seat, self.scene, self.svgrenderer))
+                seat = mtype.replace("SEAT", "")  # WEST NORTH EAST
+                self.players.append(
+                    Player(id, name, seat, self.scene, self.svgrenderer)
+                )
             if mtype == "DEALERID":
                 for player in self.players:
                     player.set_dealer(False)
@@ -277,8 +300,16 @@ class PlayerClient(QMainWindow):
             if mtype == "REDEAL":
                 for player in self.players:
                     player.reset()
+            if mtype == "HIDETRUMP":
+                for player in self.players:
+                    if player.is_dealer:
+                        player.hide_trump_card()
             if mtype == "PLEASEPLAY":
                 self.btnplaycard.setEnabled(True)
+            if mtype == "CARD_WAS_PLAYED":
+                player_id = mcontent.split(",")[0]
+                abbrev = mcontent.split(",")[1]
+                print("a card was played")
 
     def server_has_stopped(self):
         self.log("Socket error: Connection closed by server")
@@ -289,7 +320,7 @@ class PlayerClient(QMainWindow):
         self.socket.close()
 
     def timestamp_it(self, s):
-        x = "(" + time.strftime('%H:%M:%S') + ") " + s
+        x = "(" + time.strftime("%H:%M:%S") + ") " + s
         return x
 
     def send_chat(self):
@@ -331,12 +362,14 @@ class PlayerClient(QMainWindow):
     def answer_to_cut_deck(self, minmax):
         mincut = int(minmax[0])
         maxcut = int(minmax[1])
-        num,ok = QInputDialog.getInt(self,
-                                    "Cut deck",
-                                    "How many cards do you want to slide under the deck?",
-                                    random.randint(mincut,maxcut),
-                                    mincut,
-                                    maxcut)
+        num, ok = QInputDialog.getInt(
+            self,
+            "Cut deck",
+            "How many cards do you want to slide under the deck?",
+            random.randint(mincut, maxcut),
+            mincut,
+            maxcut,
+        )
         if ok:
             self.send_chat_txt("Cutting %i cards" % num)
             msg = self.assemble_player_message("CUT", str(num))
@@ -345,14 +378,27 @@ class PlayerClient(QMainWindow):
             self.answer_to_cut_deck(minmax)
 
     def enable_bid_options(self, bidoptions):
-        opts = ["pass","ask","join","abon9","misere","abon10","abon11","abon12","misere_ouverte","solo","soloslim","alone"]
+        opts = [
+            "pass",
+            "ask",
+            "join",
+            "abon9",
+            "misere",
+            "abon10",
+            "abon11",
+            "abon12",
+            "misere_ouverte",
+            "solo",
+            "soloslim",
+            "alone",
+        ]
         for opt in opts:
             if opt in bidoptions:
                 self.btn_bidoptions[opt].setEnabled(True)
 
     def bid(self, bid):
         dealer = self.get_dealer_player()
-        suit = dealer.trumpcard.suit # could be problem for trull
+        suit = dealer.trumpcard.suit  # could be problem for trull
         # suit = "Clubs" # debug
 
         if bid in ["abon9", "abon10", "abon11", "abon12"]:
@@ -404,7 +450,7 @@ class PlayerClient(QMainWindow):
 
         # complete with server message
         self.send_chat_txt(txt)
-        msg = self.assemble_player_message("BID", "%s,%s" % (bid,suit))
+        msg = self.assemble_player_message("BID", "%s,%s" % (bid, suit))
         self.send_player_message(msg)
 
         # reset the gui buttons
@@ -426,20 +472,21 @@ class PlayerClient(QMainWindow):
                 if allow_no_trump:
                     suits.append("no_trump")
                 suit = suits[index]
-                return(suit)
+                return suit
             else:
-                return(None)
+                return None
 
     def play_card(self):
         print("playing card fct now ...")
         i = 0
         for card in self.players[0].hand:
             if card.is_selected:
-                print("found a selected card on hadn:"+card.abbrev)
+                print("found a selected card on hand:" + card.abbrev)
                 i += 1
                 abbrev = card.abbrev
         if i == 1:
-            print("you have selected a card:"+abbrev)
+            print("you have selected a card:" + abbrev)
+            self.btnplaycard.setEnabled(False)
             msg = self.assemble_player_message("IPLAY", abbrev)
             self.send_player_message(msg)
 
@@ -447,7 +494,6 @@ class PlayerClient(QMainWindow):
         # for btn in self.btn_bidoptions.values():
         #     btn.setEnabled(True)
         pass
-
 
     def debug1(self):
         # # for btn in self.btn_bidoptions.values():
@@ -483,7 +529,7 @@ class PlayerClient(QMainWindow):
         self.log(suit)
 
     def debug4(self):
-        self.answer_to_cut_deck([10,30])
+        self.answer_to_cut_deck([10, 30])
 
 
 app = QApplication(sys.argv)
