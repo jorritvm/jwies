@@ -1,6 +1,16 @@
-import PyQt5.QtGui as qg
-import PyQt5.QtWidgets as qw
-import PyQt5.QtNetwork as qn
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QInputDialog,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+    QPlainTextEdit,
+    QAction,
+)
+from PyQt5.QtNetwork import QTcpServer, QHostAddress
 from PyQt5 import uic
 import configparser
 import requests
@@ -11,7 +21,7 @@ import staticvar as STATICVAR
 import controller_table as ct
 
 
-class Controller(qw.QMainWindow):
+class Controller(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(Controller, self).__init__(*args, **kwargs)
 
@@ -19,7 +29,7 @@ class Controller(qw.QMainWindow):
         self.settings = self.load_settings()
         self.log("Wies controller initiated")
 
-        self.tcp_server = qn.QTcpServer(self)
+        self.tcp_server = QTcpServer(self)
 
         self.table = ct.Table(self)
         self.players = list()  # list of user defined player objects
@@ -31,37 +41,37 @@ class Controller(qw.QMainWindow):
     def setup_gui(self):
         # gui elements
         self.setWindowTitle("jwies - controller screen")
-        self.setWindowIcon(qg.QIcon(os.path.join("icons", "server.png")))
+        self.setWindowIcon(QIcon(os.path.join("icons", "server.png")))
 
-        self.input_ip = qw.QLineEdit()
+        self.input_ip = QLineEdit()
         self.input_ip.setText("127.0.0.1")
 
-        self.input_port = qw.QLineEdit()
+        self.input_port = QLineEdit()
         self.input_port.setText("9999")
 
-        self.start_server = qw.QPushButton("Start server")
-        self.close_server = qw.QPushButton("Close server")
+        self.start_server = QPushButton("Start server")
+        self.close_server = QPushButton("Close server")
         self.close_server.setDisabled(True)
 
-        self.textbox = qw.QPlainTextEdit()
+        self.textbox = QPlainTextEdit()
         self.textbox.setReadOnly(True)
 
         # gui layout
-        layout = qw.QVBoxLayout()
+        layout = QVBoxLayout()
         layout.addWidget(self.input_ip)
         layout.addWidget(self.input_port)
         layout.addWidget(self.start_server)
         layout.addWidget(self.close_server)
         layout.addWidget(self.textbox)
 
-        central_widget = qw.QWidget()
+        central_widget = QWidget()
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
         self.resize(800, 600)
 
         # menu
-        ip_dialog_action = qg.QAction("Get external IP address", self)
-        settings_pane_action = qg.QAction("Game settings", self)
+        ip_dialog_action = QAction("Get external IP address", self)
+        settings_pane_action = QAction("Game settings", self)
         menu_bar = self.menuBar()
         menu = menu_bar.addMenu("&Menu")
         menu.addAction(ip_dialog_action)
@@ -91,17 +101,17 @@ class Controller(qw.QMainWindow):
 
     def show_ip_dialog(self):
         # text, okPressed = \
-        qw.QInputDialog.getText(
+        QInputDialog.getText(
             self,
             "External ip lookup",
             "Your external ip is:",
-            qw.QLineEdit.Normal,
+            QLineEdit.Normal,
             self.get_ip(),
         )
 
     def show_settings_pane(self):
         settings_pane = uic.loadUi(os.path.join("ui", "settings_pane.ui"))
-        settings_pane.setWindowIcon(qg.QIcon(os.path.join("icons", "network-hub.png")))
+        settings_pane.setWindowIcon(QIcon(os.path.join("icons", "network-hub.png")))
 
         # set initial value for dialog box
         settings_pane.check_dealer_shuffle.setChecked(
@@ -309,10 +319,11 @@ class Controller(qw.QMainWindow):
 
                 self.log("Connected a new player with ID %s" % str(player_id))
                 socket.readyRead.connect(lambda: self.read_player_message(player_id))
-                socket.disconnected.connect(lambda: self.remove_all_players(player_id))
+                socket.disconnected.connect(lambda: self.remove_player(player_id))
                 socket.disconnected.connect(socket.deleteLater)
 
-    def remove_all_players(self, player_id):
+    def remove_player(self, player_id):
+        # TODO does this have to handle 1 or all players disconnecting?
         self.log(
             "Player with ID %i got disconnected, now removing all players" % player_id
         )

@@ -4,7 +4,7 @@ import configparser
 import sys
 import time
 import random
-from player_player import *
+from player_player import Player, Choose_suit_dialog, MyGraphicsView, 
 
 
 class PlayerClient(QMainWindow):
@@ -28,8 +28,7 @@ class PlayerClient(QMainWindow):
 
         self.connect_to_a_game()  # debug
 
-    def setup_gui(self):
-        # sizing policies
+    def setup_gui(self):  # sizing policies
         minimum_policy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         expanding_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         preferred_policy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)

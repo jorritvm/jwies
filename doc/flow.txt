@@ -1,0 +1,87 @@
+-----------------------------------------------
+Description of the flow of the application
+-----------------------------------------------
+
+Controller: initiates a GUI
+Controller: loads in controller side settings
+Controller: can read, modify & save controller side settings
+Controller: buttonclick launches a tcp server to wait for new connections
+
+PlayerClient: initiates their GUI
+PlayerClient: loads in player side settings (previous ip etc)
+PlayerClient: buttonclick connects to server
+
+Controller: receives new connect and so creates new Player() objects and links their socket, then appends it to self.players[] 
+
+PlayerClient: connected() signal triggers PlayerClient sending 'LOGON name' message to the server
+
+Controller: receiving this LOGON message triggers Controller sending the player back his id using a 'YOUR_ID id' message
+
+PlayerClient: receiving YOUR_ID triggers PlayerClient to instantiate the Player class with this id, 'south' position etc; adds this instances to self.players. Attention: the list position of Player() in self.players does not match his id, as opposed to the controller side, where this is the case
+
+Controller: if 4 players are connected, the Table() instance self.table is asked to prepare_first_game()
+
+Table: loads players[] into seats[] and reshuffles them
+Table: informs all players who sits where through 'SEAT player_id, player_name' with respect to the targetted players position using neighbouring_player_info(). By giving the players the player_id of all opponents, and their seat at the table only once, we can communicate solely using player.ids in the future
+
+PlayerClient: receiving SEAT triggers PlayerClient to instantiate the Player class with this id, 'correct relative position' 3 more times, adds these instances to self.players.
+
+Table: calls start_game()
+Table: broadcasts who the dealer is using a 'DEALERID id' message
+
+PlayerClient: upon receiving 'DEALERID' message the Player() object matching id is recovered, and set_dealer is called
+
+Player: set_dealer changes the boolean flag as well as the name representation on the self.scene to 'dealer: name'
+
+Table: if the settings allow the dealer to reshuffle a 'SHUFFLEDECK' query is send to the dealer, else go to ask_cut_deck immediatly
+
+PlayerClient: only the dealer receves 'SHUFFLEDECK', answers a modal window, and send back 'RESHUFFLE YES' or 'RESHUFFLE NO'
+
+Table: if 'RESHUFFLE YES' is received the self.deck() is shuffled, and we move to ask_to_cut_deck
+Table: the cutter is the player left from the dealer, he is sent the 'CUTDECK mincut, maxcut' query
+
+PlayerClient: only the cutter recieves 'CUTDECK', answers a modal window, and send back 'CUT num'
+
+Table: upon receiving 'CUT' the self.deck is cut
+Table: then does divide_cards() in which up to 4 rounds of card dealing can be done, and all players are send the 'HAND cards, ...' query
+
+PlayerClient: self.players[0] (= you) gets the hand
+
+Player(): sorts the hand, creates the related Graphic_card instances, calls draw_hand()
+
+PlayerClient: verifies if TROEL has been found (every player will do this) - and send it in the chat to inform the others
+
+Table: starts the initiate_bidding() routine, first checking for trull, if it is trull & we cannot 'overbid' table starts initiate_playing_of_cards()
+however, if bidding is still allowed:
+-> the last card dealt is communicated to all players by means of a 'TRUMPCARD dealerid cardabbrev' message
+
+PlayerClients: look up dealer and tells him to drawtrumpcard
+
+Player: draws the trump card above the other cards
+
+Table: selects get_player_to_bid() and get_remaining_bid_options()
+Table: send the player to bid a query 'ASKBID bid_options'
+
+PlayerClient: enable_bid_options() activates some bid option buttons
+
+PlayerClient: when the user clicks the bid button the bid() send a'BID bid suit' query to the server
+
+Table: this BID query triggers the process_a_new_bid() function, and thus continues untill no-one can bid anymore, then either we need to redeal (all passed) or we don't
+-> if we have to redeal table will collect the cards, cleanup for new round, send a redeal message to all playerclients, start the game again
+-> if we don't redeal, initiate_playing_of_cards() is called
+
+Table: when initiating the playing of cards first the Playerclients are all informed to hide the trump card with a 'HIDETRUMP' query
+PlayerClient: then calls hide_trump_card() on every Player in self.players[]
+Table: then divides the teams based on the bids, this completes self.attackers & self.defenders
+Table: then sends out in the chat how the teams are divided - broadcast_trick_information()
+
+Table: the ask_to_play_card() function then sends a query 'PLEASEPLAY' to self.player_to_play_card.id
+Playerclient: when receiving 'PLEASEPLAY' enables the 'play card' button
+PlayerClient: when the user clicks on the button, play_card() is called, which sends a query 'IPLAY cardabbrev'
+
+Table: when receiving 'IPLAY' process_played_card() is triggered, which first validate_and_add_card_to_trick()
+Table: if it is not a valid card the same user is asked to play a card again!
+Table: if it is ok, the table broadcasts this move to all players 'CARD_WAS_PLAYED id,abbrev'
+
+
+this is where to coding stops
