@@ -7,10 +7,38 @@ import os
 from staticvar import *
 
 
+def sort_pdstack_on_hand(stack):
+    seq = list()
+    for card in stack:
+        v = 0
+        if card.suit == "Diamonds":
+            v += 100
+        elif card.suit == "Spades":
+            v += 200
+        elif card.suit == "Hearts":
+            v += 300
+        if card.value == "Jack":
+            v += 11
+        elif card.value == "Queen":
+            v += 12
+        elif card.value == "King":
+            v += 13
+        elif card.value == "Ace":
+            v += 14
+        else:
+            v += int(card.value)  # 2 - 10
+        seq.append(v)
+    sorted_indices = sorted(range(len(seq)), key=seq.__getitem__)
+    card_list = [stack[i] for i in sorted_indices]
+    return_stack = pd.stack.Stack()
+    return_stack.insert_list(card_list)
+    return return_stack
+
+
 class Player:
-    def __init__(self, id, name, seat, scene, svgrenderer):
-        print("creating player with id " + str(id))
-        self.id = int(id)  # this is the id the server has for the player
+    def __init__(self, player_id, name, seat, scene, svgrenderer):
+        print("creating player with id " + str(player_id))
+        self.player_id = int(player_id)  # this is the id the server has for the player
         self.name = name
         self.seat = seat  # this is the seat relative to where you are sitting (south)
         self.scene = scene
@@ -54,7 +82,7 @@ class Player:
         # sort the received cards and put them on my hand
         deck = pd.deck.Deck()
         stack = pd.stack.Stack(cards=deck.get_list(card_abbreviation_list))
-        stack = self.sort_pdstack_on_hand(stack)
+        stack = sort_pdstack_on_hand(stack)
         z = 10
         for pdcard in stack:
             card = GraphicCard(pdcard.abbrev, z, self.svgrenderer, self.hand)
@@ -88,33 +116,6 @@ class Player:
             transformation.rotate(CARD_ROTATE[seat])
             card.setTransform(transformation)
             self.scene.addItem(card)
-
-    def sort_pdstack_on_hand(self, stack):
-        seq = list()
-        for card in stack:
-            v = 0
-            if card.suit == "Diamonds":
-                v += 100
-            elif card.suit == "Spades":
-                v += 200
-            elif card.suit == "Hearts":
-                v += 300
-            if card.value == "Jack":
-                v += 11
-            elif card.value == "Queen":
-                v += 12
-            elif card.value == "King":
-                v += 13
-            elif card.value == "Ace":
-                v += 14
-            else:
-                v += int(card.value)  # 2 - 10
-            seq.append(v)
-        sorted_indices = sorted(range(len(seq)), key=seq.__getitem__)
-        card_list = [stack[i] for i in sorted_indices]
-        return_stack = pd.stack.Stack()
-        return_stack.insert_list(card_list)
-        return return_stack
 
     def draw_trump_card(self, abbrev):
         card = GraphicCard(abbrev, 0, self.svgrenderer, self.hand)

@@ -1,9 +1,10 @@
 import pydealer as pd
 import random
 
+
 class Player:
-    def __init__(self, id):
-        self.id = id
+    def __init__(self, player_id):
+        self.player_id = player_id
         self.name = ""
         self.socket = None
         self.hand = pd.Stack()
@@ -23,14 +24,14 @@ class Player:
                 return card.suit
         return None
 
-    def has_KH(self):
+    def has_kh(self):
         i_have_it = False
         for card in self.hand:
             if card.value == "King" and card.suit == "Hearts":
                 i_have_it = True
         return i_have_it
 
-    def has_QH(self):
+    def has_qh(self):
         i_have_it = False
         for card in self.hand:
             if card.value == "Queen" and card.suit == "Hearts":
@@ -45,6 +46,7 @@ class Table:
 
         self.seats = list()  # a list of player instances
         self.dealer_seat = 0
+        self.player_to_play_card = None
 
         # create a shuffled deck of 52 cards
         self.deck = pd.Deck()
@@ -70,11 +72,11 @@ class Table:
         self.trump = None
         self.type_of_game = None
 
-    def get_player_from_id(self, id):
+    def get_player_from_id(self, player_id):
         """ returns a Player() object linked to the given id"""
         x = None
         for player in self.seats:
-            if player.id == id:
+            if player.player_id == player_id:
                 x = player
         return x
 
@@ -108,7 +110,7 @@ class Table:
                 neighbour_info = self.neighbouring_player_info(player, direction)
                 txt = "%i,%s" % (neighbour_info[0], neighbour_info[1])
                 msg = self.ctrl.assemble_server_message("SEAT" + direction, txt)
-                self.ctrl.send_server_message(player.id, msg)
+                self.ctrl.send_server_message(player.player_id, msg)
         # start the game
         self.start_game()
 
@@ -118,6 +120,8 @@ class Table:
             if player_pov is seat:
                 break
             i += 1
+
+        neighbour = None
         if relative_position == "WEST":
             neighbour = self.seats[(i + 1) % 4]
         elif relative_position == "NORTH":
@@ -130,7 +134,7 @@ class Table:
         dealer = self.seats[self.dealer_seat]
         # tell all players who the dealer is
         self.ctrl.serverchat("The dealer for this round is: %s" % dealer.name)
-        msg = self.ctrl.assemble_server_message("DEALERID", str(dealer.id))
+        msg = self.ctrl.assemble_server_message("DEALERID", str(dealer.player_id))
         self.ctrl.broadcast_server_message(msg)
 
         # check if the dealer wants to shuffle
@@ -141,7 +145,7 @@ class Table:
                 + " if he wishes to shuffle the deck of cards."
             )
             msg = self.ctrl.assemble_server_message("SHUFFLEDECK", "no_message")
-            self.ctrl.send_server_message(dealer.id, msg)
+            self.ctrl.send_server_message(dealer.player_id, msg)
         else:
             self.ask_to_cut_deck()
 
@@ -157,7 +161,7 @@ class Table:
             % (cutter.name, mincut, maxcut)
         )
         msg = self.ctrl.assemble_server_message("CUTDECK", "%s,%s" % (mincut, maxcut))
-        self.ctrl.send_server_message(cutter.id, msg)
+        self.ctrl.send_server_message(cutter.player_id, msg)
 
     def cut_deck(self, num):
         self.deck = pd.stack.Stack(cards=self.deck[num:52] + self.deck[0:num])
@@ -192,7 +196,7 @@ class Table:
             for i in range(13):
                 player_hand_txt += player.hand[i].abbrev + ","
             msg = self.ctrl.assemble_server_message("HAND", player_hand_txt)
-            self.ctrl.send_server_message(player.id, msg)
+            self.ctrl.send_server_message(player.player_id, msg)
 
     def initiate_bidding(self):
         we_need_to_bid = True
@@ -208,7 +212,7 @@ class Table:
             dealer = self.seats[self.dealer_seat]
             trump_card = self.last_card_before_dealing.abbrev
             msg = self.ctrl.assemble_server_message(
-                "TRUMPCARD", str(dealer.id) + "," + trump_card
+                "TRUMPCARD", str(dealer.player_id) + "," + trump_card
             )
             self.ctrl.broadcast_server_message(msg)
 
@@ -219,7 +223,7 @@ class Table:
                 "Start bidding round. Please bid, %s" % player_to_bid.name
             )
             msg = self.ctrl.assemble_server_message("ASKBID", bid_options)
-            self.ctrl.send_server_message
+            self.ctrl.send_server_message(player_to_bid.id, msg)
         else:
             self.initiate_playing_of_cards()
 
@@ -242,15 +246,17 @@ class Table:
                 trump_suit = player.suit_of_my_single_ace()
         if second_player is None:
             trump_suit = "Hearts"
+            khplayer = None
+            qhplayer = None
             for player in self.seats:
-                if player.has_KH():
-                    KHplayer = player
-                if player.has_QH():
-                    QHplayer = player
-            if KHplayer != lead_player:
-                second_player = KHplayer
+                if player.has_kh():
+                    khplayer = player
+                if player.has_qh():
+                    qhplayer = player
+            if khplayer != lead_player:
+                second_player = khplayer
             else:
-                second_player = QHplayer
+                second_player = qhplayer
         self.add_bid(["trull1", trump_suit, lead_player])
         self.add_bid(["trull2", trump_suit, second_player])
 
@@ -299,7 +305,7 @@ class Table:
             bid_options = self.get_remaining_bid_options()
             self.ctrl.serverchat("Please bid, %s" % player_to_bid.name)
             msg = self.ctrl.assemble_server_message("ASKBID", bid_options)
-            self.ctrl.send_server_message
+            self.ctrl.send_server_message(player_to_bid.id, msg)
         else:
             self.ctrl.serverchat("The bidding for this game is now over.")
             need_redeal = self.check_if_we_need_to_redeal()
@@ -547,7 +553,7 @@ class Table:
 
     def ask_to_play_card(self):
         msg = self.ctrl.assemble_server_message("PLEASEPLAY", "")
-        self.send_server_message(self.player_to_play_card.id, msg)
+        self.ctrl.send_server_message(self.player_to_play_card.player_id, msg)
 
     def process_played_card(self, player, abbrev):
         # todo verify
@@ -557,7 +563,7 @@ class Table:
             self.ask_to_play_card()
         else:
             msg = self.ctrl.assemble_server_message(
-                "CARD_WAS_PLAYED", "%s,%s" % (player.id, abbrev)
+                "CARD_WAS_PLAYED", "%s,%s" % (player.player_id, abbrev)
             )
             self.ctrl.broadcast_server_message(msg)
 
@@ -569,6 +575,7 @@ class Table:
 
         # check if the card is on the players hand
         player_has_card = False
+        player_pd_card = None
         for card in player.hand:
             if card.abbrev == abbrev:
                 player_has_card = True
@@ -584,7 +591,7 @@ class Table:
             and self.settings["points"]["trulltricks"] == "8"
         ):
             highest_trump_card = self.get_highest_card_of_suit_in_stack(
-                self.player.hand, self.trump
+                player.hand, self.trump
             )
             print(
                 "we are in trull 8 mode, trump is %s, card  that player wants to play is %s and highest card "
@@ -599,7 +606,7 @@ class Table:
         if len(self.trick) != 0:
             print("player has to follow suit if he can")
             if player_pd_card.suit != self.trick[0][0].suit:
-                for card in self.player.hand:
+                for card in player.hand:
                     if card.suit == self.trick[0].suit:
                         print("player should have followed suit")
                         return False

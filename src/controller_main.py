@@ -393,8 +393,8 @@ class Controller(QMainWindow):
     def welcome_player(self, player, playername):
         player.name = playername
         self.serverchat("welcome new player: " + playername)
-        msg = self.assemble_server_message("YOUR_ID", str(player.id))
-        self.send_server_message(player.id, msg)
+        msg = self.assemble_server_message("YOUR_ID", str(player.player_id))
+        self.send_server_message(player.player_id, msg)
 
     def check_if_enough_players_are_connected(self):
         i = len(self.players)

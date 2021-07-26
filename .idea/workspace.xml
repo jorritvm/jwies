@@ -2,32 +2,14 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="862a453e-f4c6-486c-9076-ba60aae5d525" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/jwies.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/jwies.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.pylintrc" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller_main.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller_table.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/icons/clubs.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/icons/desktop-image.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/icons/diamonds.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/icons/hearts.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/icons/network-hub.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/icons/playing-card.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/icons/report.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/icons/server.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/icons/spades.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/player_main.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/player_player.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/settings/controller.ini" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/settings/player.ini" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/staticvar.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/svg/README" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/svg/svg-cards.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/connect_pane.ui" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/settings_pane.ui" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/test.ui" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/controller_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/controller_main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/controller_table.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/controller_table.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/player_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/player_main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/player_player.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/player_player.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/settings/player.ini" beforeDir="false" afterPath="$PROJECT_DIR$/src/settings/player.ini" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ztartclients - Copy.bat" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ztartclients.bat" beforeDir="false" afterPath="$PROJECT_DIR$/src/ztartclients.bat" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -132,5 +114,16 @@
       <updated>1627300189699</updated>
     </task>
     <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
 </project>
