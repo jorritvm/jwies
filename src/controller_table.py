@@ -98,9 +98,11 @@ class Table:
             self.process_played_card(player, mcontent)
 
     def prepare_first_game(self):
+        print("prepare_first_game")
         # give everyone a random seat
         self.seats = self.ctrl.players.copy()
         random.shuffle(self.seats)
+        print("seats have been shuffled")
         self.ctrl.serverchat(
             "Starting a new game. Sending everyone table seat positions."
         )
@@ -110,11 +112,24 @@ class Table:
                 neighbour_info = self.neighbouring_player_info(player, direction)
                 txt = "%i,%s" % (neighbour_info[0], neighbour_info[1])
                 msg = self.ctrl.assemble_server_message("SEAT" + direction, txt)
+                print("informing players who sits where")
                 self.ctrl.send_server_message(player.player_id, msg)
+
         # start the game
         self.start_game()
 
     def neighbouring_player_info(self, player_pov, relative_position):
+        """
+        this function provides, for a given player and his relative position (east, west, north)
+        what other player is sitting there
+        """
+        print("neighbour player info method")
+        print("player pov")
+        print(player_pov)
+        print("seats")
+        for seat in self.seats:
+            print(seat)
+
         i = 0
         for seat in self.seats:
             if player_pov is seat:
@@ -128,9 +143,12 @@ class Table:
             neighbour = self.seats[(i + 2) % 4]
         elif relative_position == "EAST":
             neighbour = self.seats[(i + 3) % 4]
-        return [neighbour.id, neighbour.name]
+
+        print("ready to return")
+        return [neighbour.player_id, neighbour.name]
 
     def start_game(self):
+        print("def start game")
         dealer = self.seats[self.dealer_seat]
         # tell all players who the dealer is
         self.ctrl.serverchat("The dealer for this round is: %s" % dealer.name)
@@ -223,7 +241,7 @@ class Table:
                 "Start bidding round. Please bid, %s" % player_to_bid.name
             )
             msg = self.ctrl.assemble_server_message("ASKBID", bid_options)
-            self.ctrl.send_server_message(player_to_bid.id, msg)
+            self.ctrl.send_server_message(player_to_bid.player_id, msg)
         else:
             self.initiate_playing_of_cards()
 
@@ -305,7 +323,7 @@ class Table:
             bid_options = self.get_remaining_bid_options()
             self.ctrl.serverchat("Please bid, %s" % player_to_bid.name)
             msg = self.ctrl.assemble_server_message("ASKBID", bid_options)
-            self.ctrl.send_server_message(player_to_bid.id, msg)
+            self.ctrl.send_server_message(player_to_bid.player_id, msg)
         else:
             self.ctrl.serverchat("The bidding for this game is now over.")
             need_redeal = self.check_if_we_need_to_redeal()

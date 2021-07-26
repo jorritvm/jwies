@@ -195,7 +195,6 @@ class GraphicCard(QGraphicsSvgItem):
 class ChooseSuitDialog(QDialog):
     def __init__(self, allow_no_trump, *args, **kwargs):
         super(ChooseSuitDialog, self).__init__(*args, **kwargs)
-        # super(Choose_suit_dialog, self).__init__(parent = None)
 
         self.setWindowTitle("Choose the suit you want for Trump...")
 
@@ -206,7 +205,7 @@ class ChooseSuitDialog(QDialog):
         for suit in suits:
             btn = QPushButton()
             if suit is not None:
-                pm = QPixmap(os.path.join("icons", suit + ".png"))
+                pm = QPixmap(os.path.join("img", suit + ".png"))
                 qi = QIcon(pm)
                 btn.setIcon(qi)
                 btn.setIconSize(QSize(50, 50))

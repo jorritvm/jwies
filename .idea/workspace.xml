@@ -3,13 +3,13 @@
   <component name="ChangeListManager">
     <list default="true" id="862a453e-f4c6-486c-9076-ba60aae5d525" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/doc/LOG.txt" beforeDir="false" afterPath="$PROJECT_DIR$/doc/LOG.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/doc/flow.txt" beforeDir="false" afterPath="$PROJECT_DIR$/doc/flow.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/controller_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/controller_main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/controller_table.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/controller_table.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/player_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/player_main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/player_player.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/player_player.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/settings/player.ini" beforeDir="false" afterPath="$PROJECT_DIR$/src/settings/player.ini" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ztartclients - Copy.bat" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ztartclients.bat" beforeDir="false" afterPath="$PROJECT_DIR$/src/ztartclients.bat" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -125,5 +125,36 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/controller_table.py</url>
+          <line>111</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/controller_table.py</url>
+          <line>112</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/controller_table.py</url>
+          <line>138</line>
+          <option name="timeStamp" value="3" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/controller_table.py</url>
+          <line>133</line>
+          <option name="timeStamp" value="4" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/controller_table.py</url>
+          <line>147</line>
+          <option name="timeStamp" value="5" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

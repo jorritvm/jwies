@@ -8,7 +8,7 @@ Controller: can read, modify & save controller side settings
 Controller: buttonclick launches a tcp server to wait for new connections
 
 PlayerClient: initiates their GUI
-PlayerClient: loads in player side settings (previous ip etc)
+PlayerClient: loads in player side settings (previous ip etc) 
 PlayerClient: buttonclick connects to server
 
 Controller: receives new connect and so creates new Player() objects and links their socket, then appends it to self.players[] 
