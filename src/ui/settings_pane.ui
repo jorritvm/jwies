@@ -719,7 +719,7 @@
    <widget class="QCheckBox" name="check_misere_ouverte_beats_trull">
     <property name="geometry">
      <rect>
-      <x>570</x>
+      <x>560</x>
       <y>150</y>
       <width>16</width>
       <height>16</height>
@@ -732,7 +732,7 @@
    <widget class="QCheckBox" name="check_soloslim_beats_trull">
     <property name="geometry">
      <rect>
-      <x>570</x>
+      <x>560</x>
       <y>80</y>
       <width>16</width>
       <height>16</height>
@@ -755,26 +755,10 @@
      <string>Troel gaat boven alles, bij troel wordt troefkaart niet gedraaid</string>
     </property>
    </widget>
-   <widget class="QCheckBox" name="check_trull_above_all_else">
-    <property name="geometry">
-     <rect>
-      <x>660</x>
-      <y>20</y>
-      <width>16</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="contextMenuPolicy">
-     <enum>Qt::NoContextMenu</enum>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-   </widget>
    <widget class="QLabel" name="label_32">
     <property name="geometry">
      <rect>
-      <x>350</x>
+      <x>340</x>
       <y>140</y>
       <width>143</width>
       <height>16</height>
@@ -787,7 +771,7 @@
    <widget class="QLabel" name="label_34">
     <property name="geometry">
      <rect>
-      <x>349</x>
+      <x>339</x>
       <y>80</y>
       <width>143</width>
       <height>16</height>
@@ -800,7 +784,7 @@
    <widget class="QLabel" name="label_35">
     <property name="geometry">
      <rect>
-      <x>350</x>
+      <x>340</x>
       <y>110</y>
       <width>143</width>
       <height>16</height>
@@ -826,7 +810,7 @@
    <widget class="QCheckBox" name="check_solo_beats_trull">
     <property name="geometry">
      <rect>
-      <x>570</x>
+      <x>560</x>
       <y>120</y>
       <width>16</width>
       <height>16</height>

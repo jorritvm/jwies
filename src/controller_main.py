@@ -1,38 +1,36 @@
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import (
-    QApplication,
-    QMainWindow,
-    QWidget,
-    QInputDialog,
-    QLineEdit,
-    QPushButton,
-    QVBoxLayout,
-    QPlainTextEdit,
-    QAction,
-)
-from PyQt5.QtNetwork import QTcpServer, QHostAddress
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtNetwork import *
 from PyQt5 import uic
+
+import os
+import sys
+import time
 import configparser
 import requests
-import sys
-import os
-import time
-import staticvar as STATICVAR
-import controller_table as ct
+
+from staticvar import *
+from controller_table import Table, Player
 
 
 class Controller(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(Controller, self).__init__(*args, **kwargs)
 
+        # setup gui
+        self.input_ip = QLineEdit()
+        self.input_port = QLineEdit()
+        self.start_server = QPushButton("Start server")
+        self.close_server = QPushButton("Close server")
+        self.textbox = QPlainTextEdit()
         self.setup_gui()
+
         self.settings = self.load_settings()
-        self.log("Wies controller initiated")
-
         self.tcp_server = QTcpServer(self)
-
-        self.table = ct.Table(self)
+        self.table = Table(self)
         self.players = list()  # list of user defined player objects
+
+        self.log("Wies controller initiated")
 
         # start debug
         self.start_tcp_server(self.input_ip.text(), self.input_port.text())
@@ -41,19 +39,10 @@ class Controller(QMainWindow):
     def setup_gui(self):
         # gui elements
         self.setWindowTitle("jwies - controller screen")
-        self.setWindowIcon(QIcon(os.path.join("icons", "server.png")))
-
-        self.input_ip = QLineEdit()
+        self.setWindowIcon(QIcon(os.path.join("img", "server.png")))
         self.input_ip.setText("127.0.0.1")
-
-        self.input_port = QLineEdit()
         self.input_port.setText("9999")
-
-        self.start_server = QPushButton("Start server")
-        self.close_server = QPushButton("Close server")
         self.close_server.setDisabled(True)
-
-        self.textbox = QPlainTextEdit()
         self.textbox.setReadOnly(True)
 
         # gui layout
@@ -111,7 +100,7 @@ class Controller(QMainWindow):
 
     def show_settings_pane(self):
         settings_pane = uic.loadUi(os.path.join("ui", "settings_pane.ui"))
-        settings_pane.setWindowIcon(QIcon(os.path.join("icons", "network-hub.png")))
+        settings_pane.setWindowIcon(QIcon(os.path.join("img", "network-hub.png")))
 
         # set initial value for dialog box
         settings_pane.check_dealer_shuffle.setChecked(

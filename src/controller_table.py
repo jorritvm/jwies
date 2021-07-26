@@ -1,7 +1,6 @@
 import pydealer as pd
 import random
 
-
 class Player:
     def __init__(self, id):
         self.id = id
@@ -72,6 +71,7 @@ class Table:
         self.type_of_game = None
 
     def get_player_from_id(self, id):
+        """ returns a Player() object linked to the given id"""
         x = None
         for player in self.seats:
             if player.id == id:
@@ -98,7 +98,7 @@ class Table:
     def prepare_first_game(self):
         # give everyone a random seat
         self.seats = self.ctrl.players.copy()
-        self.shuffle_seats()
+        random.shuffle(self.seats)
         self.ctrl.serverchat(
             "Starting a new game. Sending everyone table seat positions."
         )
@@ -111,9 +111,6 @@ class Table:
                 self.ctrl.send_server_message(player.id, msg)
         # start the game
         self.start_game()
-
-    def shuffle_seats(self):
-        random.shuffle(self.seats)
 
     def neighbouring_player_info(self, player_pov, relative_position):
         i = 0
@@ -383,6 +380,7 @@ class Table:
         return redeal
 
     def cleanup_for_new_round(self):
+        """ cleans up the structures used for storing bids"""
         self.last_card_before_dealing = None
         self.seat_to_bid = (self.dealer_seat + 1) % 4
         self.trickbids = [list(), list(), list()]
@@ -519,7 +517,10 @@ class Table:
             self.ctrl.serverchat("Impossible for the ctrl to divide the teams")
 
     def collect_cards(self):
-        # collect cards from all hands starting with the person left from the dealer
+        """
+        collect cards from all hands starting with the person left from the dealer,
+        as required in a redeal
+        """
         for i in range(4):
             player = self.seats[(self.dealer_seat + 1 + i) % 4]
             self.deck = self.deck + player.hand
@@ -561,6 +562,11 @@ class Table:
             self.ctrl.broadcast_server_message(msg)
 
     def validate_and_add_card_to_trick(self, player, abbrev):
+        """
+        perform a series of checks on the played card to see if it is a valid card choice,
+        abiding by all the rules
+        """
+
         # check if the card is on the players hand
         player_has_card = False
         for card in player.hand:
@@ -589,6 +595,7 @@ class Table:
                 print("card not validated player should have played higher")
                 return False
 
+        # check if the player has followed the suit if he was able to
         if len(self.trick) != 0:
             print("player has to follow suit if he can")
             if player_pd_card.suit != self.trick[0][0].suit:
@@ -601,11 +608,16 @@ class Table:
         return True
 
     def get_highest_card_of_suit_in_stack(self, stack, suit):
+        """
+        returns the highest card of a given suit in a given stack
+        """
         seq = list()
         for card in stack:
             v = 0
+
             if card.suit == suit:
                 v += 100
+
             if card.value == "Jack":
                 v += 11
             elif card.value == "Queen":
@@ -616,6 +628,7 @@ class Table:
                 v += 14
             else:
                 v += int(card.value)  # 2 - 10
+
             seq.append(v)
         position = seq.index(max(seq))
         return stack[position]

@@ -1,10 +1,18 @@
+from PyQt5.QtCore import Qt
 from PyQt5.QtNetwork import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
+from PyQt5.QtSvg import *
 from PyQt5 import uic
-import configparser
+
+import os
 import sys
 import time
+import configparser
 import random
-from player_player import Player, Choose_suit_dialog, MyGraphicsView, 
+
+from staticvar import *
+from player_player import Player, ChooseSuitDialog, MyGraphicsView, GraphicCard
 
 
 class PlayerClient(QMainWindow):
@@ -13,8 +21,14 @@ class PlayerClient(QMainWindow):
 
         self.players = list()  # contains player objects as defined in this module
 
-        # init GUI and settings
+        # setup gui
+        self.scene = QGraphicsScene()
+        self.fieldrect = QGraphicsRectItem(1, 1, 798, 598)
+        self.svgrenderer = QSvgRenderer("img/svg-cards.svg")
+        self.view = MyGraphicsView(self.fieldrect)
+
         self.setup_gui()
+
         self.settings = self.load_settings()
 
         # init TCP related stuff
@@ -30,21 +44,20 @@ class PlayerClient(QMainWindow):
 
     def setup_gui(self):  # sizing policies
         minimum_policy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-        expanding_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        preferred_policy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        expanding_policy = QSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Expanding)
+        preferred_policy = QSizePolicy(
+            QSizePolicy.Preferred, QSizePolicy.Expanding)
 
         # gui elements
         self.setWindowTitle("jwies - player screen")
         self.setWindowIcon(QIcon(os.path.join("icons", "playing-card.png")))
 
         # set up the playing field
-        self.scene = QGraphicsScene()
         self.scene.setBackgroundBrush(Qt.darkGreen)
         self.scene.setSceneRect(0, 0, SCENE_RECT_X, SCENE_RECT_Y)
-        self.fieldrect = QGraphicsRectItem(1, 1, 798, 598)
         self.scene.addItem(self.fieldrect)
-        self.svgrenderer = QSvgRenderer("svg/svg-cards.svg")
-        self.view = MyGraphicsView(self.fieldrect)
+
         self.view.setScene(self.scene)
         self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -75,13 +88,15 @@ class PlayerClient(QMainWindow):
         for btn in self.btn_bidoptions.values():
             btn.setEnabled(False)
 
-        spacer = QSpacerItem(20, 221, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        spacer = QSpacerItem(20, 221, QSizePolicy.Minimum,
+                             QSizePolicy.Expanding)
 
         buttonbox_layout = QVBoxLayout()
         for btn in self.btn_bidoptions.values():
             buttonbox_layout.addWidget(btn)
 
-        spacerItem = QSpacerItem(20, 221, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        # spacer_item = QSpacerItem(
+        #     20, 221, QSizePolicy.Minimum, QSizePolicy.Expanding)
         buttonbox_layout.addItem(spacer)
 
         self.btnlasttrike = QPushButton("Toon laatste slag")
@@ -183,15 +198,19 @@ class PlayerClient(QMainWindow):
 
     def connect_to_a_game(self):
         connect_pane = uic.loadUi(os.path.join("ui", "connect_pane.ui"))
-        connect_pane.setWindowIcon(QIcon(os.path.join("icons", "network-hub.png")))
+        connect_pane.setWindowIcon(
+            QIcon(os.path.join("icons", "network-hub.png")))
 
         # set initial value for dialog box
-        connect_pane.line_name.setText(self.settings["last_connection"]["name"])
+        connect_pane.line_name.setText(
+            self.settings["last_connection"]["name"])
         connect_pane.line_name.setText(
             "player" + str(random.randint(1, 1000))
         )  # for debug
-        connect_pane.line_host.setText(self.settings["last_connection"]["host"])
-        connect_pane.spin_port.setValue(self.settings.getint("last_connection", "port"))
+        connect_pane.line_host.setText(
+            self.settings["last_connection"]["host"])
+        connect_pane.spin_port.setValue(
+            self.settings.getint("last_connection", "port"))
 
         if connect_pane.exec_():
             # save new values in settings
@@ -332,12 +351,14 @@ class PlayerClient(QMainWindow):
         self.send_player_message(msg)
 
     def get_player_using_id(self, id):
+        player = None
         for player in self.players:
             if player.id == id:
                 break
         return player
 
     def get_dealer_player(self):
+        player = None
         for player in self.players:
             if player.is_dealer:
                 break
@@ -409,6 +430,7 @@ class PlayerClient(QMainWindow):
             if suit is None:
                 return
 
+        troef = ""
         if suit == "Clubs":
             troef = "KLAVEREN"
         elif suit == "Diamonds":
@@ -420,6 +442,7 @@ class PlayerClient(QMainWindow):
         elif suit == "no_trump":
             troef = "ZONDER TROEF"
 
+        txt = ""
         if bid == "ask":
             txt = "IK GA " + troef + " VRAGEN"
         elif bid == "pass":
@@ -458,7 +481,7 @@ class PlayerClient(QMainWindow):
 
     def choose_suit_pre_bid(self, allow_no_trump):
         """open suit selection dialog box and return the selected suit"""
-        dlg = Choose_suit_dialog(allow_no_trump, self)
+        dlg = ChooseSuitDialog(allow_no_trump, self)
         if dlg.exec_():
             index = 0
             total = 0
@@ -478,6 +501,7 @@ class PlayerClient(QMainWindow):
     def play_card(self):
         print("playing card fct now ...")
         i = 0
+        abbrev = ""
         for card in self.players[0].hand:
             if card.is_selected:
                 print("found a selected card on hand:" + card.abbrev)
@@ -513,7 +537,7 @@ class PlayerClient(QMainWindow):
         #     print(str(player.id))
         #     print(player.name)
         #     print(player.seat)
-        card = Graphic_Card("AS", 1, self.svgrenderer)
+        card = GraphicCard("AS", 1, self.svgrenderer)
         transformation = QTransform()
         transformation.scale(CARDSCALE, CARDSCALE)
         card.setX(100)
@@ -531,6 +555,10 @@ class PlayerClient(QMainWindow):
         self.answer_to_cut_deck([10, 30])
 
 
+print ("--------------")
+import os
+print (os.getcwd())
+print ("--------------")
 app = QApplication(sys.argv)
 main = PlayerClient()
 main.show()

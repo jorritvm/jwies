@@ -2,6 +2,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtSvg import *
 import pydealer as pd
+import pydealer.tools as pdtools
 import os
 from staticvar import *
 
@@ -14,18 +15,19 @@ class Player:
         self.seat = seat  # this is the seat relative to where you are sitting (south)
         self.scene = scene
         self.svgrenderer = svgrenderer
-        self.hand = list()  # list of Graphic_Card objects
+        self.hand = list()  # list of GraphicCard objects
 
-        self.setup_default_cards(seat)
+        self.setup_default_cards()
+        self.name_label = None
         self.draw_name(seat, name)
         self.draw_hand()
 
         self.is_dealer = False
         self.trumpcard = None
 
-    def setup_default_cards(self, seat):
+    def setup_default_cards(self):
         for z in range(13):
-            card = Graphic_Card("back", z + 10, self.svgrenderer, self.hand)
+            card = GraphicCard("back", z + 10, self.svgrenderer, self.hand)
             self.hand.append(card)
 
     def draw_name(self, seat, name):
@@ -55,7 +57,7 @@ class Player:
         stack = self.sort_pdstack_on_hand(stack)
         z = 10
         for pdcard in stack:
-            card = Graphic_Card(pdcard.abbrev, z, self.svgrenderer, self.hand)
+            card = GraphicCard(pdcard.abbrev, z, self.svgrenderer, self.hand)
             self.hand.append(card)
             z += 1
 
@@ -115,7 +117,7 @@ class Player:
         return return_stack
 
     def draw_trump_card(self, abbrev):
-        card = Graphic_Card(abbrev, 0, self.svgrenderer, self.hand)
+        card = GraphicCard(abbrev, 0, self.svgrenderer, self.hand)
         transformation = QTransform()
         transformation.scale(CARDSCALE, CARDSCALE)
         card.setX(X_TRUMPCARD[self.seat])
@@ -133,17 +135,19 @@ class Player:
     def reset(self):
         for card in self.hand:
             self.scene.removeItem(card)
-        self.hand = list()  # list of Graphic_Card objects
-        self.setup_default_cards(self.seat)
+        self.hand = list()  # list of GraphicCard objects
+        self.setup_default_cards()
         self.draw_hand()
         self.set_dealer(False)
         self.scene.removeItem(self.trumpcard)
         self.trumpcard = None
 
 
-class Graphic_Card(QGraphicsSvgItem):
+class GraphicCard(QGraphicsSvgItem):
     def __init__(self, abbrev, z, svgrenderer, hand, *args, **kwargs):
-        super(Graphic_Card, self).__init__(*args, **kwargs)
+        super(GraphicCard, self).__init__(*args, **kwargs)
+
+        # todo: check if/why we need argument hand here ...
 
         # self.card_click = pyqtSignal(str)
         self.hand = hand
@@ -161,7 +165,7 @@ class Graphic_Card(QGraphicsSvgItem):
             self.setElementId(self.svgdescription)
         else:
             deck = pd.deck.Deck()
-            self.pydealer_card = pd.tools.get_card(deck, abbrev)[1][0]
+            self.pydealer_card = pdtools.get_card(deck, abbrev)[1][0]
             self.suit = self.pydealer_card.suit
             self.value = self.pydealer_card.value
             self.svgdescription = self.get_svg_description()
@@ -173,7 +177,7 @@ class Graphic_Card(QGraphicsSvgItem):
         if v == "ace":
             v = "1"
         s = self.suit.lower()
-        s = s[0 : len(s) - 1]
+        s = s[0:len(s) - 1]
         desc = "%s_%s" % (v, s)
         return desc
 
@@ -187,9 +191,9 @@ class Graphic_Card(QGraphicsSvgItem):
             # self.card_click.emit(str(self.z))
 
 
-class Choose_suit_dialog(QDialog):
+class ChooseSuitDialog(QDialog):
     def __init__(self, allow_no_trump, *args, **kwargs):
-        super(Choose_suit_dialog, self).__init__(*args, **kwargs)
+        super(ChooseSuitDialog, self).__init__(*args, **kwargs)
         # super(Choose_suit_dialog, self).__init__(parent = None)
 
         self.setWindowTitle("Choose the suit you want for Trump...")
@@ -215,8 +219,8 @@ class Choose_suit_dialog(QDialog):
         topwidget = QWidget()
         topwidget.setLayout(suits_layout)
 
-        QBtn = QDialogButtonBox.Ok
-        self.buttonBox = QDialogButtonBox(QBtn)
+        qbtn = QDialogButtonBox.Ok
+        self.buttonBox = QDialogButtonBox(qbtn)
         self.buttonBox.accepted.connect(self.accept)
 
         self.layout = QVBoxLayout()
