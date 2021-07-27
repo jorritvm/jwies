@@ -69,7 +69,16 @@ class PlayerClient(QMainWindow):
         self.socket.disconnected.connect(self.server_has_stopped)
         self.socket.error.connect(lambda x: self.server_has_error(x))
 
-        self.connect_to_a_game()  # debug
+        # debug
+        # pop open connection pane right away
+        # self.connect_to_a_game()
+        # connect right away
+        name = "player" + str(random.randint(1, 1000))
+        self.settings["last_connection"]["name"] = name
+        self.socket.connectToHost(
+            self.settings["last_connection"]["host"],
+            int(self.settings["last_connection"]["port"]),
+        )
 
     def setup_gui(self):  # sizing policies
         minimum_policy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
@@ -222,9 +231,11 @@ class PlayerClient(QMainWindow):
         # set initial value for dialog box
         connect_pane.line_name.setText(
             self.settings["last_connection"]["name"])
+        # start debug
         connect_pane.line_name.setText(
             "player" + str(random.randint(1, 1000))
-        )  # for debug
+        )
+        # end debug
         connect_pane.line_host.setText(
             self.settings["last_connection"]["host"])
         connect_pane.spin_port.setValue(
@@ -334,7 +345,14 @@ class PlayerClient(QMainWindow):
             if mtype == "CARD_WAS_PLAYED":
                 player_id = mcontent.split(",")[0]
                 abbrev = mcontent.split(",")[1]
-                print("a card was played" + player_id + abbrev)
+                tricksize = mcontent.split(",")[2]
+                self.btnplaycard.setEnabled(False)
+                print("a card was played " + player_id + " " + abbrev)
+                card_player = self.get_player_using_id(int(player_id))
+                card_player.draw_played_card(abbrev, tricksize)
+            if mtype == "CLEAN_GREEN":
+                self.btnplaycard.setEnabled(True)
+
 
     def server_has_stopped(self):
         self.log("Socket error: Connection closed by server")
@@ -369,37 +387,48 @@ class PlayerClient(QMainWindow):
         return player
 
     def answer_to_shuffle_deck(self):
-        msgbox = QMessageBox()
-        msgbox.setIcon(QMessageBox.Question)
-        msgbox.setText("Do you want to reshuffle the deck?")
-        msgbox.setWindowTitle("Do you want to reshuffle the deck?")
-        msgbox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-        reply = msgbox.exec()
-        if reply == QMessageBox.Yes:
-            self.send_chat_txt("Yes, reshuffle the deck.")
-            msg = assemble_player_message("RESHUFFLE", "YES")
-        else:
-            self.send_chat_txt("No, do not reshuffle the deck.")
-            msg = assemble_player_message("RESHUFFLE", "NO")
+        # shortcut for debug purposes
+        self.send_chat_txt("Yes, reshuffle the deck.")
+        msg = assemble_player_message("RESHUFFLE", "YES")
         self.send_player_message(msg)
 
+        # msgbox = QMessageBox()
+        # msgbox.setIcon(QMessageBox.Question)
+        # msgbox.setText("Do you want to reshuffle the deck?")
+        # msgbox.setWindowTitle("Do you want to reshuffle the deck?")
+        # msgbox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        # reply = msgbox.exec()
+        # if reply == QMessageBox.Yes:
+        #     self.send_chat_txt("Yes, reshuffle the deck.")
+        #     msg = assemble_player_message("RESHUFFLE", "YES")
+        # else:
+        #     self.send_chat_txt("No, do not reshuffle the deck.")
+        #     msg = assemble_player_message("RESHUFFLE", "NO")
+        # self.send_player_message(msg)
+
     def answer_to_cut_deck(self, minmax):
-        mincut = int(minmax[0])
-        maxcut = int(minmax[1])
-        num, ok = QInputDialog.getInt(
-            self,
-            "Cut deck",
-            "How many cards do you want to slide under the deck?",
-            random.randint(mincut, maxcut),
-            mincut,
-            maxcut,
-        )
-        if ok:
-            self.send_chat_txt("Cutting %i cards" % num)
-            msg = assemble_player_message("CUT", str(num))
-            self.send_player_message(msg)
-        else:
-            self.answer_to_cut_deck(minmax)
+        # shortcut for debug purposes
+        num = 20
+        self.send_chat_txt("Cutting %i cards" % num)
+        msg = assemble_player_message("CUT", str(num))
+        self.send_player_message(msg)
+
+        # mincut = int(minmax[0])
+        # maxcut = int(minmax[1])
+        # num, ok = QInputDialog.getInt(
+        #     self,
+        #     "Cut deck",
+        #     "How many cards do you want to slide under the deck?",
+        #     random.randint(mincut, maxcut),
+        #     mincut,
+        #     maxcut,
+        # )
+        # if ok:
+        #     self.send_chat_txt("Cutting %i cards" % num)
+        #     msg = assemble_player_message("CUT", str(num))
+        #     self.send_player_message(msg)
+        # else:
+        #     self.answer_to_cut_deck(minmax)
 
     def enable_bid_options(self, bidoptions):
         opts = [
@@ -516,6 +545,17 @@ class PlayerClient(QMainWindow):
             self.btnplaycard.setEnabled(False)
             msg = assemble_player_message("IPLAY", abbrev)
             self.send_player_message(msg)
+
+    def clean_green(self):
+        print("def clean green")
+        time.sleep(2)  # making sure the last card does not dissappear too swift
+
+        cards_on_table = self.scene.items()
+        for card in cards_on_table:
+            print("card with zvalue > 1000 found: " + card.abbrev)
+            if card.zValue() > 1000:
+                self.scene.removeItem(card)
+
 
     def debug(self):
         pass

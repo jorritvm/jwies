@@ -15,7 +15,7 @@ class Player()
 - self.hand (a pd.Stack() representing his cards on hand)
 
 Class Table()
-- self.seats[] like self.players but this is ordered to hold the position of each player after random assignment
+- self.seats[] like self.players but this is *ordered* to hold the position of each player after random assignment
 - self.dealer_seat: <int> dealer position in self.seats (0..3)
 - self.deck: a pd.Deck representing the real physical cards with which the game is played
 - self.trickbids = list of 3 lists -> list 1: bid action, list 2: trump, list 3: who made the bid

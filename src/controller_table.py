@@ -1,5 +1,6 @@
 import pydealer as pd
 import random
+import time
 
 
 class Player:
@@ -69,6 +70,8 @@ class Table:
         # two teams
         self.attackers = list()
         self.defenders = list()
+        self.attacker_tricks = list()
+        self.defender_tricks = list()
         self.trump = None
         self.type_of_game = None
 
@@ -123,13 +126,6 @@ class Table:
         this function provides, for a given player and his relative position (east, west, north)
         what other player is sitting there
         """
-        print("neighbour player info method")
-        print("player pov")
-        print(player_pov)
-        print("seats")
-        for seat in self.seats:
-            print(seat)
-
         i = 0
         for seat in self.seats:
             if player_pov is seat:
@@ -217,33 +213,40 @@ class Table:
             self.ctrl.send_server_message(player.player_id, msg)
 
     def initiate_bidding(self):
-        we_need_to_bid = True
+        # debug bypass the bidding round
+        self.add_bid(["ask", "Hearts", self.seats[0]])
+        self.add_bid(["join", "Hearts", self.seats[1]])
+        self.add_bid(["pass", "Hearts", self.seats[2]])
+        self.add_bid(["pass", "Hearts", self.seats[3]])
+        self.initiate_playing_of_cards()
 
-        if self.check_for_trull():
-            self.add_default_trull_player_bids()
-            if self.settings["bid"]["trull_above_all_else"] == "True":
-                # trump goes above all else, there will be no more bidding so we don't show the trump card
-                we_need_to_bid = False
-
-        if we_need_to_bid:
-            # show this game's trump card (last card dealt)
-            dealer = self.seats[self.dealer_seat]
-            trump_card = self.last_card_before_dealing.abbrev
-            msg = self.ctrl.assemble_server_message(
-                "TRUMPCARD", str(dealer.player_id) + "," + trump_card
-            )
-            self.ctrl.broadcast_server_message(msg)
-
-            # start bidding round
-            player_to_bid = self.get_player_to_bid()
-            bid_options = self.get_remaining_bid_options()
-            self.ctrl.serverchat(
-                "Start bidding round. Please bid, %s" % player_to_bid.name
-            )
-            msg = self.ctrl.assemble_server_message("ASKBID", bid_options)
-            self.ctrl.send_server_message(player_to_bid.player_id, msg)
-        else:
-            self.initiate_playing_of_cards()
+        # we_need_to_bid = True
+        #
+        # if self.check_for_trull():
+        #     self.add_default_trull_player_bids()
+        #     if self.settings["bid"]["trull_above_all_else"] == "True":
+        #         # trump goes above all else, there will be no more bidding so we don't show the trump card
+        #         we_need_to_bid = False
+        #
+        # if we_need_to_bid:
+        #     # show this game's trump card (last card dealt)
+        #     dealer = self.seats[self.dealer_seat]
+        #     trump_card = self.last_card_before_dealing.abbrev
+        #     msg = self.ctrl.assemble_server_message(
+        #         "TRUMPCARD", str(dealer.player_id) + "," + trump_card
+        #     )
+        #     self.ctrl.broadcast_server_message(msg)
+        #
+        #     # start bidding round
+        #     player_to_bid = self.get_player_to_bid()
+        #     bid_options = self.get_remaining_bid_options()
+        #     self.ctrl.serverchat(
+        #         "Start bidding round. Please bid, %s" % player_to_bid.name
+        #     )
+        #     msg = self.ctrl.assemble_server_message("ASKBID", bid_options)
+        #     self.ctrl.send_server_message(player_to_bid.player_id, msg)
+        # else:
+        #     self.initiate_playing_of_cards()
 
     def check_for_trull(self):
         it_is_trull = False
@@ -574,16 +577,25 @@ class Table:
         self.ctrl.send_server_message(self.player_to_play_card.player_id, msg)
 
     def process_played_card(self, player, abbrev):
-        # todo verify
         self.ctrl.serverchat(player.name + " plays card " + abbrev)  # debug
         validated = self.validate_and_add_card_to_trick(player, abbrev)
         if not validated:
             self.ask_to_play_card()
         else:
+            # self.trick.append((player.player_id, abbrev))
             msg = self.ctrl.assemble_server_message(
-                "CARD_WAS_PLAYED", "%s,%s" % (player.player_id, abbrev)
+                "CARD_WAS_PLAYED", "%s,%s,%s" % (player.player_id, abbrev, len(self.trick))
             )
             self.ctrl.broadcast_server_message(msg)
+            if len(self.trick) == 4:
+                self.process_trick()
+                if len(self.tricks) == 13:
+                    self.process_game()
+                else:
+                    self.ask_to_play_card()
+            else:
+                self.advance_to_next_player()
+                self.ask_to_play_card()
 
     def validate_and_add_card_to_trick(self, player, abbrev):
         """
@@ -623,9 +635,10 @@ class Table:
         # check if the player has followed the suit if he was able to
         if len(self.trick) != 0:
             print("player has to follow suit if he can")
-            if player_pd_card.suit != self.trick[0][0].suit:
+            base_suit = self.trick[0][1].suit
+            if player_pd_card.suit != base_suit:
                 for card in player.hand:
-                    if card.suit == self.trick[0].suit:
+                    if card.suit == base_suit:
                         print("player should have followed suit")
                         return False
 
@@ -657,3 +670,71 @@ class Table:
             seq.append(v)
         position = seq.index(max(seq))
         return stack[position]
+
+    def advance_to_next_player(self):
+        """sets next player to play a card to the person left of the current player"""
+        i = 0
+        for seat in self.seats:
+            if self.player_to_play_card is seat:
+                break
+            i += 1
+
+        # advance
+        self.player_to_play_card = self.seats[(i + 1) % 4]
+
+    def process_trick(self):
+        """performs actions after a trick was played"""
+        # define winning player
+        winning_player = self.find_out_who_won()
+        msg = "Player %s wins the trick" % winning_player.name
+        self.ctrl.serverchat(msg)
+        self.player_to_play_card = winning_player
+
+        # define winning team
+        if winning_player in self.attackers:
+            self.attacker_tricks.append(self.trick)
+        else:
+            self.defender_tricks.append(self.trick)
+
+        # broadcast the score
+        msg = "Score: A=%i vs. D=%i " % (len(self.attacker_tricks), len(self.defender_tricks))
+        self.ctrl.serverchat(msg)
+
+        # reset for next trick
+        self.trick = list()
+        msg = self.ctrl.assemble_server_message("CLEAN_GREEN", "")
+        self.ctrl.broadcast_server_message(msg)
+
+    def find_out_who_won(self):
+        """returns the player that won the trick"""
+        trick_base_suit = self.trick[0][1].suit
+        trump_suit = self.trump
+
+        self.cardscores = list()
+        for (player, card) in self.trick:
+            v = 0
+            if card.value == "Jack":
+                v += 11
+            elif card.value == "Queen":
+                v += 12
+            elif card.value == "King":
+                v += 13
+            elif card.value == "Ace":
+                v += 14
+            else:
+                v += int(card.value)  # 2 - 10
+
+            if card.suit == trick_base_suit:
+                v = v + 100
+            if card.suit == trump_suit:
+                v = v + 200
+            self.cardscores.append(v)
+
+        winner_index = self.cardscores.index(max(self.cardscores))
+        winner = self.trick[winner_index][0]
+
+        return winner
+
+    def process_game(self):
+        """performs actions after 13 tricks have been played"""
+        pass

@@ -92,9 +92,10 @@ class Player:
         # draw them on the board
         self.draw_hand()
 
-        print("content of my hand")
-        for card in self.hand:
-            print(card.abbrev)
+        # debug
+        # print("content of my hand")
+        # for card in self.hand:
+        #     print(card.abbrev)
 
     def amount_of_aces_on_hand(self):
         print("checking how many aces are on my hand")
@@ -132,6 +133,29 @@ class Player:
     def hide_trump_card(self):
         self.scene.removeItem(self.trumpcard)
         self.trumpcard = None
+
+    def draw_played_card(self, abbrev, tricksize):
+        # create the card with the proper Z-level & draw it
+        card = GraphicCard(abbrev, 1000 + int(tricksize), self.svgrenderer, self.hand)
+        transformation = QTransform()
+        transformation.scale(CARDSCALE, CARDSCALE)
+        card.setX(X_PLAYED_CARD[self.seat])
+        card.setY(Y_PLAYED_CARD[self.seat])
+        transformation.rotate(CARD_ROTATE[self.seat])
+        card.setTransform(transformation)
+        self.scene.addItem(card)
+
+        # remove a card from the hand of the player
+        if self.seat == "SOUTH":
+            # the correct card when looking at our own hand
+            for card in self.hand:
+                if card.abbrev == abbrev:
+                    self.hand.remove(card)
+                    self.scene.removeItem(card)
+        else:
+            # pop off the last drawn card for another player
+            last_card_item = self.hand.pop()
+            self.scene.removeItem(last_card_item)
 
     def reset(self):
         for card in self.hand:
