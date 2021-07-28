@@ -1,7 +1,7 @@
 import pydealer as pd
 import random
-import time
 
+from PyQt5.QtCore import QTimer
 
 class Player:
     def __init__(self, player_id):
@@ -10,7 +10,6 @@ class Player:
         self.socket = None
         self.hand = pd.Stack()
         self.next_block_size = 0
-        # self.is_dealer = False
 
     def amount_of_aces_on_hand(self):
         i = 0
@@ -39,6 +38,8 @@ class Player:
                 i_have_it = True
         return i_have_it
 
+    def remove_card_from_hand(self, abbrev):
+        self.hand.get(abbrev)
 
 class Table:
     def __init__(self, ctrl):
@@ -64,10 +65,8 @@ class Table:
             list(),
         ]  # list 1: bid action, list 2: trump, list 3: who made the bid
 
-        self.trick = list()  # list of [player, pdcard]
-        self.tricks = list()  # list of tricks
-
         # two teams
+        self.trick = list()  # list of [player, pdcard]
         self.attackers = list()
         self.defenders = list()
         self.attacker_tricks = list()
@@ -101,11 +100,9 @@ class Table:
             self.process_played_card(player, mcontent)
 
     def prepare_first_game(self):
-        print("prepare_first_game")
         # give everyone a random seat
         self.seats = self.ctrl.players.copy()
         random.shuffle(self.seats)
-        print("seats have been shuffled")
         self.ctrl.serverchat(
             "Starting a new game. Sending everyone table seat positions."
         )
@@ -115,7 +112,6 @@ class Table:
                 neighbour_info = self.neighbouring_player_info(player, direction)
                 txt = "%i,%s" % (neighbour_info[0], neighbour_info[1])
                 msg = self.ctrl.assemble_server_message("SEAT" + direction, txt)
-                print("informing players who sits where")
                 self.ctrl.send_server_message(player.player_id, msg)
 
         # start the game
@@ -140,11 +136,9 @@ class Table:
         elif relative_position == "EAST":
             neighbour = self.seats[(i + 3) % 4]
 
-        print("ready to return")
         return [neighbour.player_id, neighbour.name]
 
     def start_game(self):
-        print("def start game")
         dealer = self.seats[self.dealer_seat]
         # tell all players who the dealer is
         self.ctrl.serverchat("The dealer for this round is: %s" % dealer.name)
@@ -213,6 +207,12 @@ class Table:
             self.ctrl.send_server_message(player.player_id, msg)
 
     def initiate_bidding(self):
+        self.trickbids = [
+            list(),
+            list(),
+            list(),
+        ]
+
         # debug bypass the bidding round
         self.add_bid(["ask", "Hearts", self.seats[0]])
         self.add_bid(["join", "Hearts", self.seats[1]])
@@ -531,7 +531,7 @@ class Table:
                 player for player in self.seats if player not in self.attackers
             ]
             self.trump = trumps[bids.index("ask")]
-            self.type_of_game = "together"
+            self.type_of_game = "alliance"
         elif "alone" in bids:
             bidder = bidders[bids.index("alone")]
             self.attackers.append(bidder)
@@ -577,22 +577,22 @@ class Table:
         self.ctrl.send_server_message(self.player_to_play_card.player_id, msg)
 
     def process_played_card(self, player, abbrev):
-        self.ctrl.serverchat(player.name + " plays card " + abbrev)  # debug
         validated = self.validate_and_add_card_to_trick(player, abbrev)
+
         if not validated:
             self.ask_to_play_card()
         else:
-            # self.trick.append((player.player_id, abbrev))
+            # remove card from player hand (server side)
+            player.remove_card_from_hand(abbrev)
+
+            # make sure all clients know this card was played
             msg = self.ctrl.assemble_server_message(
                 "CARD_WAS_PLAYED", "%s,%s,%s" % (player.player_id, abbrev, len(self.trick))
             )
             self.ctrl.broadcast_server_message(msg)
+
             if len(self.trick) == 4:
-                self.process_trick()
-                if len(self.tricks) == 13:
-                    self.process_game()
-                else:
-                    self.ask_to_play_card()
+                QTimer.singleShot(2000, self.process_trick)
             else:
                 self.advance_to_next_player()
                 self.ask_to_play_card()
@@ -616,30 +616,28 @@ class Table:
 
         # if it is trull and we are in the trull-8 mode than the first card must be the highest card of trump
         if (
-            len(self.tricks) == 0
+            len(self.attacker_tricks + self.defender_tricks) == 0
             and self.type_of_game == "trull"
             and self.settings["points"]["trulltricks"] == "8"
         ):
             highest_trump_card = self.get_highest_card_of_suit_in_stack(
                 player.hand, self.trump
             )
-            print(
-                "we are in trull 8 mode, trump is %s, card  that player wants to play is %s and highest card "
-                "on his hand is %s"
-                % (self.trump, player_pd_card.abbrev, highest_trump_card.abbrev)
-            )
             if player_pd_card is not highest_trump_card:
-                print("card not validated player should have played higher")
+                self.log("invalid move: "
+                         "we are in trull 8 mode, trump is %s, card  that player wants to play is %s and highest card "
+                         "on his hand is %s"
+                         % (self.trump, player_pd_card.abbrev, highest_trump_card.abbrev)
+                         )
                 return False
 
         # check if the player has followed the suit if he was able to
         if len(self.trick) != 0:
-            print("player has to follow suit if he can")
             base_suit = self.trick[0][1].suit
             if player_pd_card.suit != base_suit:
                 for card in player.hand:
                     if card.suit == base_suit:
-                        print("player should have followed suit")
+                        self.log("invalid move: player has to follow suit!")
                         return False
 
         self.trick.append([player, player_pd_card])
@@ -705,6 +703,17 @@ class Table:
         msg = self.ctrl.assemble_server_message("CLEAN_GREEN", "")
         self.ctrl.broadcast_server_message(msg)
 
+        # next step
+        if len(self.attacker_tricks + self.defender_tricks) == 13:
+            self.process_game()
+
+            # increase dealer position and start new game
+            self.dealer_seat = (self.dealer_seat + 1) % 4
+            self.start_game()
+
+        else:
+            self.ask_to_play_card()
+
     def find_out_who_won(self):
         """returns the player that won the trick"""
         trick_base_suit = self.trick[0][1].suit
@@ -737,4 +746,41 @@ class Table:
 
     def process_game(self):
         """performs actions after 13 tricks have been played"""
-        pass
+        # determine winner
+        winners = self.defenders
+        if self.type_of_game == "alone" and len(self.attacker_tricks) >= 5:
+            winners = self.attackers
+        if self.type_of_game == "alliance" and len(self.attacker_tricks) >= 8:
+            winners = self.attackers
+        if self.type_of_game == "misere" and len(self.attacker_tricks) == 0:
+            winners = self.attackers
+        if self.type_of_game == "misere_ouverte" and len(self.attacker_tricks) == 0:
+            winners = self.attackers
+        if self.type_of_game == "abon9" and len(self.attacker_tricks) >= 9:
+            winners = self.attackers
+        if self.type_of_game == "abon10" and len(self.attacker_tricks) >= 10:
+            winners = self.attackers
+        if self.type_of_game == "abon11" and len(self.attacker_tricks) >= 11:
+            winners = self.attackers
+        if self.type_of_game == "abon12" and len(self.attacker_tricks) >= 12:
+            winners = self.attackers
+        if self.type_of_game == "solo" and len(self.attacker_tricks) == 13:
+            winners = self.attackers
+        if self.type_of_game == "soloslim" and len(self.attacker_tricks) == 13:
+            winners = self.attackers
+        if self.type_of_game == "trull" and len(self.attacker_tricks) >= 8:
+            winners = self.attackers
+
+        winmsg = "The winner(s) for this round of " + self.type_of_game + " are " + " & ".join([w.name for w in winners])
+        self.ctrl.serverchat(winmsg)
+
+        # determine score
+        # todo: implement
+
+        # collect the cards in the deck: first the cards from the attackers, then the defenders
+        for trick in self.attacker_tricks + self.defender_tricks:
+            for cardi in range(4):
+                self.deck.add(trick[cardi][1])
+
+        self.attacker_tricks = list()
+        self.defender_tricks = list()

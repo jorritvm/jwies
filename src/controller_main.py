@@ -274,7 +274,6 @@ class Controller(QMainWindow):
             self.log("Controller settings saved")
 
     def start_tcp_server(self, ip, port):
-        print("starting server for listening")
         if not self.tcp_server.listen(QHostAddress(ip), int(port)):
             self.log("Failed to start server: " + self.tcp_server.errorString())
         else:
@@ -284,7 +283,6 @@ class Controller(QMainWindow):
             self.tcp_server.newConnection.connect(self.accept_new_player)
 
     def stop_tcp_server(self):
-        print("inside def stop server")
         self.tcp_server.close()
         self.log("Server is closed")
         self.start_server.setDisabled(False)
@@ -386,19 +384,17 @@ class Controller(QMainWindow):
             player.socket.write(msg)
 
     def serverchat(self, txt):
-        msgtxt = "Controller: " + txt
+        msgtxt = "GM: " + txt
         msg = self.assemble_server_message("CHAT", msgtxt)
         self.broadcast_server_message(msg)
 
     def welcome_player(self, player, playername):
-        print("welcoming player " + playername)
         player.name = playername
         self.serverchat("welcome new player: " + playername)
         msg = self.assemble_server_message("YOUR_ID", str(player.player_id))
         self.send_server_message(player.player_id, msg)
 
     def check_if_enough_players_are_connected(self):
-        print("checking if enough players are connected")
         i = len(self.players)
         enough = False
         if i < 4:
@@ -413,9 +409,6 @@ class Controller(QMainWindow):
                 "Too many sockets connected, restart the controller application and start over"
             )
         return enough
-
-    def dbug(self):
-        print("close server clicked")
 
 
 app = QApplication(sys.argv)

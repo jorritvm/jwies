@@ -81,7 +81,7 @@ X_PLAYED_CARD = {
     "SOUTH": 320
 }
 Y_PLAYED_CARD = {
-    "WEST": 275,
+    "WEST": 285,
     "NORTH": 340,
     "EAST": 325,
     "SOUTH": 260

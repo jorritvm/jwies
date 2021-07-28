@@ -37,7 +37,6 @@ def sort_pdstack_on_hand(stack):
 
 class Player:
     def __init__(self, player_id, name, seat, scene, svgrenderer):
-        print("creating player with id " + str(player_id))
         self.player_id = int(player_id)  # this is the id the server has for the player
         self.name = name
         self.seat = seat  # this is the seat relative to where you are sitting (south)
@@ -57,6 +56,11 @@ class Player:
         for z in range(13):
             card = GraphicCard("back", z + 10, self.svgrenderer, self.hand)
             self.hand.append(card)
+
+    def restore_default_cards(self):
+        if len(self.hand) == 0:
+            self.setup_default_cards()
+            self.draw_hand()
 
     def draw_name(self, seat, name):
         self.name_label = self.scene.addText(name)
@@ -92,17 +96,10 @@ class Player:
         # draw them on the board
         self.draw_hand()
 
-        # debug
-        # print("content of my hand")
-        # for card in self.hand:
-        #     print(card.abbrev)
-
     def amount_of_aces_on_hand(self):
-        print("checking how many aces are on my hand")
         # if i have three aces i let people know it is trull
         aces = 0
         for card in self.hand:
-            print(card.abbrev)
             if card.value == "Ace":
                 aces += 1
         return aces
@@ -136,7 +133,7 @@ class Player:
 
     def draw_played_card(self, abbrev, tricksize):
         # create the card with the proper Z-level & draw it
-        card = GraphicCard(abbrev, 1000 + int(tricksize), self.svgrenderer, self.hand)
+        card = GraphicCard(abbrev, 10000 + int(tricksize), self.svgrenderer, self.hand)
         transformation = QTransform()
         transformation.scale(CARDSCALE, CARDSCALE)
         card.setX(X_PLAYED_CARD[self.seat])

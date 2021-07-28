@@ -3,13 +3,14 @@
   <component name="ChangeListManager">
     <list default="true" id="862a453e-f4c6-486c-9076-ba60aae5d525" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/doc/important_attributes.txt" beforeDir="false" afterPath="$PROJECT_DIR$/doc/important_attributes.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/doc/communication_flow.vsdx" beforeDir="false" afterPath="$PROJECT_DIR$/doc/communication_flow.vsdx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/doc/~$$communication_flow.~vsdx" beforeDir="false" afterPath="$PROJECT_DIR$/doc/~$$communication_flow.~vsdx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/controller_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/controller_main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/controller_table.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/controller_table.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/player_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/player_main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/player_player.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/player_player.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/settings/player.ini" beforeDir="false" afterPath="$PROJECT_DIR$/src/settings/player.ini" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/staticvar.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/staticvar.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ztartclients.bat" beforeDir="false" afterPath="$PROJECT_DIR$/src/ztartclients.bat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ztartclients.bat" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -54,7 +55,7 @@
   <component name="ReaderModeSettings">
     <option name="enabled" value="false" />
   </component>
-  <component name="RunManager" selected="Python.controller_main">
+  <component name="RunManager" selected="Python.player_main">
     <configuration name="controller_main" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="jwies" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -99,8 +100,8 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.controller_main" />
         <item itemvalue="Python.player_main" />
+        <item itemvalue="Python.controller_main" />
       </list>
     </recent_temporary>
   </component>
@@ -125,36 +126,44 @@
         </entry>
       </map>
     </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/controller_table.py</url>
-          <line>114</line>
+          <line>111</line>
           <option name="timeStamp" value="1" />
         </line-breakpoint>
         <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/controller_table.py</url>
-          <line>115</line>
+          <line>112</line>
           <option name="timeStamp" value="2" />
         </line-breakpoint>
         <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/controller_table.py</url>
-          <line>134</line>
+          <line>130</line>
           <option name="timeStamp" value="3" />
         </line-breakpoint>
         <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/controller_table.py</url>
-          <line>129</line>
+          <line>125</line>
           <option name="timeStamp" value="4" />
         </line-breakpoint>
         <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/controller_table.py</url>
-          <line>143</line>
+          <line>138</line>
           <option name="timeStamp" value="5" />
         </line-breakpoint>
       </breakpoints>
+      <default-breakpoints>
+        <breakpoint type="python-exception">
+          <properties notifyOnTerminate="true" exception="BaseException">
+            <option name="notifyOnTerminate" value="true" />
+          </properties>
+        </breakpoint>
+      </default-breakpoints>
     </breakpoint-manager>
   </component>
 </project>

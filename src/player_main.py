@@ -65,7 +65,6 @@ class PlayerClient(QMainWindow):
         self.next_block_size = 0
         self.socket.connected.connect(self.connected_handler)
         self.socket.readyRead.connect(self.read_server_message)
-        self.socket.readyRead.connect(self.debug)
         self.socket.disconnected.connect(self.server_has_stopped)
         self.socket.error.connect(lambda x: self.server_has_error(x))
 
@@ -79,6 +78,7 @@ class PlayerClient(QMainWindow):
             self.settings["last_connection"]["host"],
             int(self.settings["last_connection"]["port"]),
         )
+        # end debug
 
     def setup_gui(self):  # sizing policies
         minimum_policy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
@@ -198,27 +198,6 @@ class PlayerClient(QMainWindow):
             lambda x: self.play_card()
         )  # special lambda parameter action
 
-        # ----- debug
-        debug_action = QAction("debug", self)
-        menu.addAction(debug_action)
-        debug_action.triggered.connect(lambda x: self.debug())
-
-        self.btn1 = QPushButton("1")
-        self.btn2 = QPushButton("2")
-        self.btn3 = QPushButton("3")
-        self.btn4 = QPushButton("4")
-        buttonbox_layout.addWidget(self.btn1)
-        buttonbox_layout.addWidget(self.btn2)
-        buttonbox_layout.addWidget(self.btn3)
-        buttonbox_layout.addWidget(self.btn4)
-        self.btn1.clicked.connect(lambda x: self.debug1())
-        self.btn2.clicked.connect(lambda x: self.debug2())
-        self.btn3.clicked.connect(lambda x: self.debug3())
-        self.btn4.clicked.connect(lambda x: self.debug4())
-
-        self.resize(1100, 600)
-        # ----- end debug
-
     def log(self, txt):
         msg = timestamp_it(txt)
         self.textbox.appendPlainText(msg)
@@ -311,6 +290,7 @@ class PlayerClient(QMainWindow):
             if mtype == "DEALERID":
                 for player in self.players:
                     player.set_dealer(False)
+                    player.restore_default_cards()
                 dealer = self.get_player_using_id(int(mcontent))
                 dealer.set_dealer(True)
             if mtype == "SHUFFLEDECK":
@@ -319,7 +299,6 @@ class PlayerClient(QMainWindow):
                 self.answer_to_cut_deck(mcontent.split(","))
             if mtype == "HAND":
                 hand = mcontent.split(",")[0:13]
-                print(hand)
                 self.players[0].receive_cards(hand)
                 if self.players[0].amount_of_aces_on_hand() >= 3:
                     self.send_chat_txt("Troel!")
@@ -347,11 +326,10 @@ class PlayerClient(QMainWindow):
                 abbrev = mcontent.split(",")[1]
                 tricksize = mcontent.split(",")[2]
                 self.btnplaycard.setEnabled(False)
-                print("a card was played " + player_id + " " + abbrev)
                 card_player = self.get_player_using_id(int(player_id))
                 card_player.draw_played_card(abbrev, tricksize)
             if mtype == "CLEAN_GREEN":
-                self.btnplaycard.setEnabled(True)
+                self.clean_green()
 
 
     def server_has_stopped(self):
@@ -452,7 +430,6 @@ class PlayerClient(QMainWindow):
     def bid(self, bid):
         dealer = self.get_dealer_player()
         suit = dealer.trumpcard.suit  # could be problem for trull
-        # suit = "Clubs" # debug
 
         if bid in ["abon9", "abon10", "abon11", "abon12"]:
             suit = self.choose_suit_pre_bid(False)
@@ -532,46 +509,22 @@ class PlayerClient(QMainWindow):
                 return None
 
     def play_card(self):
-        print("playing card fct now ...")
         i = 0
         abbrev = ""
         for card in self.players[0].hand:
             if card.is_selected:
-                print("found a selected card on hand:" + card.abbrev)
                 i += 1
                 abbrev = card.abbrev
         if i == 1:
-            print("you have selected a card:" + abbrev)
             self.btnplaycard.setEnabled(False)
             msg = assemble_player_message("IPLAY", abbrev)
             self.send_player_message(msg)
 
     def clean_green(self):
-        print("def clean green")
-        time.sleep(2)  # making sure the last card does not dissappear too swift
-
         cards_on_table = self.scene.items()
         for card in cards_on_table:
-            print("card with zvalue > 1000 found: " + card.abbrev)
-            if card.zValue() > 1000:
+            if card.zValue() > 10000:
                 self.scene.removeItem(card)
-
-
-    def debug(self):
-        pass
-
-    def debug1(self):
-        pass
-
-    def debug2(self):
-        pass
-
-    def debug3(self):
-        pass
-
-    def debug4(self):
-        pass
-
 
 app = QApplication(sys.argv)
 main = PlayerClient()
