@@ -1,10 +1,11 @@
 # jwies
-Vlaamse wies implementatie in python and Qt.  
-Bestaat uit een controller en een client.  
-Gebouwd in PyQt5.
+Flemish whist multiplayer application built in python 3 and Qt.  
+Based on a server-client architecture.
 
 ## Controller
-De controller bevat alle logica, en stuurt enkel need-to-know informatie naar de clients.
+The controller (=server) is the game master.  
+It contains all the game logic.  
+Information is sent to the clients on a need to know basis.
   
 ![controller main window](doc/controller_main_window.png)
 
@@ -13,11 +14,12 @@ De controller heeft veel settings, om de lokale varianten en spelregels van wiez
 ![controller settings](doc/controller_configuration.png)
 
 ## Client
-De client GUI bestaat uit een vergrootbaar kaartveld, en een chatvenster.
+The client is the player's graphical game client.  
+The GUI consists of a scalable playing field and a text chat.
   
 ![controller settings](doc/player_main_window.png)
 
-## Card game terms translation (English - Dutch)
+## Card game terms 
 | English        	| Dutch         	|
 |----------------	|---------------	|
 | deck           	| dek           	|
@@ -52,3 +54,14 @@ De client GUI bestaat uit een vergrootbaar kaartveld, en een chatvenster.
 | discard        	| weggooien     	|
 | trump          	| overgaan      	|
 | under-play     	| ondergaan     	|
+
+## How to run your own development copy
+```
+get python3.8 
+> git clone https://github.com/jorritvm/jwies
+> cd jwies # Enter to project directory
+> py -3 -m venv .venv # create virtualenv
+> .venv/bin/activate # Activating virtualenv
+(.venv)> pip install -r ./src/requirements.txt # Installing dependencies
+(.venv)> python src/player_main.py
+```

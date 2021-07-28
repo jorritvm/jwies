@@ -2,11 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="862a453e-f4c6-486c-9076-ba60aae5d525" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/src/cmdow.exe" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/controller_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/controller_main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/controller_table.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/controller_table.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/player_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/player_main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/src/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/player_helper_classes.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/player_helper_classes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/settings/player.ini" beforeDir="false" afterPath="$PROJECT_DIR$/src/settings/player.ini" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -58,7 +57,7 @@
   <component name="ReaderModeSettings">
     <option name="enabled" value="false" />
   </component>
-  <component name="RunManager" selected="Python.controller_main">
+  <component name="RunManager" selected="Python.player_main">
     <configuration name="controller_main" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="jwies" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -103,8 +102,8 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.controller_main" />
         <item itemvalue="Python.player_main" />
+        <item itemvalue="Python.controller_main" />
       </list>
     </recent_temporary>
   </component>
