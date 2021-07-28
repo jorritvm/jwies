@@ -1,10 +1,11 @@
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import *
 from PyQt5.QtSvg import *
-
 import pydealer as pd
 import pydealer.tools as pdtools
 import os
+
+from staticvar import *
 
 
 class GraphicCard(QGraphicsSvgItem):

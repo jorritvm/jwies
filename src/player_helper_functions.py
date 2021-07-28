@@ -1,9 +1,9 @@
 import time
 import configparser
-from staticvar import *
 import pydealer as pd
 import os
 
+from staticvar import *
 
 def load_settings():
     settings = configparser.ConfigParser()

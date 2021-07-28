@@ -1,5 +1,6 @@
 from PyQt5.QtGui import *
 import pydealer as pd
+
 from staticvar import *
 from player_helper_functions import *
 from player_helper_classes import *

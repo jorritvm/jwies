@@ -10,6 +10,7 @@ import random
 
 from player_player import Player, ChooseSuitDialog, MyGraphicsView
 from player_helper_functions import *
+from staticvar import *
 
 
 class PlayerClient(QMainWindow):
