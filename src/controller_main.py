@@ -10,7 +10,8 @@ import configparser
 import requests
 
 from staticvar import *
-from controller_table import Table, Player
+from controller_table import Table
+from controller_player import Player
 
 
 class Controller(QMainWindow):

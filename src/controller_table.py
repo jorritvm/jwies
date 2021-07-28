@@ -1,45 +1,8 @@
+from PyQt5.QtCore import QTimer
+
 import pydealer as pd
 import random
 
-from PyQt5.QtCore import QTimer
-
-class Player:
-    def __init__(self, player_id):
-        self.player_id = player_id
-        self.name = ""
-        self.socket = None
-        self.hand = pd.Stack()
-        self.next_block_size = 0
-
-    def amount_of_aces_on_hand(self):
-        i = 0
-        for card in self.hand:
-            if card.value == "Ace":
-                i += 1
-        return i
-
-    def suit_of_my_single_ace(self):
-        for card in self.hand:
-            if card.value == "Ace":
-                return card.suit
-        return None
-
-    def has_kh(self):
-        i_have_it = False
-        for card in self.hand:
-            if card.value == "King" and card.suit == "Hearts":
-                i_have_it = True
-        return i_have_it
-
-    def has_qh(self):
-        i_have_it = False
-        for card in self.hand:
-            if card.value == "Queen" and card.suit == "Hearts":
-                i_have_it = True
-        return i_have_it
-
-    def remove_card_from_hand(self, abbrev):
-        self.hand.get(abbrev)
 
 class Table:
     def __init__(self, ctrl):
@@ -57,8 +20,8 @@ class Table:
         # trick info
         self.last_card_before_dealing = None
         self.seat_to_bid = (
-            self.dealer_seat + 1
-        ) % 4  # player left from dealer starts to bid
+                                   self.dealer_seat + 1
+                           ) % 4  # player left from dealer starts to bid
         self.trickbids = [
             list(),
             list(),
@@ -425,7 +388,7 @@ class Table:
 
         self.player_to_play_card = self.seats[
             (self.dealer_seat + 1) % 4
-        ]  # left from dealer is the standard choice
+            ]  # left from dealer is the standard choice
 
         if "soloslim" in bids:
             bidder = self.get_player_from_id(
@@ -616,19 +579,19 @@ class Table:
 
         # if it is trull and we are in the trull-8 mode than the first card must be the highest card of trump
         if (
-            len(self.attacker_tricks + self.defender_tricks) == 0
-            and self.type_of_game == "trull"
-            and self.settings["points"]["trulltricks"] == "8"
+                len(self.attacker_tricks + self.defender_tricks) == 0
+                and self.type_of_game == "trull"
+                and self.settings["points"]["trulltricks"] == "8"
         ):
             highest_trump_card = self.get_highest_card_of_suit_in_stack(
                 player.hand, self.trump
             )
             if player_pd_card is not highest_trump_card:
-                self.log("invalid move: "
-                         "we are in trull 8 mode, trump is %s, card  that player wants to play is %s and highest card "
-                         "on his hand is %s"
-                         % (self.trump, player_pd_card.abbrev, highest_trump_card.abbrev)
-                         )
+                self.ctrl.log("invalid move: we are in trull 8 mode, "
+                              "trump is %s, card  that player wants to play is %s and highest card "
+                              "on his hand is %s"
+                              % (self.trump, player_pd_card.abbrev, highest_trump_card.abbrev)
+                              )
                 return False
 
         # check if the player has followed the suit if he was able to
@@ -637,7 +600,7 @@ class Table:
             if player_pd_card.suit != base_suit:
                 for card in player.hand:
                     if card.suit == base_suit:
-                        self.log("invalid move: player has to follow suit!")
+                        self.ctrl.log("invalid move: player has to follow suit!")
                         return False
 
         self.trick.append([player, player_pd_card])
@@ -771,7 +734,8 @@ class Table:
         if self.type_of_game == "trull" and len(self.attacker_tricks) >= 8:
             winners = self.attackers
 
-        winmsg = "The winner(s) for this round of " + self.type_of_game + " are " + " & ".join([w.name for w in winners])
+        winmsg = "The winner(s) for this round of " + self.type_of_game + " are " + " & ".join(
+            [w.name for w in winners])
         self.ctrl.serverchat(winmsg)
 
         # determine score

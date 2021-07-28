@@ -4,38 +4,12 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtSvg import *
 from PyQt5 import uic
-
 import os.path
 import sys
-import time
-import configparser
 import random
 
-from staticvar import *
 from player_player import Player, ChooseSuitDialog, MyGraphicsView
-
-
-def load_settings():
-    settings = configparser.ConfigParser()
-    settings.read(os.path.join("settings", "player.ini"))
-    return settings
-
-
-def assemble_player_message(mtype, mcontent):
-    msg = QByteArray()
-    stream = QDataStream(msg, QIODevice.WriteOnly)
-    stream.setVersion(QDATASTREAMVERSION)
-    stream.writeUInt16(0)
-    stream.writeQString(mtype)
-    stream.writeQString(mcontent)
-    stream.device().seek(0)
-    stream.writeUInt16(msg.size() - SIZEOF_UINT16)
-    return msg
-
-
-def timestamp_it(s):
-    x = "(" + time.strftime("%H:%M:%S") + ") " + s
-    return x
+from player_helper_functions import *
 
 
 class PlayerClient(QMainWindow):
