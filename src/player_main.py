@@ -43,17 +43,16 @@ class PlayerClient(QMainWindow):
         self.socket.disconnected.connect(self.server_has_stopped)
         self.socket.error.connect(lambda x: self.server_has_error(x))
 
-        # debug
-        # pop open connection pane right away
+        # debug shortcut: pop open connection pane right away
         # self.connect_to_a_game()
-        # connect right away
-        name = "player" + str(random.randint(1, 1000))
-        self.settings["last_connection"]["name"] = name
-        self.socket.connectToHost(
-            self.settings["last_connection"]["host"],
-            int(self.settings["last_connection"]["port"]),
-        )
-        # end debug
+
+        # debug shortcut: connect right away
+        # name = "player" + str(random.randint(1, 1000))
+        # self.settings["last_connection"]["name"] = name
+        # self.socket.connectToHost(
+        #     self.settings["last_connection"]["host"],
+        #     int(self.settings["last_connection"]["port"]),
+        # )
 
     def setup_gui(self):  # sizing policies
         minimum_policy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
@@ -75,13 +74,6 @@ class PlayerClient(QMainWindow):
         self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.view.setSizePolicy(expanding_policy)
-
-        # self.view.setFixedHeight(600)
-        # self.view.setFixedWidth(800)
-        # self.timer = QTimeLine(1000)
-        # self.timer.setCurveShape(QTimeLine.LinearCurve)
-        # self.animation = QGraphicsItemAnimation();
-        # self.animation.setTimeLine(self.timer)
 
         # set up the buttonbox : bidoptions & play buttons
         self.btn_bidoptions = {
@@ -108,8 +100,6 @@ class PlayerClient(QMainWindow):
         for btn in self.btn_bidoptions.values():
             buttonbox_layout.addWidget(btn)
 
-        # spacer_item = QSpacerItem(
-        #     20, 221, QSizePolicy.Minimum, QSizePolicy.Expanding)
         buttonbox_layout.addItem(spacer)
 
         self.btnlasttrike.setEnabled(False)
@@ -144,11 +134,7 @@ class PlayerClient(QMainWindow):
         splitter = QSplitter()
         splitter.addWidget(left_widget)
         splitter.addWidget(self.chatbox)
-        # central_layout.addWidget(self.chatbox)
 
-        # central_widget = QWidget()
-        # central_widget.setLayout(central_layout)
-        # self.setCentralWidget(central_widget)
         self.setCentralWidget(splitter)
 
         # menu bar
@@ -185,7 +171,7 @@ class PlayerClient(QMainWindow):
         # set initial value for dialog box
         connect_pane.line_name.setText(
             self.settings["last_connection"]["name"])
-        # start debug
+        # debug shortcut: set up a unique name instead of the one chosen by the player last time
         connect_pane.line_name.setText(
             "player" + str(random.randint(1, 1000))
         )
@@ -340,48 +326,50 @@ class PlayerClient(QMainWindow):
         return player
 
     def answer_to_shuffle_deck(self):
-        # shortcut for debug purposes
-        self.send_chat_txt("Yes, reshuffle the deck.")
-        msg = assemble_player_message("RESHUFFLE", "YES")
-        self.send_player_message(msg)
-
-        # msgbox = QMessageBox()
-        # msgbox.setIcon(QMessageBox.Question)
-        # msgbox.setText("Do you want to reshuffle the deck?")
-        # msgbox.setWindowTitle("Do you want to reshuffle the deck?")
-        # msgbox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-        # reply = msgbox.exec()
-        # if reply == QMessageBox.Yes:
-        #     self.send_chat_txt("Yes, reshuffle the deck.")
-        #     msg = assemble_player_message("RESHUFFLE", "YES")
-        # else:
-        #     self.send_chat_txt("No, do not reshuffle the deck.")
-        #     msg = assemble_player_message("RESHUFFLE", "NO")
+        # debug shortcut for debug purposes
+        # self.send_chat_txt("Yes, reshuffle the deck.")
+        # msg = assemble_player_message("RESHUFFLE", "YES")
         # self.send_player_message(msg)
+        # end debug
+
+        msgbox = QMessageBox()
+        msgbox.setIcon(QMessageBox.Question)
+        msgbox.setText("Do you want to reshuffle the deck?")
+        msgbox.setWindowTitle("Do you want to reshuffle the deck?")
+        msgbox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        reply = msgbox.exec()
+        if reply == QMessageBox.Yes:
+            self.send_chat_txt("Yes, reshuffle the deck.")
+            msg = assemble_player_message("RESHUFFLE", "YES")
+        else:
+            self.send_chat_txt("No, do not reshuffle the deck.")
+            msg = assemble_player_message("RESHUFFLE", "NO")
+        self.send_player_message(msg)
 
     def answer_to_cut_deck(self, minmax):
-        # shortcut for debug purposes
-        num = 20
-        self.send_chat_txt("Cutting %i cards" % num)
-        msg = assemble_player_message("CUT", str(num))
-        self.send_player_message(msg)
+        # debug shortcut for debug purposes
+        # num = 20
+        # self.send_chat_txt("Cutting %i cards" % num)
+        # msg = assemble_player_message("CUT", str(num))
+        # self.send_player_message(msg)
+        # end debug
 
-        # mincut = int(minmax[0])
-        # maxcut = int(minmax[1])
-        # num, ok = QInputDialog.getInt(
-        #     self,
-        #     "Cut deck",
-        #     "How many cards do you want to slide under the deck?",
-        #     random.randint(mincut, maxcut),
-        #     mincut,
-        #     maxcut,
-        # )
-        # if ok:
-        #     self.send_chat_txt("Cutting %i cards" % num)
-        #     msg = assemble_player_message("CUT", str(num))
-        #     self.send_player_message(msg)
-        # else:
-        #     self.answer_to_cut_deck(minmax)
+        mincut = int(minmax[0])
+        maxcut = int(minmax[1])
+        num, ok = QInputDialog.getInt(
+            self,
+            "Cut deck",
+            "How many cards do you want to slide under the deck?",
+            random.randint(mincut, maxcut),
+            mincut,
+            maxcut,
+        )
+        if ok:
+            self.send_chat_txt("Cutting %i cards" % num)
+            msg = assemble_player_message("CUT", str(num))
+            self.send_player_message(msg)
+        else:
+            self.answer_to_cut_deck(minmax)
 
     def enable_bid_options(self, bidoptions):
         opts = [

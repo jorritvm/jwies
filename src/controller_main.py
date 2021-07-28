@@ -33,8 +33,8 @@ class Controller(QMainWindow):
 
         self.log("Wies controller initiated")
 
-        # start debug
-        self.start_tcp_server(self.input_ip.text(), self.input_port.text())
+        # debug shortcut
+        # self.start_tcp_server(self.input_ip.text(), self.input_port.text())
         # end debug
 
     def setup_gui(self):

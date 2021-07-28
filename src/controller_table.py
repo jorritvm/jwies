@@ -176,40 +176,40 @@ class Table:
             list(),
         ]
 
-        # debug bypass the bidding round
-        self.add_bid(["ask", "Hearts", self.seats[0]])
-        self.add_bid(["join", "Hearts", self.seats[1]])
-        self.add_bid(["pass", "Hearts", self.seats[2]])
-        self.add_bid(["pass", "Hearts", self.seats[3]])
-        self.initiate_playing_of_cards()
+        # debug shortcut: bypass the bidding round
+        # self.add_bid(["ask", "Hearts", self.seats[0]])
+        # self.add_bid(["join", "Hearts", self.seats[1]])
+        # self.add_bid(["pass", "Hearts", self.seats[2]])
+        # self.add_bid(["pass", "Hearts", self.seats[3]])
+        # self.initiate_playing_of_cards()
 
-        # we_need_to_bid = True
-        #
-        # if self.check_for_trull():
-        #     self.add_default_trull_player_bids()
-        #     if self.settings["bid"]["trull_above_all_else"] == "True":
-        #         # trump goes above all else, there will be no more bidding so we don't show the trump card
-        #         we_need_to_bid = False
-        #
-        # if we_need_to_bid:
-        #     # show this game's trump card (last card dealt)
-        #     dealer = self.seats[self.dealer_seat]
-        #     trump_card = self.last_card_before_dealing.abbrev
-        #     msg = self.ctrl.assemble_server_message(
-        #         "TRUMPCARD", str(dealer.player_id) + "," + trump_card
-        #     )
-        #     self.ctrl.broadcast_server_message(msg)
-        #
-        #     # start bidding round
-        #     player_to_bid = self.get_player_to_bid()
-        #     bid_options = self.get_remaining_bid_options()
-        #     self.ctrl.serverchat(
-        #         "Start bidding round. Please bid, %s" % player_to_bid.name
-        #     )
-        #     msg = self.ctrl.assemble_server_message("ASKBID", bid_options)
-        #     self.ctrl.send_server_message(player_to_bid.player_id, msg)
-        # else:
-        #     self.initiate_playing_of_cards()
+        we_need_to_bid = True
+
+        if self.check_for_trull():
+            self.add_default_trull_player_bids()
+            if self.settings["bid"]["trull_above_all_else"] == "True":
+                # trump goes above all else, there will be no more bidding so we don't show the trump card
+                we_need_to_bid = False
+
+        if we_need_to_bid:
+            # show this game's trump card (last card dealt)
+            dealer = self.seats[self.dealer_seat]
+            trump_card = self.last_card_before_dealing.abbrev
+            msg = self.ctrl.assemble_server_message(
+                "TRUMPCARD", str(dealer.player_id) + "," + trump_card
+            )
+            self.ctrl.broadcast_server_message(msg)
+
+            # start bidding round
+            player_to_bid = self.get_player_to_bid()
+            bid_options = self.get_remaining_bid_options()
+            self.ctrl.serverchat(
+                "Start bidding round. Please bid, %s" % player_to_bid.name
+            )
+            msg = self.ctrl.assemble_server_message("ASKBID", bid_options)
+            self.ctrl.send_server_message(player_to_bid.player_id, msg)
+        else:
+            self.initiate_playing_of_cards()
 
     def check_for_trull(self):
         it_is_trull = False
