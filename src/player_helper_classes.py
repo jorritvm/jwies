@@ -6,7 +6,7 @@ import pydealer as pd
 import pydealer.tools as pdtools
 import os
 
-from staticvar import *
+from constants import *
 
 
 class GraphicCard(QGraphicsSvgItem):

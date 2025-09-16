@@ -9,7 +9,7 @@ import time
 import configparser
 import requests
 
-from staticvar import *
+from constants import *
 from controller_table import Table
 from controller_player import Player
 

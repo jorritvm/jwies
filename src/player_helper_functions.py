@@ -3,7 +3,7 @@ import configparser
 import pydealer as pd
 import os
 
-from staticvar import *
+from constants import *
 
 def load_settings():
     settings = configparser.ConfigParser()

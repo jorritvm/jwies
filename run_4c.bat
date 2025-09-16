@@ -1,5 +1,5 @@
 @echo off
-echo "starting 4 player clients" 
+echo "Starting 4 player clients"
 start "game1" cmd /k ..\.venv\Scripts\python.exe player_main.py &
 timeout 1
 start "game2" cmd /k ..\.venv\Scripts\python.exe player_main.py &
