@@ -1,4 +1,7 @@
-"""print loc in this project"""
+"""
+print loc in this project
+run from project root dir
+"""
 
 import pathlib
 
