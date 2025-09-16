@@ -1,0 +1,19 @@
+programmaverloop:
+
+- bepaal of je host of joint in een spel
+- een spelserver wordt gestart
+- de users kunnen connecteren
+
+- aan iedereen wordt gevraagd of ze klaar zijn om een nieuw spel te starten
+- een kaartendek geschud en verdeeld, de server geeft aan wie de deler is door de troefkaart te tonen
+- elke client tekent zijn eigen kaarten
+
+- de server vraagt iedereen om beurt wat ze wensen te doen en stuurt dit naar de anderen
+- de client toont wat iedereen wenst te doen, 
+- de server vraagt het dan aan de volgende, ...
+
+- de server bepaalt wie kan uitkomen en vraagt deze speler zijn kaart
+- deze wordt opgestuurd naar de volgende en de volgende zijn kaart wordt gevraagd
+
+- na elke hand bekijkt de server wie de slag gehaald heeft en op wiens hoop deze moet komen
+- na 13 slagen berekent de server de totalen

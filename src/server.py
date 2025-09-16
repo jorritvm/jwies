@@ -1,0 +1,2 @@
+class WiesServer(object):
+    

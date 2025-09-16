@@ -1,7 +1,7 @@
-
+#!/usr/bin/python
 ############################################################################
-#    Copyright (C) 2010 by                                                 #
-#    Jorrit Vander Mynsbrugge                                              #
+#    Copyright (C) 2014 by Jorrit Vander Mynsbrugge                        #
+#    jorrit.vm@gmail.com                                                   #
 #                                                                          #
 #    This program is free software; you can redistribute it and#or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -19,19 +19,25 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
-#   VERSION = 1.0
-#    DATE = 2010 07 14
-
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from PyQt4.QtSvg import *
-from PyQt4.QtNetwork import *
 import sys
+import sysconfig
+from green import Green
+from PyQt5.Qt import QObject, QApplication
 
-#eigen package imports:
+class wies(QObject):
+    def __init__(self, parent = None):
+        QObject.__init__(self, parent)
+        username = input("What is your username? ")
+        hj = input("Do you want to host or join a game? ")        
+        if hj == "host":
+            print("Starting a server...")
+            self.server = WiesServer()
+        ip = input("To what IP do you want to connect? ")
+        print("Connecting graphical client to server...")
+        pass
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     app = QApplication(sys.argv)
-    main = gamemaster()
+    main = wies()
     main.show()
     sys.exit(app.exec_())

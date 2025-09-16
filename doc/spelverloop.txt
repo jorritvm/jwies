@@ -1,0 +1,35 @@
+rollen:
+- controller: begeleid het spel, valideert de acties, telt de punten, cli
+- player doet de actie die de centrale master vraagt, gui
+
+spelverloop:
++ controller start op, luistert voor players om te connecteren
++ spelers starten hun gui op en connecteren naar een server
++ controller zegt aan iedereen dat we wachten tot er 4 spelers zijn, speelveld blijft leeg, chat werkt al
++ nadat 4e speler connecteert, controller initieert het spel
++ creert kaartendek
++ geef iedereen random plaatsen
++ kies de deler
+-- verdeel de kaarten
+geef de informatie die elke client nodig heeft aan elke client
+- controller kijkt speciale situaties na (vb troel)
+- geen troel -> laatste kaart wordt ook gedraaid
+- controller vraagt speler 1 om te bieden en geeft opties mee
+- speler 1 biedt
+ITEREER tot einde biedronde
+- controller typt resultaat van de biedronde in chat
+- controller vraagt eerste speler om uit te komen
+- speler speelt kaart
+- controller valideert kaart
+- controller vraag speler 2 om kaart te spelen ...
+ITEREER tot 4 kaarten gespeeld
+- controller evalueert wie de slag wint en zet dit weg
+- controller vraagt aan de winnende kaartspeler om uit te komen
+- volgende hand zelfde proces
+ITEREER 13 keer 
+- controller telt scores op
+- controller post scores aan iedereen
+- speler gui toont scores
+- controller vraagt iedereen of ze nog een ronde willen spelen
+HERBEGIN
+

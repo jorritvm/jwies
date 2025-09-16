@@ -1,0 +1,39 @@
+-------------------------------
+Card game terms Dutch - English 
+-------------------------------
+
+samen gaan = alliance
+biedronde = auction
+bid = bieden
+meegaan = join
+
+kleur = suit
+harten = hearts
+koeken = diamonds
+klaveren = clubs
+schoppen = spades
+
+dek = deck
+dek splitsen = cut the deck
+schudden = shuffle
+boer = jack
+dame = queen
+heer = king
+aas = ace
+
+beurt = turn
+slag = trick
+delen = deal
+herdelen = redeal
+vragen = ask
+volgen = follow suit
+passen = pass
+abondance = abondance 
+miserie = misère
+miserie bloot = misère ouverte
+spelen = play
+kopen = trump
+troef = trump
+weggooien = discard
+ondergaan = under-play
+
