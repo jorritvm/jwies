@@ -23,3 +23,14 @@ scripts/    developer utility scripts
 src/        application source code (imports resolve relative to src/)
 src/ui/     Qt Designer .ui files and their generated .py counterparts
 ```
+
+## Semantic versioning
+This project is using bump-my-version:
+```python
+bump-my-version show-bump
+bump-my-version bump minor
+```
+It is configured in `pyproject.toml` to:
+- create a tag
+- perform a commit
+- allow a dirty commit (will pull all staged files into the commit)
