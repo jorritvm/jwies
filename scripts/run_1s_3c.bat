@@ -1,4 +1,5 @@
 @echo off
+cd /d "%~dp0.."
 echo "Starting 1 controller (server) and 3 player clients"
 start "game1" cmd /k uv run src\controller_main.py &
 timeout 1

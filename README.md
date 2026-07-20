@@ -45,11 +45,11 @@ uv run src/controller_main.py
 uv run src/player_main.py
 ```
 
-Convenience scripts for local testing on Windows:
+Convenience scripts for local testing on Windows (in `scripts/`, can be run from anywhere, e.g. by double-clicking):
 
 ```shell
-run_1s_3c.bat   # starts 1 controller + 3 player clients
-run_4c.bat      # starts 4 player clients
+scripts\run_1s_3c.bat   # starts 1 controller + 3 player clients
+scripts\run_4c.bat      # starts 4 player clients
 ```
 
 ```shell
