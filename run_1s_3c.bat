@@ -1,12 +1,12 @@
 @echo off
-echo "Starting 4 player clients (of which one is the host)"
-start "game1" cmd /k ..\.venv\Scripts\python.exe controller_main.py &
+echo "Starting 1 controller (server) and 3 player clients"
+start "game1" cmd /k uv run src\controller_main.py &
 timeout 1
-start "game2" cmd /k ..\.venv\Scripts\python.exe player_main.py &
+start "game2" cmd /k uv run src\player_main.py &
 timeout 1
-start "game3" cmd /k ..\.venv\Scripts\python.exe player_main.py &
+start "game3" cmd /k uv run src\player_main.py &
 timeout 1
-start "game4" cmd /k ..\.venv\Scripts\python.exe player_main.py &
+start "game4" cmd /k uv run src\player_main.py &
 
 echo "press any button to close all clients
 pause
