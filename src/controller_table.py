@@ -1,17 +1,23 @@
-from PyQt5.QtCore import QTimer
+import random
+from typing import TYPE_CHECKING
 
 import pydealer as pd
-import random
+from PyQt6.QtCore import QTimer
+
+from controller_player import Player
+
+if TYPE_CHECKING:
+    from controller_main import Controller
 
 
 class Table:
-    def __init__(self, ctrl):
+    def __init__(self, ctrl: "Controller") -> None:
         self.ctrl = ctrl  # this way we have access to the communication functions
         self.settings = self.ctrl.settings
 
-        self.seats = list()  # a list of player instances
+        self.seats: list[Player] = []  # a list of player instances
         self.dealer_seat = 0
-        self.player_to_play_card = None
+        self.player_to_play_card: Player | None = None
 
         # create a shuffled deck of 52 cards
         self.deck = pd.Deck()
@@ -22,22 +28,22 @@ class Table:
         self.seat_to_bid = (
                                    self.dealer_seat + 1
                            ) % 4  # player left from dealer starts to bid
-        self.trickbids = [
-            list(),
-            list(),
-            list(),
+        self.trickbids: list[list] = [
+            [],
+            [],
+            [],
         ]  # list 1: bid action, list 2: trump, list 3: who made the bid
 
         # two teams
-        self.trick = list()  # list of [player, pdcard]
-        self.attackers = list()
-        self.defenders = list()
-        self.attacker_tricks = list()
-        self.defender_tricks = list()
-        self.trump = None
-        self.type_of_game = None
+        self.trick: list[list] = []  # list of [player, pdcard]
+        self.attackers: list[Player] = []
+        self.defenders: list[Player] = []
+        self.attacker_tricks: list[list] = []
+        self.defender_tricks: list[list] = []
+        self.trump: str | None = None
+        self.type_of_game: str | None = None
 
-    def get_player_from_id(self, player_id):
+    def get_player_from_id(self, player_id: int) -> Player | None:
         """ returns a Player() object linked to the given id"""
         x = None
         for player in self.seats:
@@ -45,7 +51,7 @@ class Table:
                 x = player
         return x
 
-    def handle_player_request(self, player, mtype, mcontent):
+    def handle_player_request(self, player: Player, mtype: str, mcontent: str) -> None:
         if mtype == "RESHUFFLE":
             if mcontent == "YES":
                 self.deck.shuffle()
@@ -62,7 +68,7 @@ class Table:
         elif mtype == "IPLAY":
             self.process_played_card(player, mcontent)
 
-    def prepare_first_game(self):
+    def prepare_first_game(self) -> None:
         # give everyone a random seat
         self.seats = self.ctrl.players.copy()
         random.shuffle(self.seats)
@@ -80,7 +86,9 @@ class Table:
         # start the game
         self.start_game()
 
-    def neighbouring_player_info(self, player_pov, relative_position):
+    def neighbouring_player_info(
+        self, player_pov: Player, relative_position: str
+    ) -> list:
         """
         this function provides, for a given player and his relative position (east, west, north)
         what other player is sitting there
@@ -101,7 +109,7 @@ class Table:
 
         return [neighbour.player_id, neighbour.name]
 
-    def start_game(self):
+    def start_game(self) -> None:
         dealer = self.seats[self.dealer_seat]
         # tell all players who the dealer is
         self.ctrl.serverchat("The dealer for this round is: %s" % dealer.name)
@@ -120,8 +128,8 @@ class Table:
         else:
             self.ask_to_cut_deck()
 
-    def ask_to_cut_deck(self):
-        cutter_seat = self.dealer_seat - 1
+    def ask_to_cut_deck(self) -> None:
+        cutter_seat = (self.dealer_seat - 1) % 4
         cutter = self.seats[cutter_seat]
 
         mincut = str(self.settings["deal"]["minimum_cards_to_cut"])
@@ -134,10 +142,10 @@ class Table:
         msg = self.ctrl.assemble_server_message("CUTDECK", "%s,%s" % (mincut, maxcut))
         self.ctrl.send_server_message(cutter.player_id, msg)
 
-    def cut_deck(self, num):
+    def cut_deck(self, num: int) -> None:
         self.deck = pd.stack.Stack(cards=self.deck[num:52] + self.deck[0:num])
 
-    def divide_cards(self):
+    def divide_cards(self) -> None:
         # divide the cards
         r1 = self.settings.getint("deal", "deal_1")
         r2 = self.settings.getint("deal", "deal_2")
@@ -169,11 +177,11 @@ class Table:
             msg = self.ctrl.assemble_server_message("HAND", player_hand_txt)
             self.ctrl.send_server_message(player.player_id, msg)
 
-    def initiate_bidding(self):
+    def initiate_bidding(self) -> None:
         self.trickbids = [
-            list(),
-            list(),
-            list(),
+            [],
+            [],
+            [],
         ]
 
         # debug shortcut: bypass the bidding round
@@ -211,14 +219,14 @@ class Table:
         else:
             self.initiate_playing_of_cards()
 
-    def check_for_trull(self):
+    def check_for_trull(self) -> bool:
         it_is_trull = False
         for player in self.seats:
             if player.amount_of_aces_on_hand() >= 3:
                 it_is_trull = True
         return it_is_trull
 
-    def add_default_trull_player_bids(self):
+    def add_default_trull_player_bids(self) -> None:
         lead_player = None
         second_player = None
         trump_suit = None
@@ -241,10 +249,10 @@ class Table:
                 second_player = khplayer
             else:
                 second_player = qhplayer
-        self.add_bid(["trull1", trump_suit, lead_player])
-        self.add_bid(["trull2", trump_suit, second_player])
+        self.add_bid(["trull1", trump_suit, lead_player], default_trull_bid=True)
+        self.add_bid(["trull2", trump_suit, second_player], default_trull_bid=True)
 
-    def get_player_to_bid(self):
+    def get_player_to_bid(self) -> Player | None:
         """the next player to bid is simply the one to the left, and, if one asked, and three passed
         he who asked has a final say"""
         bids = self.trickbids[0]
@@ -253,8 +261,7 @@ class Table:
                 return self.seats[self.seat_to_bid]
             elif len(bids) == 4:
                 if "ask" in bids and bids.count("pass") == 3:
-                    id_of_player_to_bid = self.trickbids[2][bids.index("ask")]
-                    return self.get_player_from_id(id_of_player_to_bid)
+                    return self.trickbids[2][bids.index("ask")]
                 else:
                     return None
             else:
@@ -266,7 +273,7 @@ class Table:
             else:
                 return None
 
-    def add_bid(self, newbid, default_trull_bid=False):
+    def add_bid(self, newbid: list, default_trull_bid: bool = False) -> None:
         action = newbid[0]
         suit = newbid[1]
         player = newbid[2]
@@ -277,9 +284,9 @@ class Table:
         if not default_trull_bid:
             self.seat_to_bid = (self.seat_to_bid + 1) % 4
 
-    def process_a_new_bid(self, player, mcontent):
+    def process_a_new_bid(self, player: Player, mcontent: str) -> None:
         # process the received bid
-        newbid = mcontent.split(",")  # 2 elements: bid and suit
+        newbid: list = mcontent.split(",")  # 2 elements: bid and suit
         newbid.append(player)
         self.add_bid(newbid)
 
@@ -302,7 +309,7 @@ class Table:
             else:
                 self.initiate_playing_of_cards()
 
-    def get_remaining_bid_options(self):
+    def get_remaining_bid_options(self) -> str | None:
         bids = self.trickbids[0]
 
         if "soloslim" in bids:
@@ -354,9 +361,12 @@ class Table:
 
         return options
 
-    def check_if_we_need_to_redeal(self):
+    def check_if_we_need_to_redeal(self) -> bool:
         bids = self.trickbids[0]
         redeal = False
+        if "trull1" in bids:
+            # trull is a forced game: even when nobody overbids it, it is played
+            return False
         if bids.count("pass") == 4 and "ask" in bids:
             self.ctrl.serverchat(
                 "One player asked, nobody joined, "
@@ -369,18 +379,18 @@ class Table:
             redeal = True
         return redeal
 
-    def cleanup_for_new_round(self):
+    def cleanup_for_new_round(self) -> None:
         """ cleans up the structures used for storing bids"""
         self.last_card_before_dealing = None
         self.seat_to_bid = (self.dealer_seat + 1) % 4
-        self.trickbids = [list(), list(), list()]
-        self.trick = list()
+        self.trickbids = [[], [], []]
+        self.trick = []
         self.trump = None
         self.type_of_game = None
 
-    def divide_teams(self):
-        self.attackers = list()
-        self.defenders = list()
+    def divide_teams(self) -> None:
+        self.attackers = []
+        self.defenders = []
 
         bids = self.trickbids[0]
         trumps = self.trickbids[1]
@@ -391,9 +401,7 @@ class Table:
             ]  # left from dealer is the standard choice
 
         if "soloslim" in bids:
-            bidder = self.get_player_from_id(
-                bidders[bids.index("soloslim")]
-            )  # todo check this!!! THIS DOES NOT WORK!!!
+            bidder = bidders[bids.index("soloslim")]
             self.attackers.append(bidder)
             self.defenders = [
                 player for player in self.seats if player not in self.attackers
@@ -506,7 +514,7 @@ class Table:
         else:
             self.ctrl.serverchat("Impossible for the ctrl to divide the teams")
 
-    def collect_cards(self):
+    def collect_cards(self) -> None:
         """
         collect cards from all hands starting with the person left from the dealer,
         as required in a redeal
@@ -516,15 +524,34 @@ class Table:
             self.deck = self.deck + player.hand
             player.hand = pd.Stack()
 
-    def initiate_playing_of_cards(self):
+    def initiate_playing_of_cards(self) -> None:
         msg = self.ctrl.assemble_server_message("HIDETRUMP", "")
         self.ctrl.broadcast_server_message(msg)
         self.divide_teams()
+        self.broadcast_teams()
+        self.broadcast_trick_count()
         self.broadcast_trick_information()
         self.ask_to_play_card()
 
-    def broadcast_trick_information(self):
-        who_list = list()
+    def broadcast_teams(self) -> None:
+        """tell all clients who plays with whom, so they can color the player names per team"""
+        attacker_ids = ",".join(str(player.player_id) for player in self.attackers)
+        defender_ids = ",".join(str(player.player_id) for player in self.defenders)
+        msg = self.ctrl.assemble_server_message(
+            "TEAMS", attacker_ids + "|" + defender_ids
+        )
+        self.ctrl.broadcast_server_message(msg)
+
+    def broadcast_trick_count(self) -> None:
+        """tell all clients how many tricks each team has won so far"""
+        msg = self.ctrl.assemble_server_message(
+            "TRICKCOUNT",
+            "%i,%i" % (len(self.attacker_tricks), len(self.defender_tricks)),
+        )
+        self.ctrl.broadcast_server_message(msg)
+
+    def broadcast_trick_information(self) -> None:
+        who_list = []
         for player in self.attackers:
             who_list.append(player.name)
         who = ",".join(who_list)
@@ -535,14 +562,17 @@ class Table:
             msg += " without trump."
         self.ctrl.serverchat(msg)
 
-    def ask_to_play_card(self):
+    def ask_to_play_card(self) -> None:
         msg = self.ctrl.assemble_server_message("PLEASEPLAY", "")
         self.ctrl.send_server_message(self.player_to_play_card.player_id, msg)
 
-    def process_played_card(self, player, abbrev):
-        validated = self.validate_and_add_card_to_trick(player, abbrev)
+    def process_played_card(self, player: Player, abbrev: str) -> None:
+        invalid_reason = self.validate_and_add_card_to_trick(player, abbrev)
 
-        if not validated:
+        if invalid_reason is not None:
+            self.ctrl.serverchat_to(
+                player.player_id, "Invalid move: %s" % invalid_reason
+            )
             self.ask_to_play_card()
         else:
             # remove card from player hand (server side)
@@ -560,10 +590,12 @@ class Table:
                 self.advance_to_next_player()
                 self.ask_to_play_card()
 
-    def validate_and_add_card_to_trick(self, player, abbrev):
+    def validate_and_add_card_to_trick(self, player: Player, abbrev: str) -> str | None:
         """
         perform a series of checks on the played card to see if it is a valid card choice,
         abiding by all the rules
+
+        returns None when the card is valid, or a human readable reason when it is not
         """
 
         # check if the card is on the players hand
@@ -575,7 +607,7 @@ class Table:
                 player_pd_card = card
                 break
         if not player_has_card:
-            return False
+            return "that card is not in your hand."
 
         # if it is trull and we are in the trull-8 mode than the first card must be the highest card of trump
         if (
@@ -592,7 +624,10 @@ class Table:
                               "on his hand is %s"
                               % (self.trump, player_pd_card.abbrev, highest_trump_card.abbrev)
                               )
-                return False
+                return (
+                    "in trull-8 the first card must be your highest trump (%s)."
+                    % highest_trump_card.abbrev
+                )
 
         # check if the player has followed the suit if he was able to
         if len(self.trick) != 0:
@@ -601,16 +636,16 @@ class Table:
                 for card in player.hand:
                     if card.suit == base_suit:
                         self.ctrl.log("invalid move: player has to follow suit!")
-                        return False
+                        return "you have to follow suit (%s)." % base_suit
 
         self.trick.append([player, player_pd_card])
-        return True
+        return None
 
-    def get_highest_card_of_suit_in_stack(self, stack, suit):
+    def get_highest_card_of_suit_in_stack(self, stack: pd.Stack, suit: str):
         """
         returns the highest card of a given suit in a given stack
         """
-        seq = list()
+        seq = []
         for card in stack:
             v = 0
 
@@ -632,7 +667,7 @@ class Table:
         position = seq.index(max(seq))
         return stack[position]
 
-    def advance_to_next_player(self):
+    def advance_to_next_player(self) -> None:
         """sets next player to play a card to the person left of the current player"""
         i = 0
         for seat in self.seats:
@@ -643,7 +678,7 @@ class Table:
         # advance
         self.player_to_play_card = self.seats[(i + 1) % 4]
 
-    def process_trick(self):
+    def process_trick(self) -> None:
         """performs actions after a trick was played"""
         # define winning player
         winning_player = self.find_out_who_won()
@@ -660,9 +695,10 @@ class Table:
         # broadcast the score
         msg = "Score: A=%i vs. D=%i " % (len(self.attacker_tricks), len(self.defender_tricks))
         self.ctrl.serverchat(msg)
+        self.broadcast_trick_count()
 
         # reset for next trick
-        self.trick = list()
+        self.trick = []
         msg = self.ctrl.assemble_server_message("CLEAN_GREEN", "")
         self.ctrl.broadcast_server_message(msg)
 
@@ -670,19 +706,21 @@ class Table:
         if len(self.attacker_tricks + self.defender_tricks) == 13:
             self.process_game()
 
-            # increase dealer position and start new game
+            # increase dealer position, reset the round state and start a new game
+            # (resetting also moves seat_to_bid to the player left of the new dealer)
             self.dealer_seat = (self.dealer_seat + 1) % 4
+            self.cleanup_for_new_round()
             self.start_game()
 
         else:
             self.ask_to_play_card()
 
-    def find_out_who_won(self):
+    def find_out_who_won(self) -> Player:
         """returns the player that won the trick"""
         trick_base_suit = self.trick[0][1].suit
         trump_suit = self.trump
 
-        self.cardscores = list()
+        cardscores = []
         for (player, card) in self.trick:
             v = 0
             if card.value == "Jack":
@@ -700,14 +738,14 @@ class Table:
                 v = v + 100
             if card.suit == trump_suit:
                 v = v + 200
-            self.cardscores.append(v)
+            cardscores.append(v)
 
-        winner_index = self.cardscores.index(max(self.cardscores))
+        winner_index = cardscores.index(max(cardscores))
         winner = self.trick[winner_index][0]
 
         return winner
 
-    def process_game(self):
+    def process_game(self) -> None:
         """performs actions after 13 tricks have been played"""
         # determine winner
         winners = self.defenders
@@ -746,5 +784,5 @@ class Table:
             for cardi in range(4):
                 self.deck.add(trick[cardi][1])
 
-        self.attacker_tricks = list()
-        self.defender_tricks = list()
+        self.attacker_tricks = []
+        self.defender_tricks = []

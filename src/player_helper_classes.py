@@ -1,17 +1,36 @@
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtSvg import *
 import pydealer as pd
 import pydealer.tools as pdtools
-import os
+from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtGui import QIcon, QPixmap, QResizeEvent
+from PyQt6.QtSvg import QSvgRenderer
+from PyQt6.QtSvgWidgets import QGraphicsSvgItem
+from PyQt6.QtWidgets import (
+    QDialog,
+    QDialogButtonBox,
+    QGraphicsRectItem,
+    QGraphicsSceneMouseEvent,
+    QGraphicsView,
+    QHBoxLayout,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
-from constants import *
+from constants import SELECT_ELEVATION, TRUMP_ELEVATION, Y_CARD
+from paths import RESOURCES_DIR
 
 
 class GraphicCard(QGraphicsSvgItem):
-    def __init__(self, abbrev, z, svgrenderer, hand, *args, **kwargs):
-        super(GraphicCard, self).__init__(*args, **kwargs)
+    def __init__(
+        self,
+        abbrev: str,
+        z: int,
+        svgrenderer: QSvgRenderer,
+        hand: list,
+        *args,
+        **kwargs,
+    ) -> None:
+        super().__init__(*args, **kwargs)
 
         # todo: check if/why we need argument hand here ...
 
@@ -25,6 +44,7 @@ class GraphicCard(QGraphicsSvgItem):
         self.abbrev = abbrev
 
         self.is_selected = False
+        self.is_trump_shown = False  # True while this own-hand card is shown as trump
 
         if abbrev == "back":
             self.svgdescription = "back"
@@ -37,7 +57,7 @@ class GraphicCard(QGraphicsSvgItem):
             self.svgdescription = self.get_svg_description()
             self.setElementId(self.svgdescription)
 
-    def get_svg_description(self):
+    def get_svg_description(self) -> str:
         """translate pydealer suit and value into svg card descriptor"""
         v = self.value.lower()
         if v == "ace":
@@ -47,30 +67,34 @@ class GraphicCard(QGraphicsSvgItem):
         desc = "%s_%s" % (v, s)
         return desc
 
-    def mousePressEvent(self, event):
+    def base_y(self) -> int:
+        """resting y position of this card in the own hand (trump stays elevated)"""
+        return Y_CARD["SOUTH"] - (TRUMP_ELEVATION if self.is_trump_shown else 0)
+
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         if self.svgdescription != "back":
             for card in self.hand:
-                card.setY(Y_CARD["SOUTH"])
+                card.setY(card.base_y())
                 card.is_selected = False
-            self.setY(Y_CARD["SOUTH"] - 40)
+            self.setY(self.base_y() - SELECT_ELEVATION)
             self.is_selected = True
             # self.card_click.emit(str(self.z))
 
 
 class ChooseSuitDialog(QDialog):
-    def __init__(self, allow_no_trump, *args, **kwargs):
-        super(ChooseSuitDialog, self).__init__(*args, **kwargs)
+    def __init__(self, allow_no_trump: bool, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
 
         self.setWindowTitle("Choose the suit you want for Trump...")
 
         suits = ["clubs", "diamonds", "spades", "hearts"]
         if allow_no_trump:
             suits.append(None)
-        self.suitbuttons = list()
+        self.suitbuttons: list[QPushButton] = []
         for suit in suits:
             btn = QPushButton()
             if suit is not None:
-                pm = QPixmap(os.path.join("img", suit + ".png"))
+                pm = QPixmap(str(RESOURCES_DIR / (suit + ".png")))
                 qi = QIcon(pm)
                 btn.setIcon(qi)
                 btn.setIconSize(QSize(50, 50))
@@ -84,7 +108,7 @@ class ChooseSuitDialog(QDialog):
         topwidget = QWidget()
         topwidget.setLayout(suits_layout)
 
-        qbtn = QDialogButtonBox.Ok
+        qbtn = QDialogButtonBox.StandardButton.Ok
         self.buttonBox = QDialogButtonBox(qbtn)
         self.buttonBox.accepted.connect(self.accept)
 
@@ -95,9 +119,9 @@ class ChooseSuitDialog(QDialog):
 
 
 class MyGraphicsView(QGraphicsView):
-    def __init__(self, fieldrect, *args, **kwargs):
-        super(MyGraphicsView, self).__init__(*args, **kwargs)
+    def __init__(self, fieldrect: QGraphicsRectItem, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.fieldrect = fieldrect
 
-    def resizeEvent(self, event):
-        self.fitInView(self.fieldrect, Qt.KeepAspectRatio)
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        self.fitInView(self.fieldrect, Qt.AspectRatioMode.KeepAspectRatio)

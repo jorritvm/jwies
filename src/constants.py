@@ -1,13 +1,22 @@
-from PyQt5.QtCore import *
+from PyQt6.QtCore import QDataStream
 
 # DEFINE NETWORK STREAM CONSTANTS
 SIZEOF_UINT16 = 2
-QDATASTREAMVERSION = QDataStream.Qt_5_10
+QDATASTREAMVERSION = QDataStream.Version.Qt_6_0
 
 # DEFINE GRAPHICS SCENE CONSTANTS
 SCENE_RECT_X = 800
 SCENE_RECT_Y = 600
 CARDSCALE = 0.594
+
+# vertical offsets (in scene pixels) for lifting cards out of the own hand
+SELECT_ELEVATION = 40  # card selected to be played
+TRUMP_ELEVATION = 25  # dealer's own trump card while it is being shown
+
+# PLAYER NAME LABEL COLORS
+NAME_COLOR_DEFAULT = "white"
+TEAM_COLOR_ATTACKERS = "#ffd54a"  # amber
+TEAM_COLOR_DEFENDERS = "#7ec8ff"  # light blue
 
 # NAME determines position of player name label
 X_NAME = {

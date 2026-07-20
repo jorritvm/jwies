@@ -1,19 +1,22 @@
-import time
 import configparser
+import time
+
 import pydealer as pd
-import os
+from PyQt6.QtCore import QByteArray, QDataStream, QIODevice
 
-from constants import *
+from constants import QDATASTREAMVERSION, SIZEOF_UINT16
+from paths import CONFIG_DIR
 
-def load_settings():
+
+def load_settings() -> configparser.ConfigParser:
     settings = configparser.ConfigParser()
-    settings.read(os.path.join("settings", "player.ini"))
+    settings.read(CONFIG_DIR / "player.ini")
     return settings
 
 
-def assemble_player_message(mtype, mcontent):
+def assemble_player_message(mtype: str, mcontent: str) -> QByteArray:
     msg = QByteArray()
-    stream = QDataStream(msg, QIODevice.WriteOnly)
+    stream = QDataStream(msg, QIODevice.OpenModeFlag.WriteOnly)
     stream.setVersion(QDATASTREAMVERSION)
     stream.writeUInt16(0)
     stream.writeQString(mtype)
@@ -23,13 +26,13 @@ def assemble_player_message(mtype, mcontent):
     return msg
 
 
-def timestamp_it(s):
+def timestamp_it(s: str) -> str:
     x = "(" + time.strftime("%H:%M:%S") + ") " + s
     return x
 
 
-def sort_pdstack_on_hand(stack):
-    seq = list()
+def sort_pdstack_on_hand(stack: pd.stack.Stack) -> pd.stack.Stack:
+    seq = []
     for card in stack:
         v = 0
         if card.suit == "Diamonds":
