@@ -1,22 +1,32 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtNetwork import *
-from PyQt5 import uic
-
-import os
+import configparser
 import sys
 import time
-import configparser
-import requests
 
-from staticvar import *
-from controller_table import Table
+import requests
+from PyQt6 import uic
+from PyQt6.QtCore import QByteArray, QDataStream, QIODevice
+from PyQt6.QtGui import QAction, QIcon
+from PyQt6.QtNetwork import QHostAddress, QTcpServer
+from PyQt6.QtWidgets import (
+    QApplication,
+    QInputDialog,
+    QLineEdit,
+    QMainWindow,
+    QPlainTextEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
+
+from constants import QDATASTREAMVERSION, SIZEOF_UINT16
 from controller_player import Player
+from controller_table import Table
+from paths import CONFIG_DIR, RESOURCES_DIR, UI_DIR
 
 
 class Controller(QMainWindow):
-    def __init__(self, *args, **kwargs):
-        super(Controller, self).__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
 
         # setup gui
         self.input_ip = QLineEdit()
@@ -29,7 +39,7 @@ class Controller(QMainWindow):
         self.settings = self.load_settings()
         self.tcp_server = QTcpServer(self)
         self.table = Table(self)
-        self.players = list()  # list of user defined player objects
+        self.players: list[Player] = []  # list of user defined player objects
 
         self.log("Wies controller initiated")
 
@@ -37,10 +47,10 @@ class Controller(QMainWindow):
         # self.start_tcp_server(self.input_ip.text(), self.input_port.text())
         # end debug
 
-    def setup_gui(self):
+    def setup_gui(self) -> None:
         # gui elements
         self.setWindowTitle("jwies - controller screen")
-        self.setWindowIcon(QIcon(os.path.join("img", "server.png")))
+        self.setWindowIcon(QIcon(str(RESOURCES_DIR / "server.png")))
         self.input_ip.setText("127.0.0.1")
         self.input_port.setText("9999")
         self.close_server.setDisabled(True)
@@ -77,31 +87,31 @@ class Controller(QMainWindow):
         ip_dialog_action.triggered.connect(lambda x: self.show_ip_dialog())
         settings_pane_action.triggered.connect(lambda x: self.show_settings_pane())
 
-    def log(self, txt):
+    def log(self, txt: str) -> None:
         msg = "(%s) %s" % (time.strftime("%H:%M:%S"), txt)
         self.textbox.appendPlainText(msg)
 
-    def load_settings(self):
+    def load_settings(self) -> configparser.ConfigParser:
         settings = configparser.ConfigParser()
-        settings.read(os.path.join("settings", "controller.ini"))
+        settings.read(CONFIG_DIR / "controller.ini")
         return settings
 
-    def get_ip(self):
+    def get_ip(self) -> str:
         return requests.get("https://api.ipify.org").text
 
-    def show_ip_dialog(self):
+    def show_ip_dialog(self) -> None:
         # text, okPressed = \
         QInputDialog.getText(
             self,
             "External ip lookup",
             "Your external ip is:",
-            QLineEdit.Normal,
+            QLineEdit.EchoMode.Normal,
             self.get_ip(),
         )
 
-    def show_settings_pane(self):
-        settings_pane = uic.loadUi(os.path.join("ui", "settings_pane.ui"))
-        settings_pane.setWindowIcon(QIcon(os.path.join("img", "network-hub.png")))
+    def show_settings_pane(self) -> None:
+        settings_pane = uic.loadUi(str(UI_DIR / "settings_pane.ui"))
+        settings_pane.setWindowIcon(QIcon(str(RESOURCES_DIR / "network-hub.png")))
 
         # set initial value for dialog box
         settings_pane.check_dealer_shuffle.setChecked(
@@ -179,7 +189,7 @@ class Controller(QMainWindow):
             self.settings.getboolean("points", "when_all_pass_points_are_double")
         )
 
-        if settings_pane.exec_():
+        if settings_pane.exec():
             # save new values in settings
             self.settings["deal"]["dealer_can_shuffle"] = (
                 "True" if settings_pane.check_dealer_shuffle.isChecked() else "False"
@@ -269,12 +279,12 @@ class Controller(QMainWindow):
                 "True" if settings_pane.check_pass_double.isChecked() else "False"
             )
 
-            with open(os.path.join("settings", "controller.ini"), "w") as settings_file:
+            with open(CONFIG_DIR / "controller.ini", "w") as settings_file:
                 self.settings.write(settings_file)
 
             self.log("Controller settings saved")
 
-    def start_tcp_server(self, ip, port):
+    def start_tcp_server(self, ip: str, port: str) -> None:
         if not self.tcp_server.listen(QHostAddress(ip), int(port)):
             self.log("Failed to start server: " + self.tcp_server.errorString())
         else:
@@ -283,13 +293,13 @@ class Controller(QMainWindow):
             self.close_server.setDisabled(False)
             self.tcp_server.newConnection.connect(self.accept_new_player)
 
-    def stop_tcp_server(self):
+    def stop_tcp_server(self) -> None:
         self.tcp_server.close()
         self.log("Server is closed")
         self.start_server.setDisabled(False)
         self.close_server.setDisabled(True)
 
-    def accept_new_player(self):
+    def accept_new_player(self) -> None:
         self.log("Accepting new player")
         socket = self.tcp_server.nextPendingConnection()
         if socket is None:
@@ -300,6 +310,7 @@ class Controller(QMainWindow):
                 self.log(
                     "Error accepting new player: maximum amount of players connected reached (4)"
                 )
+                socket.disconnectFromHost()
             else:
                 player = Player(player_id)
                 self.players.append(player)
@@ -310,8 +321,10 @@ class Controller(QMainWindow):
                 socket.disconnected.connect(lambda: self.remove_player(player_id))
                 socket.disconnected.connect(socket.deleteLater)
 
-    def remove_player(self, player_id):
+    def remove_player(self, player_id: int) -> None:
         # TODO does this have to handle 1 or all players disconnecting?
+        if not self.players:
+            return
         self.log(
             "Player with ID %i got disconnected, now removing all players" % player_id
         )
@@ -319,10 +332,10 @@ class Controller(QMainWindow):
             "Player %s got disconnected, now removing all players"
             % self.players[player_id].name
         )
-        self.players = list()
-        self.table = None
+        self.players = []
+        self.table = Table(self)
 
-    def read_player_message(self, player_id):
+    def read_player_message(self, player_id: int) -> None:
         player = self.players[player_id]
         socket = player.socket
         stream = QDataStream(socket)
@@ -362,10 +375,10 @@ class Controller(QMainWindow):
                 # here we pass all game related messages to the table
                 self.table.handle_player_request(player, mtype, mcontent)
 
-    def assemble_server_message(self, mtype, mcontent):
+    def assemble_server_message(self, mtype: str, mcontent: str) -> QByteArray:
         self.log("Assembled server message: [%s]-[%s]" % (mtype, mcontent))
         msg = QByteArray()
-        stream = QDataStream(msg, QIODevice.WriteOnly)
+        stream = QDataStream(msg, QIODevice.OpenModeFlag.WriteOnly)
         stream.setVersion(QDATASTREAMVERSION)
         stream.writeUInt16(0)
         stream.writeQString(mtype)
@@ -374,29 +387,37 @@ class Controller(QMainWindow):
         stream.writeUInt16(msg.size() - SIZEOF_UINT16)
         return msg
 
-    def send_server_message(self, player_id, msg):
+    def send_server_message(self, player_id: int, msg: QByteArray) -> None:
         self.log("Sending server message to %s" % self.players[player_id].name)
         socket = self.players[player_id].socket
         socket.write(msg)
 
-    def broadcast_server_message(self, msg):
+    def broadcast_server_message(self, msg: QByteArray) -> None:
         self.log("Broadcasting server message")
         for player in self.players:
             player.socket.write(msg)
 
-    def serverchat(self, txt):
+    def serverchat(self, txt: str) -> None:
         msgtxt = "GM: " + txt
         msg = self.assemble_server_message("CHAT", msgtxt)
         self.broadcast_server_message(msg)
 
-    def welcome_player(self, player, playername):
+    def serverchat_to(self, player_id: int, txt: str) -> None:
+        """send a GM chat message to a single player instead of broadcasting it"""
+        msgtxt = "GM: " + txt
+        msg = self.assemble_server_message("CHAT", msgtxt)
+        self.send_server_message(player_id, msg)
+
+    def welcome_player(self, player: Player, playername: str) -> None:
         player.name = playername
         self.serverchat("welcome new player: " + playername)
         msg = self.assemble_server_message("YOUR_ID", str(player.player_id))
         self.send_server_message(player.player_id, msg)
 
-    def check_if_enough_players_are_connected(self):
-        i = len(self.players)
+    def check_if_enough_players_are_connected(self) -> bool:
+        # count logged-on players (with a name), not sockets: when several clients
+        # connect at the same time the game must not start before every LOGON arrived
+        i = len([player for player in self.players if player.name != ""])
         enough = False
         if i < 4:
             self.serverchat(
@@ -412,7 +433,12 @@ class Controller(QMainWindow):
         return enough
 
 
-app = QApplication(sys.argv)
-main = Controller()
-main.show()
-app.exec_()
+def main() -> None:
+    app = QApplication(sys.argv)
+    main_window = Controller()
+    main_window.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()

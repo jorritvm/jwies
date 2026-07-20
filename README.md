@@ -1,67 +1,60 @@
 # jwies
-Flemish whist multiplayer application built in python 3 and Qt.  
+Flemish whist (wiezen) multiplayer application built in Python 3 and PyQt6.
 Based on a server-client architecture.
 
-## Controller
-The controller (=server) is the game master.  
-It contains all the game logic.  
-Information is sent to the clients on a need to know basis.
-  
-![controller main window](doc/controller_main_window.png)
+<!-- TOC -->
+* [jwies](#jwies)
+  * [Controller](#controller)
+  * [Client](#client)
+  * [Development setup](#development-setup)
+  * [Running the application](#running-the-application)
+  * [Author](#author)
+<!-- TOC -->
 
-De controller heeft veel settings, om de lokale varianten en spelregels van wiezen te ondersteunen.
-  
-![controller settings](doc/controller_configuration.png)
+## Controller & Client
 
-## Client
-The client is the player's graphical game client.  
-The GUI consists of a scalable playing field and a text chat.
-  
-![controller settings](doc/player_main_window.png)
 
-## Card game terms 
-| English        	| Dutch         	|
-|----------------	|---------------	|
-| deck           	| dek           	|
-| cut the deck   	| dek splitsen  	|
-| shuffle        	| schudden      	|
-| suit           	| kleur         	|
-| hearts         	| harten        	|
-| diamonds       	| koeken        	|
-| clubs          	| klaveren      	|
-| spades         	| schoppen      	|
-| jack           	| boer          	|
-| queen          	| dame          	|
-| king           	| heer          	|
-| ace            	| aas           	|
-|                	|               	|
-| deal           	| delen         	|
-| redeal         	| herdelen      	|
-|                	|               	|
-| auction        	| biedronde     	|
-| bieden         	| bid           	|
-| ask            	| vragen        	|
-| follow suit    	| volgen        	|
-| pass           	| passen        	|
-| abundance      	| abondance     	|
-| misere         	| miserie       	|
-| misere ouverte 	| miserie bloot 	|
-|                	|               	|
-| turn           	| beurt         	|
-| trick          	| slag          	|
-| play           	| spel / spelen 	|
-| trump          	| troef         	|
-| discard        	| weggooien     	|
-| trump          	| overgaan      	|
-| under-play     	| ondergaan     	|
+| Description | Screenshot |
+|----------------------------------------------------------------------------------------------------------------------------------------------------|----|
+| The controller (=server) is the game master. <br> It contains all the game logic.<br />Information is sent to the clients on a need to know basis. |  [<img src="docs/screenshots/controller_main_window.png" width="300"/>](docs/screenshots/controller_main_window.png)  |
+| The controller has many settings to support local variants of the game.                                                                            | [<img src="docs/screenshots/controller_configuration.png" width="300"/>](docs/screenshots/controller_configuration.png)  |
+ | The client is the player's graphical game client.<br />The GUI consists of a scalable playing field and a text chat. |  [<img src="docs/screenshots/player_main_window.png" width="300"/>](docs/screenshots/player_main_window.png) |
 
-## How to run your own development copy
+
+## Development setup
+This project uses [uv](https://docs.astral.sh/uv/) for Python and dependency management.
+
+```shell
+# clone the repository
+git clone https://github.com/jorritvm/jwies
+cd jwies
+
+# create the virtual environment and install all dependencies
+# (uv also installs the pinned python version from .python-version if needed)
+uv sync
 ```
-get python3.8 
-> git clone https://github.com/jorritvm/jwies
-> cd jwies # Enter to project directory
-> py -3 -m venv .venv # create virtualenv
-> .venv/bin/activate # Activating virtualenv
-(.venv)> pip install -r ./src/requirements.txt # Installing dependencies
-(.venv)> python src/player_main.py
+
+## Running the application
+Always run from the project root:
+
+```shell
+# start the controller (server)
+uv run src/controller_main.py
+
+# start a player client (one per player, 4 needed for a game)
+uv run src/player_main.py
 ```
+
+Convenience scripts for local testing on Windows (in `scripts/`, can be run from anywhere, e.g. by double-clicking):
+
+```shell
+scripts\run_1s_3c.bat   # starts 1 controller + 3 player clients
+scripts\run_4c.bat      # starts 4 player clients
+```
+
+```shell
+uv run scripts/build_ui.py
+```
+
+## Author
+Jorrit Vander Mynsbrugge

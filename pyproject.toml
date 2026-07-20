@@ -1,0 +1,12 @@
+[project]
+name = "jwies"
+version = "0.1.2"
+description = "Vlaamse wies implementatie in Python en Qt"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "pydealer>=1.4.0",
+    "pyprojroot>=0.3.0",
+    "pyqt6>=6.9.1",
+    "requests>=2.32.5",
+]
