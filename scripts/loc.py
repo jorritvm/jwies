@@ -10,7 +10,8 @@ def count_loc():
     total = 0
     for path in pathlib.Path(".").rglob("*.py"):
         if ".venv" not in path.parts:  # skip any file under .venv
-            total += sum(1 for _ in open(path, encoding="utf-8"))
+            with open(path, encoding="utf-8") as handle:
+                total += sum(1 for _ in handle)
     return total
 
 

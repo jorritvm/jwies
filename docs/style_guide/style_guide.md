@@ -2,7 +2,66 @@
 
 ## General
 
-Stick to PEP8 style guide as much as possible.
+Stick to PEP8 style guide as much as possible. `ruff` enforces the mechanical
+part of this; run `uv run ruff check .` before committing.
+
+## Language: English code, Dutch to the player
+
+This is the rule that shapes the most decisions in the codebase.
+
+- **Identifiers, comments, docstrings, log messages, commit messages: English.**
+- **Anything a player reads: Dutch.** UI labels, chat, error messages,
+  documentation aimed at whoever hosts a game, and the settings files.
+
+Concretely:
+
+- Server-side Dutch lives in `src/jwies-server/jwies_server/texts/nl.yaml` and
+  nowhere else. Only `presenter.py` and `chat.py` may call `catalog.render(...)`.
+  A test asserts every key used in code exists, and that no key is unused.
+- Each client owns Dutch **only** for its own widgets: `web/js/labels.js` and
+  the label tables in `jwies_qt_client/main_window.py`. Game sentences
+  (bid announcements, contract statements, the settlement) arrive from the
+  server ready to display, so they are written once.
+- Wire message types and event names stay English (`play_card`,
+  `trick_completed`): they are internal identifiers, not player-facing text.
+
+## Settings models
+
+Settings files are edited by hand by whoever hosts a game, so their keys are
+Dutch. The models keep English field names and supply Dutch aliases:
+
+```python
+dealer_may_shuffle: Annotated[
+    bool,
+    Field(alias="deler_mag_schudden", description="Mag de deler schudden?"),
+] = False
+```
+
+- Inherit from `DutchModel`, which sets `populate_by_name`, `frozen`, and
+  `extra="forbid"`. Forbidding extras turns a host's typo into a startup error
+  instead of a silently ignored rule.
+- The `description` mirrors the comment above that key in the templates.
+- **Every key in a template must be preceded by a comment** explaining what it
+  does, and for enumerated settings, which values are allowed. This is enforced
+  by `tests/config/test_templates.py`, not left to discipline.
+
+## Async
+
+- `jwies-core` is synchronous and stays that way. No `async def`, no `asyncio`
+  import, no timers. `tests/core/test_purity.py` enforces it.
+- Everything async lives in `jwies-server`. All mutation of a `GameEngine`
+  happens inside that lobby's single task, so no locks are needed anywhere.
+
+## JavaScript
+
+The web client has no build step and no framework, deliberately: it is served
+straight from the Python package.
+
+- ES modules, no bundler, no npm, no transpilation.
+- 2-space indent, semicolons, double quotes.
+- `const` by default, `let` when reassigning, never `var`.
+- Never insert untrusted text with `innerHTML`; use `textContent` or the
+  `escapeHtml` helper in `table.js`.
 
 ## Capitalization
 

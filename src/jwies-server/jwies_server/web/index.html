@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>jwies - Vlaamse wies</title>
+  <link rel="stylesheet" href="./css/base.css">
+  <link rel="stylesheet" href="./css/table.css">
+</head>
+<body>
+  <!-- Hidden host for the SVG card sheet. Zero-sized rather than display:none,
+       because getBBox() needs a rendered element to measure. -->
+  <div id="card-sprite" aria-hidden="true"></div>
+
+  <header id="topbar">
+    <h1>jwies</h1>
+    <span id="status-line">Niet verbonden</span>
+  </header>
+
+  <main id="screens">
+
+    <section id="screen-connect" class="screen">
+      <div class="panel">
+        <h2>Aanmelden</h2>
+        <p class="hint">Kies een naam. Die naam is ook wat je weer aan tafel zet
+          als je verbinding wegvalt.</p>
+        <label for="input-username">Jouw naam</label>
+        <input id="input-username" type="text" maxlength="20" autocomplete="nickname"
+               placeholder="bijv. Jan">
+        <p id="connect-error" class="error" hidden></p>
+        <button id="btn-connect" class="primary">Verbinden</button>
+      </div>
+    </section>
+
+    <section id="screen-lobby" class="screen" hidden>
+      <div class="panel wide">
+        <h2>Lobby's</h2>
+        <div id="lobby-list" class="lobby-list"></div>
+        <p id="lobby-empty" class="hint">Er zijn nog geen tafels. Maak er een aan.</p>
+
+        <h3>Nieuwe tafel</h3>
+        <div class="form-row">
+          <label for="input-lobby-name">Naam</label>
+          <input id="input-lobby-name" type="text" maxlength="40" placeholder="Onze tafel">
+        </div>
+        <div class="form-row">
+          <label for="select-ruleset">Regelset</label>
+          <select id="select-ruleset"></select>
+        </div>
+        <div class="form-row">
+          <label for="select-scoring">Puntentelling</label>
+          <select id="select-scoring"></select>
+        </div>
+        <button id="btn-create" class="primary">Tafel aanmaken</button>
+      </div>
+    </section>
+
+    <section id="screen-table" class="screen" hidden>
+      <div id="table-area">
+        <div id="felt">
+          <div id="pause-overlay" hidden><span id="pause-text"></span></div>
+
+          <div class="seat seat--north"><div class="seat-name"></div><div class="seat-cards"></div></div>
+          <div class="seat seat--east"><div class="seat-name"></div><div class="seat-cards"></div></div>
+          <div class="seat seat--west"><div class="seat-name"></div><div class="seat-cards"></div></div>
+          <div class="seat seat--south"><div class="seat-name"></div><div class="seat-cards"></div></div>
+
+          <div id="trick-area"></div>
+          <div id="trump-area"></div>
+          <div id="trick-counter"></div>
+        </div>
+
+        <aside id="sidebar">
+          <div id="contract-box" class="box"></div>
+          <div id="bid-bar" class="box" hidden>
+            <h3>Jouw bod</h3>
+            <div id="bid-options"></div>
+          </div>
+          <div id="action-box" class="box"></div>
+          <div id="scoreboard" class="box"></div>
+          <div class="box grow">
+            <h3>Chat</h3>
+            <div id="chat-log"></div>
+            <form id="chat-form">
+              <input id="chat-input" type="text" maxlength="500"
+                     placeholder="Typ een bericht of !help">
+              <button type="submit">Verzenden</button>
+            </form>
+          </div>
+          <button id="btn-last-trick" class="toggle">Toon laatste slag</button>
+        </aside>
+      </div>
+    </section>
+
+  </main>
+
+  <dialog id="suit-dialog">
+    <form method="dialog">
+      <h3>Kies een troefkleur</h3>
+      <div id="suit-buttons"></div>
+      <button value="" class="cancel">Annuleren</button>
+    </form>
+  </dialog>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

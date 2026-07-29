@@ -1,0 +1,88 @@
+# =============================================================================
+#  jwies - serverinstellingen
+#
+#  Kopieer dit bestand naar bijvoorbeeld config/server.yaml, pas het aan, en
+#  start de server met:
+#
+#      jwies-server --config config/server.yaml
+#
+#  De server blijft draaien en host meerdere spellen tegelijk (lobby's).
+# =============================================================================
+
+# Versie van het bestandsformaat. Niet met de hand wijzigen.
+# Toegelaten waarden: 1
+schema_versie: 1
+
+# ---------------------------------------------------------------------------
+# Waar is de server bereikbaar? Zowel de webclient als de PyQt-client
+# verbinden met dit adres en deze poort.
+# ---------------------------------------------------------------------------
+netwerk:
+  # Op welk adres luistert de server?
+  # 127.0.0.1 = enkel deze computer, 0.0.0.0 = bereikbaar op het hele netwerk.
+  adres: "0.0.0.0"
+
+  # Op welke poort luistert de server?
+  # Toegelaten waarden: 1 t.e.m. 65535
+  poort: 8000
+
+# ---------------------------------------------------------------------------
+# Hoeveel spellen mag de server tegelijk hosten, en hoe lang wacht hij op
+# spelers die de verbinding verliezen?
+# ---------------------------------------------------------------------------
+lobby:
+  # Hoeveel lobby's mogen er tegelijk bestaan?
+  # Toegelaten waarden: 1 of hoger
+  maximum_aantal: 20
+
+  # Na hoeveel minuten zonder verbonden spelers wordt een lobby opgeruimd?
+  # Toegelaten waarden: 1 of hoger
+  opruimen_na_minuten: 60
+
+  # Na hoeveel minuten wordt de stoel van een weggevallen speler vrijgegeven?
+  # Zolang die tijd niet verstreken is, pauzeert het spel en wacht het op hem.
+  # Toegelaten waarden: 1 of hoger
+  stoel_vrijgeven_na_minuten: 30
+
+# Welke regelsets mogen spelers kiezen bij het maken van een lobby?
+# De naam links is wat spelers zien; rechts staat het pad naar het bestand,
+# relatief ten opzichte van dit serverbestand.
+regelsets:
+  # De traditionele regels uit docs/game_rules.md.
+  klassiek: "../templates/ruleset/klassiek.yaml"
+  # De regels zoals de applicatie ze voor de refactor speelde.
+  jwies_v0: "../templates/ruleset/jwies_v0.yaml"
+
+# Welke puntenschalen mogen spelers kiezen bij het maken van een lobby?
+puntenschalen:
+  # Kleine schaal: elke tegenstander betaalt het volledige bedrag.
+  schaal_a: "../templates/scoring/schaal_a.yaml"
+  # Grote schaal (o.a. Sporza): het bedrag wordt over de tegenstanders verdeeld.
+  schaal_b: "../templates/scoring/schaal_b.yaml"
+  # De bedragen uit de oude config/controller.ini.
+  jwies_v0: "../templates/scoring/jwies_v0.yaml"
+
+# Welke regelset wordt voorgesteld wanneer een speler niets kiest?
+# Moet hierboven bij 'regelsets' gedefinieerd zijn.
+standaard_regelset: klassiek
+
+# Welke puntenschaal wordt voorgesteld wanneer een speler niets kiest?
+# Moet hierboven bij 'puntenschalen' gedefinieerd zijn.
+standaard_puntenschaal: schaal_a
+
+# Welke AI-agents mogen lege stoelen invullen?
+# Er zijn er vandaag nog geen; deze lijst is voorbereid op een latere uitbreiding.
+# Toegelaten waarden: een lijst met agentnamen, of []
+toegelaten_agents: []
+
+# ---------------------------------------------------------------------------
+# Logboek. Vervangt het tekstvenster van de oude controller-GUI.
+# ---------------------------------------------------------------------------
+logboek:
+  # Hoeveel detail wil je in het logboek?
+  # Toegelaten waarden: DEBUG, INFO, WARNING, ERROR
+  niveau: INFO
+
+  # Naar welk bestand wordt gelogd? Leeg laten = enkel naar het scherm (stdout),
+  # wat de juiste keuze is wanneer je de server in Docker draait.
+  bestand: ""

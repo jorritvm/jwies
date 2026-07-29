@@ -1,0 +1,99 @@
+# =============================================================================
+#  jwies - puntentelling "jwies v0"
+#
+#  Reproduceert de [points]-sectie van config/controller.ini uit de versie van
+#  voor de refactor. Let op: die instellingen werden nooit toegepast - de oude
+#  code had de puntentelling niet geimplementeerd. Deze schaal maakt ze voor het
+#  eerst echt bruikbaar.
+# =============================================================================
+
+# Versie van het bestandsformaat. Niet met de hand wijzigen.
+# Toegelaten waarden: 1
+schema_versie: 1
+
+# Naam die spelers te zien krijgen bij het chatcommando !counting.
+naam: "jwies v0 (zoals controller.ini)"
+
+# Hoe wordt een contract van een speler tegen drie afgerekend?
+# De oude instellingen waren bedragen per tegenstander.
+# Toegelaten waarden: per_tegenstander, gedeeld
+betaling_solospel: per_tegenstander
+
+# Kost een mislukt contract het dubbele?
+# Oude instelling: losing_is_double = True
+# Toegelaten waarden: true, false
+verliezen_is_dubbel: true
+
+# Verdubbelt de inzet van de volgende ronde wanneer iedereen past?
+# Oude instelling: when_all_pass_points_are_double = True
+# Toegelaten waarden: true, false
+iedereen_past_verdubbelt: true
+
+# Per contract gelden vier waarden:
+#   basis            - punten wanneer het contract exact gehaald wordt
+#                      (oude instelling: exact_amount_of_tricks = 1)
+#   per_overslag     - extra punten per slag boven het beloofde aantal
+#                      (oude instelling: extra_trick = 0.5)
+#   per_slag_tekort  - punten per ontbrekende slag (weglaten = zelfde als basis)
+#   alle_dertien     - vaste waarde bij alle 13 slagen (weglaten = basis + overslagen)
+contracten:
+
+  # Vragen en meegaan.
+  alliance:
+    basis: 1
+    per_overslag: 0.5
+
+  # Alleen gaan.
+  alone:
+    basis: 1
+    per_overslag: 0.5
+
+  # Troel.
+  troel:
+    basis: 1
+    per_overslag: 0.5
+
+  # Abondance 9 slagen. Oude instelling: abundance = 5
+  abondance_9:
+    basis: 5
+    per_overslag: 0
+
+  # Abondance in troef. Oude instelling: abundance = 5
+  abondance_9_trump:
+    basis: 5
+    per_overslag: 0
+
+  # Abondance 10 slagen. Oude instelling: abundance = 5
+  abondance_10:
+    basis: 5
+    per_overslag: 0
+
+  # Abondance 11 slagen. Oude instelling: abundance = 5
+  abondance_11:
+    basis: 5
+    per_overslag: 0
+
+  # Abondance 12 slagen. Oude instelling: abundance = 5
+  abondance_12:
+    basis: 5
+    per_overslag: 0
+
+  # Miserie. Oude instelling: misere = 5
+  misere:
+    basis: 5
+    per_overslag: 0
+
+  # Miserie op tafel. Oude instelling: misere_ouverte = 10
+  misere_ouverte:
+    basis: 10
+    per_overslag: 0
+
+  # Solo. Oude instelling: solo = 20
+  solo:
+    basis: 20
+    per_overslag: 0
+
+  # Solo slim. Oude instelling: solo_slim = 40
+  solo_slim:
+    basis: 40
+    per_overslag: 0

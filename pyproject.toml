@@ -1,21 +1,67 @@
 [project]
-name = "jwies"
+name = "jwies-workspace"
 version = "0.2.0"
-description = "Vlaamse wies implementatie in Python en Qt"
+description = "Vlaamse wies implementatie in Python - workspace root"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = [
-    "pydealer>=1.4.0",
-    "pyprojroot>=0.3.0",
-    "pyqt6>=6.9.1",
-    "requests>=2.32.5",
-]
+dependencies = []
+
+[tool.uv.workspace]
+members = ["src/*"]
+
+[tool.uv.sources]
+jwies-assets = { workspace = true }
+jwies-protocol = { workspace = true }
+jwies-core = { workspace = true }
 
 [dependency-groups]
 dev = [
     "bump-my-version>=1.4.1",
+    "mypy>=1.13",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "ruff>=0.8",
+    "httpx>=0.28",
+    "websockets>=14.0",
+    "types-pyyaml>=6.0",
 ]
 
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+    # Field(...) as a default is how pydantic is meant to be used.
+    "B008",
+    # PEP 695 "type X = ..." aliases are lazily evaluated, which pydantic
+    # cannot resolve for Annotated field types. TypeAlias stays.
+    "UP040",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Pydantic deep-copies mutable defaults per instance, so a literal {} or []
+# as a field default is safe here (and is the documented way to write it).
+"src/jwies-protocol/jwies_protocol/*.py" = ["RUF012"]
+"src/jwies-core/jwies_core/config/*.py" = ["RUF012"]
+"src/jwies-server/jwies_server/config.py" = ["RUF012"]
+
+[tool.mypy]
+python_version = "3.13"
+warn_unused_configs = true
+warn_redundant_casts = true
+no_implicit_optional = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = ["jwies_core.*", "jwies_protocol.*"]
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
 
 [tool.bumpversion]
 current_version = "0.2.0"
@@ -29,7 +75,25 @@ tag = true
 sign_tags = false
 tag_name = "v{new_version}"
 tag_message = "Bump version: {current_version} → {new_version}"
-allow_dirty = true
+allow_dirty = false
 commit = true
 message = "Bump version: {current_version} → {new_version}"
 commit_args = ""
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+
+[[tool.bumpversion.files]]
+filename = "src/jwies-assets/pyproject.toml"
+
+[[tool.bumpversion.files]]
+filename = "src/jwies-protocol/pyproject.toml"
+
+[[tool.bumpversion.files]]
+filename = "src/jwies-core/pyproject.toml"
+
+[[tool.bumpversion.files]]
+filename = "src/jwies-server/pyproject.toml"
+
+[[tool.bumpversion.files]]
+filename = "src/jwies-qt-client/pyproject.toml"

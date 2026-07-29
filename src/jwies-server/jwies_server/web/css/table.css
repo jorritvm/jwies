@@ -1,0 +1,179 @@
+/* De speeltafel.
+
+   Bewust geen pixeltabellen zoals de Qt-client: vier zones in een grid, met
+   een rotatie per zone. Zo schaalt de tafel mee met het scherm. */
+
+#screen-table { padding: 0; align-items: stretch; }
+
+#table-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr minmax(16rem, 22rem);
+}
+
+#felt {
+  position: relative;
+  background: radial-gradient(circle at 50% 45%, var(--felt) 0%, var(--felt-dark) 75%);
+  overflow: hidden;
+  min-height: 0;
+}
+
+.seat {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.seat--south { bottom: 0.5rem; left: 50%; transform: translateX(-50%); }
+.seat--north { top: 0.5rem; left: 50%; transform: translateX(-50%); }
+.seat--west  { left: 0.5rem; top: 50%; transform: translateY(-50%); }
+.seat--east  { right: 0.5rem; top: 50%; transform: translateY(-50%); }
+
+.seat--west .seat-cards,
+.seat--east .seat-cards { flex-direction: column; }
+
+.seat-name {
+  font-size: 0.85rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+}
+.seat-name.dealer::after { content: " (deler)"; color: var(--ink-dim); }
+.seat-name.attacker { color: var(--accent); }
+.seat-name.defender { color: var(--defender); }
+.seat-name.turn { outline: 2px solid var(--accent); }
+.seat-name.offline { opacity: 0.5; text-decoration: line-through; }
+
+.seat-cards { display: flex; }
+
+/* Overlapping fan. --i is the card's index in the hand. */
+.card {
+  width: 4.4rem;
+  height: 6.2rem;
+  flex: 0 0 auto;
+  border-radius: 5px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  transition: transform 0.12s ease;
+}
+.seat--south .seat-cards .card,
+.seat--north .seat-cards .card { margin-left: -2.2rem; }
+.seat--west .seat-cards .card,
+.seat--east .seat-cards .card { margin-top: -4.6rem; }
+.seat-cards .card:first-child { margin-left: 0; margin-top: 0; }
+
+.card.playable { cursor: pointer; }
+.card.playable:hover { transform: translateY(-1.2rem); }
+.card.selected { transform: translateY(-1.6rem); outline: 3px solid var(--accent); }
+.card.dimmed { filter: brightness(0.55) saturate(0.5); }
+
+#trick-area {
+  position: absolute;
+  inset: 30% 30% 30% 30%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  place-items: center;
+  pointer-events: none;
+}
+
+#trick-area .card { width: 3.8rem; height: 5.4rem; }
+#trick-area .pos-south { grid-area: 3 / 2; }
+#trick-area .pos-west  { grid-area: 2 / 1; }
+#trick-area .pos-north { grid-area: 1 / 2; }
+#trick-area .pos-east  { grid-area: 2 / 3; }
+
+#trump-area {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+}
+#trump-area .card { width: 3.4rem; height: 4.8rem; }
+
+#trick-counter {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+}
+
+#pause-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.62);
+  text-align: center;
+  padding: 1rem;
+  font-size: 1.05rem;
+}
+#pause-overlay[hidden] { display: none; }
+
+#sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.6rem;
+  background: #191e20;
+  border-left: 1px solid #000;
+  min-height: 0;
+  overflow: auto;
+}
+
+.box {
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.7rem;
+  font-size: 0.88rem;
+}
+.box.grow { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 10rem; }
+.box[hidden] { display: none; }
+
+#bid-options { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+#bid-options button { padding: 0.4rem 0.6rem; font-size: 0.82rem; }
+
+#action-box:empty { display: none; }
+#action-box button { width: 100%; margin-top: 0.4rem; }
+
+#scoreboard table { width: 100%; border-collapse: collapse; }
+#scoreboard td { padding: 0.15rem 0; }
+#scoreboard td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+
+#chat-log {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: 0.4rem;
+}
+#chat-log .server { color: var(--accent); }
+#chat-log .system { color: var(--ink-dim); font-style: italic; }
+#chat-log .player .who { font-weight: 600; }
+
+#chat-form { display: flex; gap: 0.35rem; }
+#chat-form input { flex: 1 1 auto; min-width: 0; }
+
+.toggle[aria-pressed="true"] { background: var(--accent); color: #1a1a1a; }
+
+@media (max-width: 860px) {
+  #table-area { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+  #sidebar { border-left: none; border-top: 1px solid #000; max-height: 45vh; }
+  .card { width: 3.2rem; height: 4.5rem; }
+  .seat--south .seat-cards .card,
+  .seat--north .seat-cards .card { margin-left: -1.7rem; }
+}
