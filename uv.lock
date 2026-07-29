@@ -385,10 +385,8 @@ version = "0.2.0"
 source = { editable = "src/jwies-server" }
 dependencies = [
     { name = "fastapi" },
-    { name = "jwies-assets" },
     { name = "jwies-core" },
     { name = "jwies-protocol" },
-    { name = "jwies-web-client" },
     { name = "pyyaml" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -396,10 +394,8 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
-    { name = "jwies-assets", editable = "src/jwies-assets" },
     { name = "jwies-core", editable = "src/jwies-core" },
     { name = "jwies-protocol", editable = "src/jwies-protocol" },
-    { name = "jwies-web-client", editable = "src/jwies-web-client" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32" },
 ]
@@ -408,6 +404,18 @@ requires-dist = [
 name = "jwies-web-client"
 version = "0.2.0"
 source = { editable = "src/jwies-web-client" }
+dependencies = [
+    { name = "jwies-assets" },
+    { name = "starlette" },
+    { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "jwies-assets", editable = "src/jwies-assets" },
+    { name = "starlette", specifier = ">=0.40" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.32" },
+]
 
 [[package]]
 name = "jwies-workspace"

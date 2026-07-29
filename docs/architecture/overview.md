@@ -4,12 +4,17 @@
 
 ```mermaid
 flowchart LR
-    web[Browserclient<br/>vanilla JS + SVG]
+    browser[Browser]
     qt[PyQt6-client<br/>QWebSocket]
 
-    subgraph server[jwies-server, een proces]
+    subgraph webproc[jwies-web, eigen proces en poort]
+        static[/HTML, CSS, JS/]
+        assets[/kaartenset/]
+        conf[/config.json/]
+    end
+
+    subgraph server[jwies-server, eigen proces en poort]
         ws[/ws websocket/]
-        static[/statische bestanden/]
         mgr[LobbyManager]
         lobby[LobbyRuntime<br/>een asyncio-task per tafel]
         pres[Presenter<br/>+ nl.yaml]
@@ -17,13 +22,25 @@ flowchart LR
 
     core[jwies-core<br/>spelregels, puntentelling<br/>zuiver, synchroon]
 
-    web -- JSON --> ws
-    qt  -- JSON --> ws
-    web -.-> static
+    browser -. eenmalig downloaden .-> static
+    browser -. kaarten .-> assets
+    browser -. waar draait het spel? .-> conf
+    browser -- JSON --> ws
+    qt -- JSON --> ws
     ws --> mgr --> lobby
     lobby --> core
     lobby --> pres
 ```
+
+De twee processen weten niets van elkaar. `jwies-web` deelt bestanden uit en
+kent de spelregels niet; `jwies-server` speelt het spel en deelt geen bestanden
+uit. Ligt de spelserver plat, dan laadt de pagina nog altijd - ze zal enkel
+melden dat ze het spel niet bereikt.
+
+Omdat de pagina van een ander adres komt dan de websocket, moet de browser
+weten waar het spel draait. Volgorde: wat de speler zelf invulde,
+`?server=...`, `game_server_url` uit `/config.json`, en anders dezelfde host als
+de pagina.
 
 ## De zes pakketten
 
@@ -32,19 +49,19 @@ flowchart LR
 | `jwies-core` | Alle spelregels en de puntentelling. Geen I/O, geen async, geen Qt, geen timers. |
 | `jwies-protocol` | Het berichtenschema als pydantic-modellen. Geen spellogica, geen import van core. |
 | `jwies-assets` | De kaartenset (SVG-cards 2.0.1) en de iconen. |
-| `jwies-web-client` | De browserclient: HTML, CSS, JavaScript. Geen Python-logica, geen buildstap. |
-| `jwies-server` | Lobby's, sessies, websockets, chat. Serveert de twee bestandspakketten mee. |
+| `jwies-web-client` | De browserclient (HTML, CSS, JS) plus de webserver die hem uitdeelt. |
+| `jwies-server` | Lobby's, sessies, websockets, chat. Deelt geen bestanden uit. |
 | `jwies-qt-client` | De desktopclient. |
 
-Een test bewaakt dat `jwies-server` nooit PyQt binnentrekt en `jwies-qt-client`
-nooit FastAPI.
+Tests bewaken dat `jwies-server` nooit PyQt binnentrekt, `jwies-qt-client` nooit
+FastAPI, en `jwies-web-client` nooit `jwies-core` of `jwies-protocol` - die
+laatste kent de spelregels niet en hoort ze ook niet te kennen.
 
-`jwies-assets` en `jwies-web-client` bevatten allebei enkel bestanden. Ze zijn
-Python-pakketten omdat dat de eenvoudigste manier is om bestanden mee te
-verhuizen naar waar de server draait: `pip install jwies-server` levert meteen
-ook de browserclient op, en `importlib.resources` vindt ze evengoed in een wheel
-of een containerimage als in een checkout. Er zit geen npm, bundler of
-transpilatie tussen: wat in de repo staat, is wat de browser krijgt.
+Er zit geen npm, bundler of transpilatie tussen: wat in de repo staat, is wat de
+browser krijgt. `jwies-web-client` is een Python-pakket omdat dat de
+eenvoudigste manier is om die bestanden mee te verhuizen naar waar ze
+uitgeserveerd worden; `importlib.resources` vindt ze evengoed in een wheel of
+een containerimage als in een checkout.
 
 ## Drie principes die de rest verklaren
 

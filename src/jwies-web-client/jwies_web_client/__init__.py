@@ -1,19 +1,22 @@
-"""The browser client for Vlaamse wies.
+"""The browser client for Vlaamse wies, with its own little webserver.
 
-This package contains no Python logic - only static HTML, CSS and JavaScript
-under ``static/``, plus the accessor below so a server can find and serve them.
-The browser is the runtime; there is no build step, no npm and no bundler.
+The static files live under ``static/``; ``server.py`` hands them out. That
+server is deliberately separate from ``jwies-server``: it holds no state, knows
+nothing about the rules, and keeps serving the page while the game server is
+down or restarting.
 
-It is a *thin* client, like the PyQt one: it holds no rules. It never decides
+The client is *thin*, like the PyQt one: it holds no rules. It never decides
 which cards may be played, who may bid what, or who won a trick. All of that
-arrives from the server, which ships the permitted options with every prompt.
-``tests/e2e/test_web_client.py`` asserts that this stays true.
+arrives from the game server, which ships the permitted options with every
+prompt. ``tests/e2e/test_web_client.py`` asserts that this stays true.
 """
 
 from importlib.resources import files
 from importlib.resources.abc import Traversable
 
-__all__ = ["ENTRY_POINT", "static_root"]
+__version__ = "0.2.0"
+
+__all__ = ["ENTRY_POINT", "__version__", "static_root"]
 
 ENTRY_POINT = "index.html"
 

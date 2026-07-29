@@ -11,6 +11,9 @@ export const LABELS = {
   notConnected: "Niet verbonden",
 
   nameRequired: "Vul een naam in van 2 tot 20 tekens.",
+  serverRequired: "Vul het adres van de spelserver in (ws://... of wss://...).",
+  serverUnreachable:
+    "Geen verbinding met de spelserver op {adres}. Draait hij, en klopt het adres?",
   lobbyNameRequired: "Geef de tafel een naam.",
 
   join: "Deelnemen",

@@ -27,6 +27,13 @@
         <label for="input-username">Jouw naam</label>
         <input id="input-username" type="text" maxlength="20" autocomplete="nickname"
                placeholder="bijv. Jan">
+
+        <label for="input-server">Spelserver</label>
+        <input id="input-server" type="text" spellcheck="false"
+               placeholder="ws://127.0.0.1:8000/ws">
+        <p class="hint">Dit adres is meestal al goed ingevuld. Pas het aan
+          wanneer de spelserver ergens anders draait dan deze pagina.</p>
+
         <p id="connect-error" class="error" hidden></p>
         <button id="btn-connect" class="primary">Verbinden</button>
       </div>

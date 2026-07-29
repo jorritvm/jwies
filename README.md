@@ -20,11 +20,18 @@ git clone https://github.com/jorritvm/jwies
 cd jwies
 uv sync --all-packages
 
-# start de server
+# start de spelserver
 uv run --package jwies-server jwies-server --config templates/server.yaml
 
-# spelen: open http://localhost:8000 in vier browservensters
+# start, in een tweede venster, de webclient
+uv run --package jwies-web-client jwies-web --game-server ws://127.0.0.1:8000/ws
+
+# spelen: open http://localhost:8080 in vier browservensters
 ```
+
+Twee processen dus: de **spelserver** (poort 8000, enkel websockets) en de
+**webclient** (poort 8080, enkel bestanden). Ze staan los van elkaar, zodat de
+pagina blijft laden terwijl je de spelserver herstart.
 
 Liever de desktopclient?
 
@@ -95,12 +102,20 @@ Iedereen aan tafel kan in de chat commando's aan de server geven:
 ## Hoe het in elkaar zit
 
 ```
-browser  ─┐
-          ├─ websockets (JSON) ─→  jwies-server  ─→  jwies-core
-PyQt6    ─┘                        lobby's,           spelregels,
-                                   sessies,           puntentelling
-                                   chat
+              statische bestanden
+browser ──────→ jwies-web (poort 8080)
+   │              HTML, CSS, JS, kaarten
+   │
+   └──┐
+      ├─ websockets (JSON) ─→  jwies-server (poort 8000)  ─→  jwies-core
+PyQt6 ┘                        lobby's, sessies, chat          spelregels,
+                                                               puntentelling
 ```
+
+De webclient wordt door zijn eigen webserver uitgedeeld, niet door de
+spelserver. Die twee weten niets van elkaar: `jwies-web` deelt enkel bestanden
+uit, `jwies-server` enkel spel. Ligt de spelserver even plat, dan laadt de
+pagina nog altijd.
 
 Zes losse pakketten onder `src/`, elk met hun eigen afhankelijkheden:
 
@@ -109,8 +124,8 @@ Zes losse pakketten onder `src/`, elk met hun eigen afhankelijkheden:
 | `jwies-core` | De spelregels en de puntentelling. Geen I/O, geen GUI, geen async. | pydantic, pyyaml |
 | `jwies-protocol` | Het berichtenschema. Enkel pydantic-modellen, geen spellogica. | pydantic |
 | `jwies-assets` | De kaartenset en iconen. | — |
-| `jwies-web-client` | De browserclient: HTML, CSS en JavaScript. Geen Python-logica. | — |
-| `jwies-server` | Lobby's, sessies, websockets. Serveert de webclient mee. | core, protocol, assets, web-client, fastapi |
+| `jwies-web-client` | De browserclient plus de webserver die hem uitdeelt. | assets, starlette, uvicorn |
+| `jwies-server` | Lobby's, sessies, websockets. Deelt geen bestanden uit. | core, protocol, fastapi |
 | `jwies-qt-client` | De desktopclient. Tekent enkel wat de server stuurt. | protocol, assets, pyqt6 |
 
 De server draait **nooit** PyQt en de desktopclient **nooit** FastAPI; ze delen
@@ -127,9 +142,15 @@ elke beurt mee welke kaarten of biedingen toegelaten zijn. Daardoor kunnen een
 browser en een PyQt-venster nooit van mening verschillen over de regels. Een
 test faalt wanneer er toch spellogica in een client verschijnt.
 
-`jwies-web-client` bevat geen Python en geen buildstap: gewoon HTML, CSS en
-ES-modules die de server uitserveert. De browser is de runtime. Installeer je dat
-pakket niet, dan start de server nog steeds en werkt de PyQt-client gewoon.
+`jwies-web-client` heeft geen buildstap: gewoon HTML, CSS en ES-modules, plus een
+kleine webserver om ze uit te delen. De browser is de runtime; er komt geen npm
+of bundler aan te pas. Het pakket kent de spelregels niet en praat zelf nooit met
+de spelserver - dat doet de browser.
+
+De browser vindt de spelserver via, in volgorde: wat de speler zelf invulde,
+`?server=...` in de adresbalk, `--game-server` (uitgeserveerd als
+`/config.json`), en anders dezelfde host als de pagina. Die laatste is handig
+wanneer je beide achter één reverse proxy zet.
 
 ---
 

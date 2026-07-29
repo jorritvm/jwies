@@ -35,17 +35,29 @@ uv tree --package jwies-qt-client --no-dev  # mag geen fastapi bevatten
 ## Draaien
 
 ```powershell
-# server
+# spelserver (websockets, poort 8000)
 uv run --package jwies-server jwies-server --config templates/server.yaml
+
+# browserclient (statische bestanden, poort 8080)
+uv run --package jwies-web-client jwies-web --game-server ws://127.0.0.1:8000/ws
 
 # desktopclient
 uv run --package jwies-qt-client jwies --username Jan
 
-# server + vier clients ineens, voor een testpotje
+# alles ineens, voor een testpotje
 .\scripts\run_dev.ps1
 ```
 
-Nuttige serveropties: `--host`, `--port`, `--log-level`, `--log-file`.
+Twee servers, met opzet gescheiden: `jwies-server` speelt het spel en deelt geen
+bestanden uit, `jwies-web` deelt bestanden uit en kent het spel niet. Zo blijft
+de pagina laden terwijl je de spelserver herstart, en hoeft de webclient niet
+mee opnieuw uitgerold te worden wanneer de spelregels veranderen.
+
+Nuttige opties: `--host`, `--port`, `--log-level`, `--log-file` (spelserver);
+`--host`, `--port`, `--game-server`, `--log-level` (webclient).
+
+Zet je beide achter één reverse proxy op hetzelfde adres, laat `--game-server`
+dan weg: de pagina valt dan terug op zijn eigen host.
 
 ## Testen
 

@@ -57,6 +57,7 @@ store.addEventListener("change", () => {
 // --- verbinden ---------------------------------------------------------------
 
 const usernameInput = document.getElementById("input-username");
+const serverInput = document.getElementById("input-server");
 const connectError = document.getElementById("connect-error");
 
 document.getElementById("btn-connect").addEventListener("click", () => {
@@ -66,17 +67,34 @@ document.getElementById("btn-connect").addEventListener("click", () => {
     connectError.hidden = false;
     return;
   }
+  const serverUrl = serverInput.value.trim();
+  if (!/^wss?:\/\/.+/.test(serverUrl)) {
+    connectError.textContent = LABELS.serverRequired;
+    connectError.hidden = false;
+    return;
+  }
   connectError.hidden = true;
   statusLine.textContent = LABELS.connecting;
-  connection.connect(username);
+  connection.connect(username, null, serverUrl);
 });
 
-usernameInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") document.getElementById("btn-connect").click();
-});
+for (const field of [usernameInput, serverInput]) {
+  field.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") document.getElementById("btn-connect").click();
+  });
+}
 
 connection.addEventListener("closed", () => {
   statusLine.textContent = LABELS.disconnected;
+  // Nog nooit verbonden geweest? Dan klopt het adres waarschijnlijk niet, en
+  // heeft de speler daar meer aan dan aan "verbinding verbroken".
+  if (!store.state.username) {
+    connectError.textContent = fill(LABELS.serverUnreachable, {
+      adres: connection.url(),
+    });
+    connectError.hidden = false;
+    store.update({ screen: "connect" });
+  }
 });
 
 connection.addEventListener("message", (event) => {
@@ -241,11 +259,17 @@ function chooseSuit(allowNoTrump) {
 
 async function boot() {
   await loadDeck();
+
+  // Deze pagina komt van zijn eigen webserver, dus het adres van de spelserver
+  // moet apart bepaald worden. Zie Connection.resolveUrl().
+  const serverUrl = await Connection.resolveUrl();
+  serverInput.value = serverUrl;
+
   const saved = Connection.restore();
   if (saved?.username) {
     usernameInput.value = saved.username;
     statusLine.textContent = LABELS.connecting;
-    connection.connect(saved.username, saved.resumeToken);
+    connection.connect(saved.username, saved.resumeToken, serverUrl);
   } else {
     statusLine.textContent = LABELS.notConnected;
   }

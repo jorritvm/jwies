@@ -9,7 +9,8 @@
 param(
     [int]$Clients = 4,
     [switch]$ServerOnly,
-    [int]$Port = 8000
+    [int]$Port = 8000,
+    [int]$WebPort = 8080
 )
 
 $root = Split-Path -Parent $PSScriptRoot
@@ -21,16 +22,27 @@ if (-not (Test-Path $configPath)) {
     $configPath = Join-Path $root "templates\server.yaml"
 }
 
-Write-Host "Server starten op poort $Port..."
+# Twee aparte processen: de spelserver en de webserver die de browserclient
+# uitdeelt. Zo blijft de pagina laden wanneer je de spelserver herstart.
+Write-Host "Spelserver starten op poort $Port..."
 $server = Start-Process -PassThru -FilePath "uv" -ArgumentList @(
     "run", "--package", "jwies-server", "jwies-server",
     "--config", $configPath, "--port", $Port
 )
 
-Start-Sleep -Seconds 2
-Write-Host "Webclient: http://localhost:$Port"
+Write-Host "Webclient starten op poort $WebPort..."
+$web = Start-Process -PassThru -FilePath "uv" -ArgumentList @(
+    "run", "--package", "jwies-web-client", "jwies-web",
+    "--port", $WebPort,
+    "--game-server", "ws://127.0.0.1:$Port/ws"
+)
 
-$processes = @($server)
+Start-Sleep -Seconds 2
+Write-Host ""
+Write-Host "Browserclient: http://localhost:$WebPort"
+Write-Host "Spelserver:    ws://localhost:$Port/ws"
+
+$processes = @($server, $web)
 if (-not $ServerOnly) {
     $names = @("Jan", "Piet", "Joris", "Korneel")
     for ($i = 0; $i -lt $Clients; $i++) {

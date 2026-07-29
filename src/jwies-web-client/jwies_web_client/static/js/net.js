@@ -19,6 +19,7 @@ export class Connection extends EventTarget {
     this.backoff = 1000;
     this.lastSeq = 0;
     this.wanted = false;
+    this.serverUrl = null;
   }
 
   static restore() {
@@ -33,7 +34,11 @@ export class Connection extends EventTarget {
     try {
       localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ username: this.username, resumeToken: this.resumeToken }),
+        JSON.stringify({
+          username: this.username,
+          resumeToken: this.resumeToken,
+          serverUrl: this.serverUrl,
+        }),
       );
     } catch {
       /* private mode: niet erg, we verbinden dan gewoon met enkel de naam */
@@ -48,14 +53,50 @@ export class Connection extends EventTarget {
     }
   }
 
-  url() {
+  /** Adres van dezelfde host als deze pagina. */
+  static sameOriginUrl() {
     const scheme = location.protocol === "https:" ? "wss:" : "ws:";
     return `${scheme}//${location.host}/ws`;
   }
 
-  connect(username, resumeToken = null) {
+  /**
+   * Waar draait de spelserver?
+   *
+   * Deze pagina wordt door een eigen webserver uitgeserveerd, los van de
+   * spelserver, dus dat hoeft niet hetzelfde adres te zijn. In volgorde van
+   * voorrang:
+   *   1. wat de speler zelf invulde (bewaard in localStorage)
+   *   2. ?server=... in de adresbalk
+   *   3. game_server_url uit /config.json, gezet met jwies-web --game-server
+   *   4. dezelfde host als deze pagina
+   */
+  static async resolveUrl() {
+    const saved = Connection.restore();
+    if (saved?.serverUrl) return saved.serverUrl;
+
+    const fromQuery = new URLSearchParams(location.search).get("server");
+    if (fromQuery) return fromQuery;
+
+    try {
+      const response = await fetch("./config.json", { cache: "no-store" });
+      if (response.ok) {
+        const config = await response.json();
+        if (config.game_server_url) return config.game_server_url;
+      }
+    } catch {
+      /* geen config.json: dan gewoon dezelfde host proberen */
+    }
+    return Connection.sameOriginUrl();
+  }
+
+  url() {
+    return this.serverUrl || Connection.sameOriginUrl();
+  }
+
+  connect(username, resumeToken = null, serverUrl = null) {
     this.username = username;
     this.resumeToken = resumeToken ?? this.resumeToken;
+    this.serverUrl = serverUrl ?? this.serverUrl;
     this.wanted = true;
     this._open();
   }
