@@ -13,6 +13,7 @@ members = ["src/*"]
 jwies-assets = { workspace = true }
 jwies-protocol = { workspace = true }
 jwies-core = { workspace = true }
+jwies-web-client = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -91,6 +92,9 @@ filename = "src/jwies-protocol/pyproject.toml"
 
 [[tool.bumpversion.files]]
 filename = "src/jwies-core/pyproject.toml"
+
+[[tool.bumpversion.files]]
+filename = "src/jwies-web-client/pyproject.toml"
 
 [[tool.bumpversion.files]]
 filename = "src/jwies-server/pyproject.toml"

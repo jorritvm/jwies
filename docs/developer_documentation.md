@@ -105,7 +105,7 @@ sleutel die de code gebruikt ook echt bestaat, en omgekeerd.
    `server_messages.py` en opnemen in de union onderaan.
 2. Afhandelen in `jwies_server/connection.py` (lobbyniveau) of
    `jwies_server/lobby.py` (spelniveau).
-3. Verwerken in beide clients: `web/js/store.js` en
+3. Verwerken in beide clients: `jwies_web_client/static/js/store.js` en
    `jwies_qt_client/state.py`.
 
 Het protocol heeft een versienummer (`PROTOCOL_VERSION` in

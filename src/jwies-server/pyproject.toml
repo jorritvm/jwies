@@ -7,6 +7,10 @@ dependencies = [
     "jwies-core",
     "jwies-protocol",
     "jwies-assets",
+    # Statische bestanden van de browserclient. Bevat geen Python-logica; de
+    # server serveert ze enkel. Laat je dit pakket weg, dan start de server nog
+    # steeds en werkt de PyQt-client gewoon.
+    "jwies-web-client",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "pyyaml>=6.0",

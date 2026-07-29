@@ -18,8 +18,9 @@ Concretely:
 - Server-side Dutch lives in `src/jwies-server/jwies_server/texts/nl.yaml` and
   nowhere else. Only `presenter.py` and `chat.py` may call `catalog.render(...)`.
   A test asserts every key used in code exists, and that no key is unused.
-- Each client owns Dutch **only** for its own widgets: `web/js/labels.js` and
-  the label tables in `jwies_qt_client/main_window.py`. Game sentences
+- Each client owns Dutch **only** for its own widgets:
+  `jwies_web_client/static/js/labels.js` and the label tables in
+  `jwies_qt_client/main_window.py`. Game sentences
   (bid announcements, contract statements, the settlement) arrive from the
   server ready to display, so they are written once.
 - Wire message types and event names stay English (`play_card`,

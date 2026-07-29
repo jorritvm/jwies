@@ -89,7 +89,13 @@ def create_app(config: LoadedConfig, *, catalog: TextCatalog | None = None) -> F
 
 
 def _mount_static(app: FastAPI) -> None:
-    """Serve the card assets and the browser client from this same process."""
+    """Serve the card assets and the browser client from this same process.
+
+    Both come from separate packages that hold nothing but files, so they are
+    located through ``importlib.resources`` rather than by walking up from
+    ``__file__``. That keeps working from an installed wheel or a container
+    image.
+    """
     with as_file(files("jwies_assets")) as assets_dir:
         if Path(assets_dir).is_dir():
             app.mount(
@@ -98,11 +104,22 @@ def _mount_static(app: FastAPI) -> None:
                 name="assets",
             )
 
-    web_dir = Path(__file__).parent / "web"
-    if web_dir.is_dir():
-        app.mount("/", StaticFiles(directory=str(web_dir), html=True), name="web")
-    else:  # pragma: no cover - only when the client has not been built yet
-        log.warning("webclient niet gevonden op %s", web_dir)
+    # The browser client is an optional dependency in practice: a server that
+    # only ever talks to PyQt clients does not need it, and should still start.
+    try:
+        from jwies_web_client import static_root
+    except ImportError:  # pragma: no cover - only without the web client
+        log.warning(
+            "jwies-web-client is niet geinstalleerd; de browserclient wordt niet "
+            "aangeboden. De PyQt-client werkt gewoon."
+        )
+        return
+
+    with as_file(static_root()) as web_dir:
+        if Path(web_dir).is_dir():
+            app.mount("/", StaticFiles(directory=str(web_dir), html=True), name="web")
+        else:  # pragma: no cover - a broken install
+            log.warning("webclient niet gevonden op %s", web_dir)
 
 
 async def _reap_forever(lobbies: LobbyManager) -> None:

@@ -25,18 +25,26 @@ flowchart LR
     lobby --> pres
 ```
 
-## De vijf pakketten
+## De zes pakketten
 
 | Pakket | Rol |
 |---|---|
 | `jwies-core` | Alle spelregels en de puntentelling. Geen I/O, geen async, geen Qt, geen timers. |
 | `jwies-protocol` | Het berichtenschema als pydantic-modellen. Geen spellogica, geen import van core. |
 | `jwies-assets` | De kaartenset (SVG-cards 2.0.1) en de iconen. |
-| `jwies-server` | Lobby's, sessies, websockets, chat, en de webclient. |
+| `jwies-web-client` | De browserclient: HTML, CSS, JavaScript. Geen Python-logica, geen buildstap. |
+| `jwies-server` | Lobby's, sessies, websockets, chat. Serveert de twee bestandspakketten mee. |
 | `jwies-qt-client` | De desktopclient. |
 
 Een test bewaakt dat `jwies-server` nooit PyQt binnentrekt en `jwies-qt-client`
 nooit FastAPI.
+
+`jwies-assets` en `jwies-web-client` bevatten allebei enkel bestanden. Ze zijn
+Python-pakketten omdat dat de eenvoudigste manier is om bestanden mee te
+verhuizen naar waar de server draait: `pip install jwies-server` levert meteen
+ook de browserclient op, en `importlib.resources` vindt ze evengoed in een wheel
+of een containerimage als in een checkout. Er zit geen npm, bundler of
+transpilatie tussen: wat in de repo staat, is wat de browser krijgt.
 
 ## Drie principes die de rest verklaren
 

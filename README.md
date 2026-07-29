@@ -102,14 +102,15 @@ PyQt6    ─┘                        lobby's,           spelregels,
                                    chat
 ```
 
-Vijf losse pakketten onder `src/`, elk met hun eigen afhankelijkheden:
+Zes losse pakketten onder `src/`, elk met hun eigen afhankelijkheden:
 
 | Pakket | Rol | Hangt af van |
 |---|---|---|
 | `jwies-core` | De spelregels en de puntentelling. Geen I/O, geen GUI, geen async. | pydantic, pyyaml |
 | `jwies-protocol` | Het berichtenschema. Enkel pydantic-modellen, geen spellogica. | pydantic |
 | `jwies-assets` | De kaartenset en iconen. | — |
-| `jwies-server` | Lobby's, sessies, websockets, en de webclient. | core, protocol, assets, fastapi |
+| `jwies-web-client` | De browserclient: HTML, CSS en JavaScript. Geen Python-logica. | — |
+| `jwies-server` | Lobby's, sessies, websockets. Serveert de webclient mee. | core, protocol, assets, web-client, fastapi |
 | `jwies-qt-client` | De desktopclient. Tekent enkel wat de server stuurt. | protocol, assets, pyqt6 |
 
 De server draait **nooit** PyQt en de desktopclient **nooit** FastAPI; ze delen
@@ -120,10 +121,15 @@ $env:UV_PROJECT_ENVIRONMENT=".venv-server"; uv sync --package jwies-server
 $env:UV_PROJECT_ENVIRONMENT=".venv-qt";     uv sync --package jwies-qt-client
 ```
 
-De spelregels zitten volledig in `jwies-core` en nergens anders. De clients
-weten niet eens wat kleur volgen is: de server stuurt bij elke beurt mee welke
-kaarten of biedingen toegelaten zijn. Daardoor kunnen een browser en een
-PyQt-venster nooit van mening verschillen over de regels.
+De spelregels zitten volledig in `jwies-core` en nergens anders. **Beide clients
+zijn thin clients**: ze weten niet eens wat kleur volgen is. De server stuurt bij
+elke beurt mee welke kaarten of biedingen toegelaten zijn. Daardoor kunnen een
+browser en een PyQt-venster nooit van mening verschillen over de regels. Een
+test faalt wanneer er toch spellogica in een client verschijnt.
+
+`jwies-web-client` bevat geen Python en geen buildstap: gewoon HTML, CSS en
+ES-modules die de server uitserveert. De browser is de runtime. Installeer je dat
+pakket niet, dan start de server nog steeds en werkt de PyQt-client gewoon.
 
 ---
 
