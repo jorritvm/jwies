@@ -119,7 +119,7 @@ def test_the_game_server_does_not_depend_on_the_web_client() -> None:
     import tomllib
 
     manifest = (
-        Path(__file__).resolve().parents[2] / "src" / "jwies-server" / "pyproject.toml"
+        Path(__file__).resolve().parents[2] / "packages" / "jwies-server" / "pyproject.toml"
     )
     data = tomllib.loads(manifest.read_text(encoding="utf-8"))
     dependencies = " ".join(data["project"]["dependencies"])
@@ -132,7 +132,7 @@ def test_every_card_id_the_client_builds_exists_in_the_sheet() -> None:
     # two ever disagree, cards render blank - so check all 52 plus the back.
     sheet = (
         Path(__file__).resolve().parents[2]
-        / "src"
+        / "packages"
         / "jwies-assets"
         / "jwies_assets"
         / "svg-cards.svg"
@@ -222,7 +222,7 @@ def test_the_web_client_never_depends_on_the_game() -> None:
     import tomllib
 
     manifest = (
-        Path(__file__).resolve().parents[2] / "src" / "jwies-web-client" / "pyproject.toml"
+        Path(__file__).resolve().parents[2] / "packages" / "jwies-web-client" / "pyproject.toml"
     )
     data = tomllib.loads(manifest.read_text(encoding="utf-8"))
     dependencies = " ".join(data["project"]["dependencies"])
@@ -235,7 +235,7 @@ def test_the_web_client_ships_no_game_logic_in_python() -> None:
     """Its Python is a file server and nothing else."""
     package = (
         Path(__file__).resolve().parents[2]
-        / "src"
+        / "packages"
         / "jwies-web-client"
         / "jwies_web_client"
     )

@@ -186,7 +186,7 @@ def test_the_client_declares_no_dependency_on_the_engine() -> None:
     import tomllib
     from pathlib import Path
 
-    manifest = Path(__file__).resolve().parents[2] / "src" / "jwies-qt-client" / "pyproject.toml"
+    manifest = Path(__file__).resolve().parents[2] / "packages" / "jwies-qt-client" / "pyproject.toml"
     data = tomllib.loads(manifest.read_text(encoding="utf-8"))
     dependencies = " ".join(data["project"]["dependencies"])
     assert "jwies-core" not in dependencies

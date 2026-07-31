@@ -1,6 +1,6 @@
 """Scene geometry for the card table.
 
-Ported verbatim from the pre-refactor ``src/constants.py``: these numbers are
+Ported verbatim from the pre-refactor ``packages/constants.py``: these numbers are
 tuned by eye and there is no reason to re-derive them. Only the network
 constants that used to live alongside them are gone, since the wire format is
 now JSON over websockets.

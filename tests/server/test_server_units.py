@@ -12,7 +12,7 @@ from jwies_server.chat import COMMANDS, ChatContext, handle_chat_command, is_com
 from jwies_server.sessions import HelloOutcome, SessionRegistry
 from jwies_server.texts import MissingTextError, TextCatalog
 
-SERVER_SRC = Path(__file__).resolve().parents[2] / "src" / "jwies-server" / "jwies_server"
+SERVER_SRC = Path(__file__).resolve().parents[2] / "packages" / "jwies-server" / "jwies_server"
 
 
 @pytest.fixture(scope="module")
