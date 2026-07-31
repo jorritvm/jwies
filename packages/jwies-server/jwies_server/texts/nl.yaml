@@ -2,7 +2,7 @@
 #  Nederlandse teksten van de server.
 #
 #  Alles wat een speler te lezen krijgt, staat hier. De code werkt met Engelse
-#  sleutels; de zinnen zijn Nederlands. Zo staat een tikfout op een plaats en
+#  sleutels; de zinnen zijn Nederlands. Zo staat een tikfout op één plaats en
 #  hoeven de clients geen vertaaltabel bij te houden.
 #
 #  Tussen accolades staan invulvelden; laat ze staan zoals ze zijn.

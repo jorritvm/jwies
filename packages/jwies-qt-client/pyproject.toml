@@ -5,7 +5,6 @@ description = "PyQt6-client voor Vlaamse wies - tekent enkel wat de server stuur
 requires-python = ">=3.13"
 dependencies = [
     "jwies-protocol",
-    "jwies-assets",
     "pyqt6>=6.9.1",
     "pyyaml>=6.0",
 ]

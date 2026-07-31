@@ -15,7 +15,7 @@ This is the rule that shapes the most decisions in the codebase.
 
 Concretely:
 
-- Server-side Dutch lives in `src/jwies-server/jwies_server/texts/nl.yaml` and
+- Server-side Dutch lives in `packages/jwies-server/jwies_server/texts/nl.yaml` and
   nowhere else. Only `presenter.py` and `chat.py` may call `catalog.render(...)`.
   A test asserts every key used in code exists, and that no key is unused.
 - Each client owns Dutch **only** for its own widgets:

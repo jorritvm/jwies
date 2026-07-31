@@ -3,8 +3,6 @@ name = "jwies-server"
 version = "0.2.0"
 description = "Headless lobbyserver voor Vlaamse wies - websockets en JSON"
 requires-python = ">=3.13"
-# Enkel de spelserver: geen kaartafbeeldingen, geen HTML, geen browserclient.
-# Die worden door jwies-web-client uitgeserveerd, op een eigen poort.
 dependencies = [
     "jwies-core",
     "jwies-protocol",

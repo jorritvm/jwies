@@ -20,11 +20,11 @@ from fastapi.testclient import TestClient
 from jwies_core.cards import full_deck
 from jwies_server.app import create_app
 from jwies_server.config import load_server_config
-from jwies_web_client import static_root
+from jwies_web_client import STATIC
 from jwies_web_client.server import create_app as create_web_app
 
 TEMPLATES = Path(__file__).resolve().parents[2] / "templates"
-WEB = Path(str(static_root()))
+WEB = STATIC
 
 
 @pytest.fixture(scope="module")
@@ -124,24 +124,35 @@ def test_the_game_server_does_not_depend_on_the_web_client() -> None:
     data = tomllib.loads(manifest.read_text(encoding="utf-8"))
     dependencies = " ".join(data["project"]["dependencies"])
     assert "jwies-web-client" not in dependencies
-    assert "jwies-assets" not in dependencies
 
 
 def test_every_card_id_the_client_builds_exists_in_the_sheet() -> None:
     # cards.js maps a code like "10S" to an element id like "10_spade". If the
     # two ever disagree, cards render blank - so check all 52 plus the back.
-    sheet = (
-        Path(__file__).resolve().parents[2]
-        / "packages"
-        / "jwies-assets"
-        / "jwies_assets"
-        / "svg-cards.svg"
-    ).read_text(encoding="utf-8", errors="ignore")
+    sheet = (WEB / "assets" / "svg-cards.svg").read_text(encoding="utf-8", errors="ignore")
     ids = set(re.findall(r'id="([^"]+)"', sheet))
 
     for card in full_deck():
         assert card.svg_element_id in ids, f"{card.code} -> {card.svg_element_id} ontbreekt"
     assert "back" in ids
+
+
+def test_both_clients_ship_the_same_card_sheet() -> None:
+    """The sheet is copied into each client rather than shared through a package.
+
+    That is a deliberate trade: one duplicated file instead of a whole package
+    whose only job was handing out that file. This test is the price - it fails
+    the moment the two copies drift apart.
+    """
+    qt = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "jwies-qt-client"
+        / "jwies_qt_client"
+        / "assets"
+        / "svg-cards.svg"
+    )
+    assert qt.read_bytes() == (WEB / "assets" / "svg-cards.svg").read_bytes()
 
 
 def test_the_javascript_and_python_agree_on_card_ids() -> None:

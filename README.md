@@ -117,16 +117,15 @@ spelserver. Die twee weten niets van elkaar: `jwies-web` deelt enkel bestanden
 uit, `jwies-server` enkel spel. Ligt de spelserver even plat, dan laadt de
 pagina nog altijd.
 
-Zes losse pakketten onder `src/`, elk met hun eigen afhankelijkheden:
+Vijf losse pakketten onder `packages/`, elk met hun eigen afhankelijkheden:
 
 | Pakket | Rol | Hangt af van |
 |---|---|---|
 | `jwies-core` | De spelregels en de puntentelling. Geen I/O, geen GUI, geen async. | pydantic, pyyaml |
 | `jwies-protocol` | Het berichtenschema. Enkel pydantic-modellen, geen spellogica. | pydantic |
-| `jwies-assets` | De kaartenset en iconen. | — |
-| `jwies-web-client` | De browserclient plus de webserver die hem uitdeelt. | assets, starlette, uvicorn |
+| `jwies-web-client` | De browserclient plus de webserver die hem uitdeelt. | starlette, uvicorn |
 | `jwies-server` | Lobby's, sessies, websockets. Deelt geen bestanden uit. | core, protocol, fastapi |
-| `jwies-qt-client` | De desktopclient. Tekent enkel wat de server stuurt. | protocol, assets, pyqt6 |
+| `jwies-qt-client` | De desktopclient. Tekent enkel wat de server stuurt. | protocol, pyqt6 |
 
 De server draait **nooit** PyQt en de desktopclient **nooit** FastAPI; ze delen
 alleen het berichtenschema. Wil je ze in aparte omgevingen installeren:
@@ -160,7 +159,7 @@ wanneer je beide achter één reverse proxy zet.
 uv run pytest                      # alle tests
 uv run pytest tests/core           # enkel de spelregels
 uv run ruff check .                # stijlcontrole
-uv run mypy src/jwies-core         # typecontrole
+uv run mypy packages/jwies-core    # typecontrole
 ```
 
 Meer in [`docs/developer_documentation.md`](docs/developer_documentation.md) en
@@ -176,8 +175,9 @@ De spelregels zelf staan uitgebreid beschreven in
 De code staat onder de licentie in [`LICENSE`](LICENSE).
 
 De kaartafbeeldingen zijn **SVG-cards 2.0.1** van David Bellot, onder de LGPL.
-Ze zitten in `src/jwies-assets/jwies_assets/` samen met hun licentietekst, en
-worden door de server uitgeserveerd op `/assets/svg-cards.svg`.
+Elke client draagt zijn eigen kopie, samen met de licentietekst:
+`packages/jwies-web-client/jwies_web_client/static/assets/` (uitgeserveerd op
+`/assets/svg-cards.svg`) en `packages/jwies-qt-client/jwies_qt_client/assets/`.
 
 ## Auteur
 

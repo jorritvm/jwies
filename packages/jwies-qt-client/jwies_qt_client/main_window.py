@@ -8,10 +8,8 @@ server's prompt names and draws the state the server sends.
 from __future__ import annotations
 
 import logging
-from importlib.resources import as_file
 from typing import Any
 
-from jwies_assets import CARD_DECK_SVG, asset_path, icon_path
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtSvg import QSvgRenderer
@@ -36,6 +34,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from jwies_qt_client import ASSETS
 from jwies_qt_client.net import ServerConnection
 from jwies_qt_client.settings import ClientSettings
 from jwies_qt_client.state import ClientState
@@ -116,12 +115,10 @@ class MainWindow(QMainWindow):
         self.card_signals = CardSignals()
 
         self.setWindowTitle("jwies - Vlaamse wies")
-        with as_file(icon_path("playing-card.png")) as path:
-            self.setWindowIcon(QIcon(str(path)))
+        self.setWindowIcon(QIcon(str(ASSETS / "playing-card.png")))
         self.resize(1100, 720)
 
-        with as_file(asset_path(CARD_DECK_SVG)) as path:
-            self.renderer = QSvgRenderer(str(path))
+        self.renderer = QSvgRenderer(str(ASSETS / "svg-cards.svg"))
 
         self._build_ui()
         self._wire()

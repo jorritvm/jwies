@@ -87,14 +87,14 @@ nodig.
 ```powershell
 uv run ruff check .
 uv run ruff format .
-uv run mypy src/jwies-core src/jwies-protocol
+uv run mypy packages/jwies-core packages/jwies-protocol
 ```
 
 Zie [`style_guide/style_guide.md`](style_guide/style_guide.md).
 
 ## Iets aan de spelregels veranderen
 
-Alle regels zitten in `src/jwies-core/`. Het is de bedoeling dat je daar kan
+Alle regels zitten in `packages/jwies-core/`. Het is de bedoeling dat je daar kan
 werken zonder ooit een server te starten: de engine is zuiver en synchroon.
 
 - **Een instelling toevoegen**: veld in `config/ruleset.py` (Engelse naam,
@@ -108,7 +108,7 @@ werken zonder ooit een server te starten: de engine is zuiver en synchroon.
   de nulsomtest overleven.
 
 Voeg je een speler-zichtbare zin toe, dan hoort die in
-`src/jwies-server/jwies_server/texts/nl.yaml`; een test controleert dat elke
+`packages/jwies-server/jwies_server/texts/nl.yaml`; een test controleert dat elke
 sleutel die de code gebruikt ook echt bestaat, en omgekeerd.
 
 ## Een nieuw berichttype

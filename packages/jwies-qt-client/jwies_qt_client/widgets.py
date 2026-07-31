@@ -8,9 +8,6 @@ SVG element id directly.
 
 from __future__ import annotations
 
-from importlib.resources import as_file
-
-from jwies_assets import icon_path
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QIcon, QPixmap, QResizeEvent
 from PyQt6.QtSvg import QSvgRenderer
@@ -27,6 +24,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from jwies_qt_client import ASSETS
 from jwies_qt_client.cards import CARD_BACK, svg_element_id
 from jwies_qt_client.layout import SELECT_ELEVATION, TRUMP_ELEVATION, Y_CARD
 
@@ -102,8 +100,8 @@ class ChooseSuitDialog(QDialog):
             if code is None:
                 button.setText("Geen troef")
             else:
-                with as_file(icon_path(f"{SUIT_ICONS[code]}.png")) as path:
-                    button.setIcon(QIcon(QPixmap(str(path))))
+                icon = ASSETS / f"{SUIT_ICONS[code]}.png"
+                button.setIcon(QIcon(QPixmap(str(icon))))
                 button.setIconSize(QSize(50, 50))
             button.clicked.connect(lambda _checked, chosen=code: self._choose(chosen))
             self.suit_buttons.append((code, button))

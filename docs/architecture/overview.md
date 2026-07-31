@@ -42,16 +42,15 @@ weten waar het spel draait. Volgorde: wat de speler zelf invulde,
 `?server=...`, `game_server_url` uit `/config.json`, en anders dezelfde host als
 de pagina.
 
-## De zes pakketten
+## De vijf pakketten
 
 | Pakket | Rol |
 |---|---|
 | `jwies-core` | Alle spelregels en de puntentelling. Geen I/O, geen async, geen Qt, geen timers. |
 | `jwies-protocol` | Het berichtenschema als pydantic-modellen. Geen spellogica, geen import van core. |
-| `jwies-assets` | De kaartenset (SVG-cards 2.0.1) en de iconen. |
-| `jwies-web-client` | De browserclient (HTML, CSS, JS) plus de webserver die hem uitdeelt. |
+| `jwies-web-client` | De browserclient (HTML, CSS, JS) plus de webserver die hem uitdeelt, inclusief de kaartenset. |
 | `jwies-server` | Lobby's, sessies, websockets, chat. Deelt geen bestanden uit. |
-| `jwies-qt-client` | De desktopclient. |
+| `jwies-qt-client` | De desktopclient, met een eigen kopie van de kaartenset (SVG-cards 2.0.1) en de iconen. |
 
 Tests bewaken dat `jwies-server` nooit PyQt binnentrekt, `jwies-qt-client` nooit
 FastAPI, en `jwies-web-client` nooit `jwies-core` of `jwies-protocol` - die
@@ -156,7 +155,7 @@ een nieuwe snapshot moet vragen. `re` verwijst naar de `id` van het bericht dat
 het antwoord uitlokte.
 
 De volledige berichtenlijst staat in
-`src/jwies-protocol/jwies_protocol/client_messages.py` en `server_messages.py`.
+`packages/jwies-protocol/jwies_protocol/client_messages.py` en `server_messages.py`.
 Dat zijn pydantic-modellen met een discriminator op `type`, dus een onbekend
 berichttype is een validatiefout en geen stilzwijgend genegeerd bericht.
 

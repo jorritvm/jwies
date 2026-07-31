@@ -11,16 +11,12 @@ arrives from the game server, which ships the permitted options with every
 prompt. ``tests/e2e/test_web_client.py`` asserts that this stays true.
 """
 
-from importlib.resources import files
-from importlib.resources.abc import Traversable
+from pathlib import Path
 
 __version__ = "0.2.0"
 
-__all__ = ["ENTRY_POINT", "__version__", "static_root"]
+__all__ = ["STATIC", "__version__"]
 
-ENTRY_POINT = "index.html"
-
-
-def static_root() -> Traversable:
-    """The directory to serve as the web root."""
-    return files(__name__) / "static"
+# The web root: index.html, css/, js/ and assets/svg-cards.svg. The card sheet
+# is a plain copy of the Qt client's, so neither needs a package to share it.
+STATIC = Path(__file__).parent / "static"

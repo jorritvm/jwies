@@ -4,8 +4,6 @@ version = "0.2.0"
 description = "Browserclient voor Vlaamse wies, met een eigen webserver"
 requires-python = ">=3.13"
 dependencies = [
-    # De kaartenset, zodat de browser voor niets bij de spelserver moet zijn.
-    "jwies-assets",
     # Enkel om de statische bestanden uit te serveren. Dit pakket kent de
     # spelregels niet en praat zelf nooit met de spelserver.
     "starlette>=0.40",
