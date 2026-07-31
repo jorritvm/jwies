@@ -13,7 +13,12 @@ import contextlib
 import logging
 
 from fastapi import WebSocket
-from jwies_protocol import (
+from pydantic import ValidationError
+from starlette.websockets import WebSocketDisconnect, WebSocketState
+
+from jwies_server import __version__
+from jwies_server.lobby_manager import LobbyError, LobbyManager
+from jwies_server.protocol import (
     PROTOCOL_VERSION,
     ClientEnvelope,
     ErrorCode,
@@ -22,13 +27,7 @@ from jwies_protocol import (
     client_messages,
     server_messages,
 )
-from pydantic import ValidationError
-from starlette.websockets import WebSocketDisconnect, WebSocketState
-
-from jwies_server import __version__
-from jwies_server.lobby_manager import LobbyError, LobbyManager
 from jwies_server.sessions import HelloOutcome, Session, SessionRegistry
-from jwies_server.texts import TextCatalog
 
 __all__ = ["WebsocketAgent", "handle_connection"]
 
@@ -41,8 +40,6 @@ CLOSE_USERNAME_TAKEN = 4409
 
 class WebsocketAgent:
     """A ``PlayerAgent`` backed by a websocket."""
-
-    is_human = True
 
     def __init__(self, websocket: WebSocket, username: str) -> None:
         self.websocket = websocket
@@ -103,7 +100,6 @@ async def handle_connection(
     *,
     sessions: SessionRegistry,
     lobbies: LobbyManager,
-    catalog: TextCatalog,
 ) -> None:
     """Run one connection from accept to close."""
     await websocket.accept()
@@ -111,7 +107,7 @@ async def handle_connection(
     agent: WebsocketAgent | None = None
 
     try:
-        session, agent = await _handshake(websocket, sessions, lobbies, catalog)
+        session, agent = await _handshake(websocket, sessions, lobbies)
         if session is None or agent is None:
             return
 
@@ -123,11 +119,11 @@ async def handle_connection(
                     websocket,
                     server_messages.Error(
                         code=ErrorCode.BAD_MESSAGE,
-                        text=catalog.render("error.bad_message"),
+                        text="Onbegrijpelijk bericht ontvangen.",
                     ),
                 )
                 continue
-            await _route(envelope, session, sessions, lobbies, catalog)
+            await _route(envelope, session, lobbies)
 
     except WebSocketDisconnect:
         pass
@@ -155,7 +151,6 @@ async def _handshake(
     websocket: WebSocket,
     sessions: SessionRegistry,
     lobbies: LobbyManager,
-    catalog: TextCatalog,
 ) -> tuple[Session | None, WebsocketAgent | None]:
     raw = await websocket.receive_text()
     envelope = _parse(raw)
@@ -164,7 +159,7 @@ async def _handshake(
         await _send_raw(
             websocket,
             server_messages.Error(
-                code=ErrorCode.BAD_MESSAGE, text=catalog.render("error.bad_message")
+                code=ErrorCode.BAD_MESSAGE, text="Onbegrijpelijk bericht ontvangen."
             ),
         )
         await websocket.close()
@@ -175,8 +170,9 @@ async def _handshake(
             websocket,
             server_messages.Error(
                 code=ErrorCode.PROTOCOL_VERSION,
-                text=catalog.render(
-                    "error.protocol_version", client=envelope.v, server=PROTOCOL_VERSION
+                text=(
+                    f"Deze client spreekt versie {envelope.v} van het protocol, "
+                    f"de server versie {PROTOCOL_VERSION}. Werk je client bij."
                 ),
             ),
         )
@@ -189,7 +185,7 @@ async def _handshake(
             websocket,
             server_messages.Error(
                 code=ErrorCode.USERNAME_INVALID,
-                text=catalog.render("error.username_invalid"),
+                text=("Ongeldige naam. Gebruik 2 tot 20 letters, cijfers, spaties, '-' of '_'."),
             ),
         )
         await websocket.close(code=CLOSE_USERNAME_TAKEN)
@@ -201,7 +197,7 @@ async def _handshake(
             websocket,
             server_messages.Error(
                 code=ErrorCode.USERNAME_TAKEN,
-                text=catalog.render("error.username_taken", naam=hello.username),
+                text=(f"De naam '{hello.username}' is al in gebruik door iemand die online is."),
             ),
         )
         await websocket.close(code=CLOSE_USERNAME_TAKEN)
@@ -236,7 +232,7 @@ async def _handshake(
             ServerEnvelope(
                 msg=server_messages.Chat(
                     kind=server_messages.ChatKind.SERVER,
-                    text=catalog.render("lobby.welcome", speler=session.username),
+                    text=f"Welkom {session.username}!",
                     private=True,
                 )
             )
@@ -247,9 +243,7 @@ async def _handshake(
 async def _route(
     envelope: ClientEnvelope,
     session: Session,
-    sessions: SessionRegistry,
     lobbies: LobbyManager,
-    catalog: TextCatalog,
 ) -> None:
     """Handle lobby-level messages here; hand game messages to the lobby task."""
     message = envelope.msg
@@ -292,11 +286,7 @@ async def _route(
                     server_messages.PlayerJoined(username=session.username, seat=session.seat)
                 )
                 await lobby.broadcast(server_messages.LobbyStateMessage(lobby=lobby.lobby_state()))
-                await lobby.broadcast(
-                    lobby.presenter.chat(
-                        catalog.render("lobby.player_joined", speler=session.username)
-                    )
-                )
+                await lobby.broadcast(lobby.presenter.chat(f"{session.username} komt aan tafel."))
                 if lobbies.is_startable(lobby):
                     await lobby.start_game()
 
@@ -318,7 +308,7 @@ async def _route(
                     await reply(
                         server_messages.Error(
                             code=ErrorCode.NOT_IN_LOBBY,
-                            text=catalog.render("error.not_in_lobby"),
+                            text="Je zit niet in een lobby.",
                         )
                     )
                     return

@@ -11,6 +11,33 @@ from tests.e2e.conftest import ScriptedClient, play_until
 
 pytestmark = pytest.mark.anyio if False else []
 
+# The snapshot names exactly one hand - yours. There is no field that could
+# carry anyone else's, which is the structural half of the privacy guarantee;
+# test_a_player_never_sees_another_players_hand is the behavioural half.
+SNAPSHOT_FIELDS = {
+    "lobby",
+    "phase",
+    "round_number",
+    "multiplier",
+    "your_seat",
+    "dealer_seat",
+    "seats",
+    "your_hand",
+    "open_hands",
+    "turned_trump",
+    "trump",
+    "bids",
+    "contract",
+    "current_trick",
+    "last_trick",
+    "trick_counts",
+    "totals",
+    "pending_seat",
+    "prompt",
+    "paused",
+    "missing_players",
+}
+
 
 async def seat_four(server: str) -> list[ScriptedClient]:
     """Connect four clients, create a lobby and fill it. Game auto-starts."""
@@ -65,11 +92,13 @@ async def test_four_clients_play_a_complete_round(server: str) -> None:
         totals = [finished[client.username]["totals"] for client in clients]
         assert all(total == totals[0] for total in totals)
 
-        # (e) nobody ever received someone else's hand
+        # (e) every snapshot a client received carried only its own hand
         for client in clients:
-            for message in client.seen("hand_dealt"):
-                assert len(message["cards"]) == 13
-            assert len(client.seen("hand_dealt")) >= 1
+            snapshots = client.seen("snapshot")
+            assert snapshots
+            for message in snapshots:
+                assert set(message["snapshot"]) <= SNAPSHOT_FIELDS
+                assert len(message["snapshot"]["your_hand"]) <= 13
     finally:
         for client in clients:
             await client.close()
@@ -81,8 +110,8 @@ async def test_a_player_never_sees_another_players_hand(server: str) -> None:
         hands: dict[str, set[str]] = {}
 
         def stop(message: dict[str, Any], client: ScriptedClient) -> bool:
-            if message["type"] == "hand_dealt":
-                hands[client.username] = set(message["cards"])
+            if message["type"] == "snapshot" and len(message["snapshot"]["your_hand"]) == 13:
+                hands[client.username] = set(message["snapshot"]["your_hand"])
                 return len(hands) == 4
             return False
 
@@ -106,7 +135,7 @@ async def test_the_dutch_announcements_reach_every_client(server: str) -> None:
         seen: dict[str, bool] = {}
 
         def stop(message: dict[str, Any], client: ScriptedClient) -> bool:
-            if message["type"] == "contract_established":
+            if message["type"] == "snapshot" and message["snapshot"]["contract"] is not None:
                 seen[client.username] = True
                 return len(seen) == 4
             return False
@@ -114,12 +143,13 @@ async def test_the_dutch_announcements_reach_every_client(server: str) -> None:
         await play_until(clients, stop, timeout=40)
 
         for client in clients:
-            announcement = client.seen("contract_established")[0]
-            # Server-rendered Dutch, ready to display.
-            assert announcement["text"]
-            assert announcement["contract"]["name"]
-            bids = client.seen("bid_placed")
-            assert any(bid["announcement"] for bid in bids)
+            # The contract itself is state, so it lives in the snapshot; the
+            # sentence announcing it is news, so it comes through the chat.
+            # Both are already Dutch, rendered server-side.
+            assert client.snapshot["contract"]["name"]
+            assert any(bid["announcement"] for bid in client.snapshot["bids"])
+            chat = [message["text"] for message in client.seen("chat")]
+            assert any(client.snapshot["contract"]["name"] in line for line in chat)
     finally:
         for client in clients:
             await client.close()

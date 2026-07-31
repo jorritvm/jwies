@@ -8,6 +8,7 @@ exist, a layout that throws on construction.
 from __future__ import annotations
 
 import os
+from typing import Any
 
 import pytest
 
@@ -17,7 +18,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 
 from jwies_qt_client.main_window import MainWindow
 from jwies_qt_client.settings import ClientSettings
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QInputDialog, QMessageBox
 
 
 @pytest.fixture(scope="module")
@@ -115,6 +116,26 @@ SNAPSHOT = {
 }
 
 
+def prompt(kind: str, **fields: Any) -> dict[str, Any]:
+    return {
+        "kind": kind,
+        "bid_options": [],
+        "legal_cards": [],
+        "cut_minimum": 0,
+        "cut_maximum": 0,
+        **fields,
+    }
+
+
+def snapshot(**overrides: Any) -> dict[str, Any]:
+    """The table above with a few fields swapped out.
+
+    Everything the client believes now arrives this way: the server sends a
+    fresh snapshot after every change, and nothing else carries state.
+    """
+    return {"type": "snapshot", "snapshot": {**SNAPSHOT["snapshot"], **overrides}}
+
+
 def test_the_window_builds(window: MainWindow) -> None:
     assert window.windowTitle().startswith("jwies")
 
@@ -141,21 +162,18 @@ def test_the_trick_counter_shows_dutch(window: MainWindow) -> None:
 
 
 def test_bid_buttons_come_from_the_server_prompt(window: MainWindow) -> None:
-    message = {
-        "type": "prompt",
-        "prompt": {
-            "kind": "bid",
-            "bid_options": [
-                {"type": "pass", "tricks": None, "suit": None},
-                {"type": "abondance", "tricks": 10, "suit": None},
-            ],
-            "legal_cards": [],
-            "cut_minimum": 0,
-            "cut_maximum": 0,
-        },
-    }
     window.on_message(SNAPSHOT)
-    window.on_message(message)
+    window.on_message(
+        snapshot(
+            prompt=prompt(
+                "bid",
+                bid_options=[
+                    {"type": "pass", "tricks": None, "suit": None},
+                    {"type": "abondance", "tricks": 10, "suit": None},
+                ],
+            )
+        )
+    )
     labels = [
         window.bid_layout.itemAt(index).widget().text()
         for index in range(window.bid_layout.count())
@@ -166,6 +184,7 @@ def test_bid_buttons_come_from_the_server_prompt(window: MainWindow) -> None:
 def test_a_paused_game_disables_playing(window: MainWindow) -> None:
     window.on_message(SNAPSHOT)
     window.on_message({"type": "game_paused", "missing": ["Joris"], "text": "Joris is weg."})
+    window.on_message(snapshot(paused=True, missing_players=["Joris"]))
     assert window.state["paused"] is True
     assert window.play_button.isEnabled() is False
 
@@ -181,6 +200,77 @@ def test_chat_text_from_the_server_is_shown_as_is(window: MainWindow) -> None:
         }
     )
     assert "Jan wint de slag." in window.chat_log.toPlainText()
+
+
+class TestPromptsThatAskAQuestion:
+    """Opening a modal is a reaction to a new prompt, never part of drawing.
+
+    A modal spins a nested Qt event loop, so the socket keeps delivering while
+    one is open. If the render path opened them, every chat line arriving after
+    the shuffle prompt would stack another dialog on top.
+    """
+
+    @pytest.fixture
+    def asked(self, window: MainWindow, monkeypatch: pytest.MonkeyPatch) -> list[str]:
+        """Record every dialog opened and every answer sent."""
+        opened: list[str] = []
+
+        def question(*_args: object, **_kwargs: object) -> object:
+            opened.append("shuffle")
+            return QMessageBox.StandardButton.Yes
+
+        def get_int(*_args: object, **_kwargs: object) -> tuple[int, bool]:
+            opened.append("cut")
+            return 7, True
+
+        monkeypatch.setattr(QMessageBox, "question", staticmethod(question))
+        monkeypatch.setattr(QInputDialog, "getInt", staticmethod(get_int))
+        monkeypatch.setattr(window.connection, "send", lambda *a, **k: None)
+        return opened
+
+    def test_a_shuffle_prompt_asks_once(self, window: MainWindow, asked: list[str]) -> None:
+        window.on_message(snapshot(prompt=prompt("shuffle")))
+        assert asked == ["shuffle"]
+
+    def test_later_snapshots_do_not_ask_again(self, window: MainWindow, asked: list[str]) -> None:
+        # The exact stacking bug: the server keeps sending snapshots that still
+        # carry the shuffle prompt until the dealer's answer arrives, and the
+        # socket keeps delivering while the first dialog holds a nested loop.
+        window.on_message(snapshot(prompt=prompt("shuffle")))
+        for _ in range(3):
+            window.on_message(
+                {"type": "chat", "kind": "server", "text": "Jan schudt.", "sender": None}
+            )
+            window.on_message(snapshot(prompt=prompt("shuffle")))
+        assert asked == ["shuffle"]
+
+    def test_redrawing_the_table_never_asks(self, window: MainWindow, asked: list[str]) -> None:
+        window.on_message(snapshot(prompt=prompt("shuffle")))
+        asked.clear()
+        window.refresh_table()
+        window.on_last_trick_toggled(True)
+        assert asked == []
+
+    def test_a_cut_prompt_asks_for_a_number(self, window: MainWindow, asked: list[str]) -> None:
+        window.on_message(snapshot(prompt=prompt("cut", cut_minimum=1, cut_maximum=51)))
+        assert asked == ["cut"]
+
+    def test_a_bid_prompt_asks_nothing(self, window: MainWindow, asked: list[str]) -> None:
+        # Bidding is answered with the buttons on the table, not with a dialog.
+        window.on_message(
+            snapshot(
+                prompt=prompt("bid", bid_options=[{"type": "pass", "tricks": None, "suit": None}])
+            )
+        )
+        assert asked == []
+
+    def test_a_resumed_game_asks_again(self, window: MainWindow, asked: list[str]) -> None:
+        # The server re-offers the pending turn after a pause, because it never
+        # recorded having asked. The client must accept that offer.
+        window.on_message(snapshot(prompt=prompt("shuffle")))
+        window.on_message(snapshot(prompt=prompt("shuffle"), paused=True, missing_players=["Jo"]))
+        window.on_message(snapshot(prompt=prompt("shuffle")))
+        assert asked == ["shuffle", "shuffle"]
 
 
 def test_the_lobby_list_renders(window: MainWindow) -> None:
@@ -200,6 +290,7 @@ def test_the_lobby_list_renders(window: MainWindow) -> None:
             ],
         }
     )
-    assert window.lobby_list.count() == 1
-    assert "Testtafel" in window.lobby_list.item(0).text()
-    assert "wacht op spelers" in window.lobby_list.item(0).text()
+    listing = window.lobby_page.lobby_list
+    assert listing.count() == 1
+    assert "Testtafel" in listing.item(0).text()
+    assert "wacht op spelers" in listing.item(0).text()

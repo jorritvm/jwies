@@ -70,11 +70,6 @@ standaard_regelset: klassiek
 # Moet hierboven bij 'puntenschalen' gedefinieerd zijn.
 standaard_puntenschaal: schaal_a
 
-# Welke AI-agents mogen lege stoelen invullen?
-# Er zijn er vandaag nog geen; deze lijst is voorbereid op een latere uitbreiding.
-# Toegelaten waarden: een lijst met agentnamen, of []
-toegelaten_agents: []
-
 # ---------------------------------------------------------------------------
 # Logboek. Vervangt het tekstvenster van de oude controller-GUI.
 # ---------------------------------------------------------------------------

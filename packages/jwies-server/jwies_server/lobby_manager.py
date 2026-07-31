@@ -6,12 +6,10 @@ import itertools
 import logging
 import time
 
-from jwies_protocol import LobbyStatusCode, LobbySummary
-
 from jwies_server.config import LoadedConfig
 from jwies_server.lobby import LobbyRuntime
+from jwies_server.protocol import LobbyStatusCode, LobbySummary
 from jwies_server.sessions import Session
-from jwies_server.texts import TextCatalog
 
 __all__ = ["LobbyError", "LobbyManager"]
 
@@ -30,9 +28,8 @@ class LobbyError(Exception):
 class LobbyManager:
     """Owns every lobby on this server."""
 
-    def __init__(self, config: LoadedConfig, catalog: TextCatalog) -> None:
+    def __init__(self, config: LoadedConfig) -> None:
         self.config = config
-        self.catalog = catalog
         self.lobbies: dict[str, LobbyRuntime] = {}
         self._ids = itertools.count(1)
 
@@ -44,7 +41,7 @@ class LobbyManager:
     def get(self, lobby_id: str) -> LobbyRuntime:
         lobby = self.lobbies.get(lobby_id)
         if lobby is None:
-            raise LobbyError("lobby_not_found", self.catalog.render("error.lobby_not_found"))
+            raise LobbyError("lobby_not_found", "Die lobby bestaat niet (meer).")
         return lobby
 
     def lobby_of(self, session: Session) -> LobbyRuntime | None:
@@ -67,30 +64,24 @@ class LobbyManager:
         if len(self.lobbies) >= settings.lobby.maximum:
             raise LobbyError(
                 "internal",
-                self.catalog.render("error.max_lobbies", maximum=settings.lobby.maximum),
+                f"De server zit aan zijn maximum van {settings.lobby.maximum} lobby's.",
             )
         if any(lobby.name.casefold() == name.casefold() for lobby in self.lobbies.values()):
-            raise LobbyError("lobby_exists", self.catalog.render("error.lobby_exists"))
+            raise LobbyError("lobby_exists", "Er is al een lobby met die naam.")
 
         ruleset_name = ruleset or settings.default_ruleset
         scoring_name = scoring or settings.default_scoring
         if ruleset_name not in self.config.rulesets:
             raise LobbyError(
                 "unknown_ruleset",
-                self.catalog.render(
-                    "error.unknown_ruleset",
-                    naam=ruleset_name,
-                    beschikbaar=", ".join(sorted(self.config.rulesets)),
-                ),
+                f"Onbekende regelset '{ruleset_name}'. "
+                f"Beschikbaar: {', '.join(sorted(self.config.rulesets))}.",
             )
         if scoring_name not in self.config.scorings:
             raise LobbyError(
                 "unknown_scoring",
-                self.catalog.render(
-                    "error.unknown_scoring",
-                    naam=scoring_name,
-                    beschikbaar=", ".join(sorted(self.config.scorings)),
-                ),
+                f"Onbekende puntenschaal '{scoring_name}'. "
+                f"Beschikbaar: {', '.join(sorted(self.config.scorings))}.",
             )
 
         self.leave(session)
@@ -104,7 +95,6 @@ class LobbyManager:
             ruleset_name=ruleset_name,
             scoring=self.config.scorings[scoring_name],
             scoring_name=scoring_name,
-            catalog=self.catalog,
             rng_seed=rng_seed,
         )
         lobby.start_task()
@@ -117,7 +107,7 @@ class LobbyManager:
         if session.username in lobby.members:
             return lobby
         if not lobby.free_seats():
-            raise LobbyError("lobby_full", self.catalog.render("error.lobby_full"))
+            raise LobbyError("lobby_full", "Deze lobby zit vol.")
         self.leave(session)
         lobby.add_member(session)
         log.info("%s komt in lobby %s", session.username, lobby_id)
@@ -136,7 +126,7 @@ class LobbyManager:
         lobby = self.get(lobby_id)
         # The host may always delete; anyone may clear away an empty lobby.
         if lobby.host_username != session.username and not lobby.is_empty():
-            raise LobbyError("not_host", self.catalog.render("error.not_host"))
+            raise LobbyError("not_host", "Alleen wie de lobby aanmaakte kan dat doen.")
         for member in list(lobby.members.values()):
             member.session.lobby_id = None
             member.session.seat = None

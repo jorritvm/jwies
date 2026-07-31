@@ -11,12 +11,13 @@ recipient's hand.
 
 from __future__ import annotations
 
-from jwies_protocol.common import (
+from jwies_server.protocol.common import (
     BidTypeCode,
     CardCode,
     ContractKeyCode,
     LobbyStatusCode,
     PhaseCode,
+    PromptKindCode,
     ProtocolModel,
     SeatIndex,
     SuitCode,
@@ -32,20 +33,10 @@ __all__ = [
     "LobbySummary",
     "PlayedCardInfo",
     "Prompt",
-    "PromptKindCode",
     "SeatInfo",
     "Snapshot",
     "TrickCounts",
 ]
-
-from enum import StrEnum
-
-
-class PromptKindCode(StrEnum):
-    SHUFFLE = "shuffle"
-    CUT = "cut"
-    BID = "bid"
-    PLAY = "play"
 
 
 class BidInfo(ProtocolModel):

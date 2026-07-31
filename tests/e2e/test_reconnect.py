@@ -134,12 +134,12 @@ async def test_the_outstanding_prompt_is_reissued_after_resuming(server: str) ->
 
         back = ScriptedClient(server, on_turn.username)
         await back.__aenter__()
-        restored = await back.wait_for("snapshot", timeout=15)
-        # The engine never recorded that it had already asked, so the prompt
-        # simply comes back with the legal options intact.
-        assert restored["snapshot"]["prompt"] is not None
-        prompt = await back.wait_for("prompt", timeout=15)
-        assert prompt["prompt"]["kind"] in ("play", "bid", "cut", "shuffle")
+        # The engine never recorded that it had already asked, so the turn
+        # simply comes back in the snapshot, legal options intact.
+        restored = await back.wait_for(
+            "snapshot", timeout=15, predicate=lambda m: m["snapshot"]["prompt"] is not None
+        )
+        assert restored["snapshot"]["prompt"]["kind"] in ("play", "bid", "cut", "shuffle")
         await back.close()
     finally:
         for client in clients:

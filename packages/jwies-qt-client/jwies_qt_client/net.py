@@ -13,13 +13,18 @@ from __future__ import annotations
 import json
 import logging
 
-from jwies_protocol import PROTOCOL_VERSION
 from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtSignal
 from PyQt6.QtWebSockets import QWebSocket
 
 __all__ = ["ServerConnection"]
 
 log = logging.getLogger(__name__)
+
+# The client speaks the wire format directly - it builds message dicts by hand
+# and reads them by hand, exactly like the browser client does. So the version
+# lives here as a plain number rather than being imported from the server; the
+# handshake is what catches a mismatch.
+PROTOCOL_VERSION = 1
 
 INITIAL_BACKOFF_MS = 1000
 MAX_BACKOFF_MS = 30000

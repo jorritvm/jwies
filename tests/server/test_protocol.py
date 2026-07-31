@@ -1,4 +1,9 @@
-"""Protocol models: round-trips, discrimination, and parity with the engine."""
+"""Protocol models: round-trips, discrimination, and validation on the way in.
+
+There is no enum-parity suite any more: the protocol's ``*Code`` names are
+aliases of the engine's enums rather than copies of them, so the properties
+those tests asserted are true by construction.
+"""
 
 from __future__ import annotations
 
@@ -6,16 +11,12 @@ import json
 from typing import get_args
 
 import pytest
-from jwies_protocol import (
+from jwies_server.protocol import (
     PROTOCOL_VERSION,
     BidInfo,
-    BidTypeCode,
     ClientEnvelope,
-    ClientKind,
     ClientMessage,
     ContractKeyCode,
-    PhaseCode,
-    PromptKindCode,
     ServerEnvelope,
     ServerMessage,
     SuitCode,
@@ -96,43 +97,6 @@ def test_optional_bid_fields_may_be_omitted() -> None:
     assert bid.tricks is None and bid.suit is None
 
 
-# --- parity with the engine's own enums --------------------------------------
-
-
-def test_suit_codes_match_the_engine() -> None:
-    from jwies_core.cards import Suit
-
-    assert {member.value for member in SuitCode} == {member.value for member in Suit}
-
-
-def test_bid_type_codes_match_the_engine() -> None:
-    from jwies_core.bidding import BidType
-
-    assert {member.value for member in BidTypeCode} == {member.value for member in BidType}
-
-
-def test_contract_key_codes_match_the_engine() -> None:
-    from jwies_core.contracts import ContractKey
-
-    assert {member.value for member in ContractKeyCode} == {member.value for member in ContractKey}
-
-
-def test_phase_codes_match_the_engine() -> None:
-    from jwies_core.engine import Phase
-
-    assert {member.value for member in PhaseCode} == {member.value for member in Phase}
-
-
-def test_prompt_kind_codes_match_the_engine() -> None:
-    from jwies_core.engine import PromptKind
-
-    assert {member.value for member in PromptKindCode} == {member.value for member in PromptKind}
-
-
-def test_client_kinds_cover_both_clients() -> None:
-    assert {member.value for member in ClientKind} == {"qt", "web"}
-
-
 # --- every message type is reachable ----------------------------------------
 
 
@@ -158,10 +122,7 @@ def test_every_server_message_round_trips() -> None:
     # of a field type JSON has no representation for.
     samples: list[ServerMessage] = [
         server_messages.Pong(),
-        server_messages.PromptCleared(),
         server_messages.TableCleared(),
-        server_messages.TrumpHidden(),
-        server_messages.PhaseChanged(phase=PhaseCode.BIDDING),
         server_messages.CardPlayed(seat=2, card="QD", position_in_trick=3),
         server_messages.RoundFinished(
             tricks_made=8, made=True, deltas={"Jan": "2"}, totals={"Jan": "2"}, text="ok"

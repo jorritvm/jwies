@@ -12,9 +12,9 @@ from datetime import UTC, datetime
 
 from pydantic import Field
 
-from jwies_protocol.client_messages import ClientMessage
-from jwies_protocol.common import PROTOCOL_VERSION, ProtocolModel
-from jwies_protocol.server_messages import ServerMessage
+from jwies_server.protocol.client_messages import ClientMessage
+from jwies_server.protocol.common import PROTOCOL_VERSION, ProtocolModel
+from jwies_server.protocol.server_messages import ServerMessage
 
 __all__ = ["ClientEnvelope", "ServerEnvelope"]
 

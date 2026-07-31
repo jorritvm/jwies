@@ -1,8 +1,10 @@
 // De volledige clienttoestand.
 //
-// Een momentopname (snapshot) vervangt de toestand in een keer; de losse
-// gebeurtenissen werken ze bij voor de animatie. Daardoor is herverbinden
-// gratis: er komt gewoon een nieuwe snapshot binnen.
+// Een momentopname (snapshot) vervangt de toestand in een keer, en de server
+// stuurt er een na elke verandering. Dat is de enige weg waarlangs toestand
+// binnenkomt - de rest van de berichten zijn mededelingen. Daardoor is
+// herverbinden gratis, en kunnen deze client en de PyQt-client onmogelijk van
+// mening verschillen over wat een gebeurtenis betekende.
 
 export class Store extends EventTarget {
   constructor() {
@@ -75,11 +77,18 @@ export class Store extends EventTarget {
     });
   }
 
-  // Elke servergebeurtenis werkt de toestand bij. De teksten zijn al
-  // Nederlands: de server rendert ze, de client toont ze alleen.
+  // Enkel deze berichten veranderen iets. Al de rest die de server stuurt is
+  // een mededeling - wie de slag won, welk contract er ligt, dat het spel
+  // gepauzeerd is - en de momentopname die erop volgt zegt dat allemaal al.
+  // Diezelfde feiten hier een tweede keer afleiden is precies hoe twee clients
+  // uit elkaar gaan lopen.
   applyMessage(message) {
     const state = this.state;
     switch (message.type) {
+      case "snapshot":
+        this.applySnapshot(message.snapshot);
+        break;
+
       case "hello_ok":
         this.update({ username: message.username, rulesets: message.rulesets,
                       scorings: message.scorings });
@@ -100,39 +109,9 @@ export class Store extends EventTarget {
         this.update({ screen: "table", seats: message.seats, yourSeat: message.your_seat });
         break;
 
-      case "snapshot":
-        this.applySnapshot(message.snapshot);
-        break;
-
-      case "hand_dealt":
-        this.update({ hand: message.cards, trick: [], lastTrick: null });
-        break;
-
-      case "round_started":
-        this.update({
-          roundNumber: message.round_number,
-          dealerSeat: message.dealer_seat,
-          contract: null,
-          trump: null,
-          turnedTrump: null,
-          trick: [],
-          lastTrick: null,
-          trickCounts: { declarers: 0, defenders: 0 },
-        });
-        break;
-
-      case "trump_turned":
-        this.update({ turnedTrump: message.card });
-        break;
-
-      case "trump_hidden":
-        this.update({ turnedTrump: null });
-        break;
-
-      case "contract_established":
-        this.update({ contract: message.contract, trump: message.contract.trump });
-        break;
-
+      // De slag op tafel. De engine haalt een slag binnen zodra ze gewonnen is,
+      // dus geen enkele momentopname kan de seconden beschrijven dat ze blijft
+      // liggen om bekeken te worden; deze drie overbruggen dat gat.
       case "card_played":
         this.update({
           trick: [...state.trick, { seat: message.seat, card: message.card }],
@@ -149,33 +128,6 @@ export class Store extends EventTarget {
 
       case "table_cleared":
         this.update({ trick: [] });
-        break;
-
-      case "prompt":
-        this.update({ prompt: message.prompt });
-        break;
-
-      case "prompt_cleared":
-        this.update({ prompt: null });
-        break;
-
-      case "round_finished":
-        this.update({ totals: message.totals, prompt: null });
-        break;
-
-      case "game_paused":
-        this.update({ paused: true, missing: message.missing, prompt: null });
-        break;
-
-      case "game_resumed":
-        this.update({ paused: false, missing: [] });
-        break;
-
-      case "player_disconnected":
-      case "player_reconnected":
-      case "player_joined":
-      case "player_left":
-        // De lobbytoestand volgt zo; hier enkel de systeemregel in de chat.
         break;
 
       default:

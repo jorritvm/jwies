@@ -95,10 +95,15 @@ class ScriptedClient:
         self.username = username
         self.socket: Any = None
         self.received: list[dict[str, Any]] = []
-        self.hand: list[str] = []
+        self.snapshot: dict[str, Any] = {}
         self.resume_token: str | None = None
         self.seat: int | None = None
         self._counter = 0
+
+    @property
+    def hand(self) -> list[str]:
+        """This client's cards, straight out of the last snapshot."""
+        return list(self.snapshot.get("your_hand") or [])
 
     async def __aenter__(self) -> ScriptedClient:
         self.socket = await websockets.connect(self.url)
@@ -126,8 +131,8 @@ class ScriptedClient:
         self.received.append(message)
         if message["type"] == "hello_ok":
             self.resume_token = message["resume_token"]
-        elif message["type"] == "hand_dealt":
-            self.hand = list(message["cards"])
+        elif message["type"] == "snapshot":
+            self.snapshot = message["snapshot"]
         elif message["type"] == "game_started":
             self.seat = message["your_seat"]
         return message
@@ -192,13 +197,22 @@ async def play_until(
     done = asyncio.Event()
 
     async def pump(client: ScriptedClient) -> None:
+        answered: dict[str, Any] | None = None
         while not done.is_set():
             try:
                 message = await client._recv(timeout=1.0)
             except TimeoutError:
                 continue
-            if message["type"] == "prompt":
-                await answer_prompt(client, message["prompt"])
+            # Whose turn it is arrives in the snapshot and nowhere else. The
+            # server keeps repeating it until the answer lands, so remember the
+            # last one acted on rather than answering the same turn twice.
+            if message["type"] == "snapshot":
+                pending = message["snapshot"].get("prompt")
+                if pending is not None and pending != answered:
+                    answered = pending
+                    await answer_prompt(client, pending)
+                elif pending is None:
+                    answered = None
             if stop(message, client):
                 done.set()
 

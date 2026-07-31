@@ -1,7 +1,8 @@
 """Chat commands.
 
-Commands register themselves through a decorator, so ``!help`` is generated
-from the registry and can never drift from what actually exists.
+Commands register themselves through a decorator together with their own help
+line, so ``!help`` is generated from the registry and can never drift from what
+actually exists.
 """
 
 from __future__ import annotations
@@ -11,9 +12,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from jwies_core.config import describe_ruleset, describe_scoring_scale
-from jwies_protocol import PROTOCOL_VERSION
 
-from jwies_server.texts import TextCatalog
+from jwies_server.protocol import PROTOCOL_VERSION
 
 if TYPE_CHECKING:
     from jwies_server.lobby import LobbyRuntime
@@ -23,6 +23,8 @@ __all__ = ["COMMANDS", "ChatContext", "handle_chat_command", "is_command"]
 
 COMMAND_PREFIX = "!"
 
+NEEDS_LOBBY = "Dat commando werkt enkel binnen een lobby."
+
 
 @dataclass
 class ChatContext:
@@ -30,7 +32,6 @@ class ChatContext:
 
     lobby: LobbyRuntime | None
     session: Session
-    catalog: TextCatalog
     argument: str = ""
 
 
@@ -39,11 +40,11 @@ CommandHandler = Callable[[ChatContext], list[str]]
 COMMANDS: dict[str, tuple[CommandHandler, str]] = {}
 
 
-def command(name: str, help_key: str) -> Callable[[CommandHandler], CommandHandler]:
-    """Register a chat command together with the text key describing it."""
+def command(name: str, help_line: str) -> Callable[[CommandHandler], CommandHandler]:
+    """Register a chat command together with its line in ``!help``."""
 
     def register(handler: CommandHandler) -> CommandHandler:
-        COMMANDS[name] = (handler, help_key)
+        COMMANDS[name] = (handler, help_line)
         return handler
 
     return register
@@ -53,36 +54,32 @@ def is_command(text: str) -> bool:
     return text.startswith(COMMAND_PREFIX)
 
 
-@command("help", "chat.help.help")
+@command("help", "!help     - toon deze lijst")
 def _help(context: ChatContext) -> list[str]:
-    lines = [context.catalog.render("chat.help.header")]
-    for name in sorted(COMMANDS):
-        _, help_key = COMMANDS[name]
-        lines.append(context.catalog.render(help_key))
-    return lines
+    return ["Beschikbare commando's:", *(COMMANDS[name][1] for name in sorted(COMMANDS))]
 
 
-@command("ruleset", "chat.help.ruleset")
+@command("ruleset", "!ruleset  - toon de spelregels die in deze lobby gelden")
 def _ruleset(context: ChatContext) -> list[str]:
     if context.lobby is None:
-        return [context.catalog.render("chat.needs_lobby")]
+        return [NEEDS_LOBBY]
     return describe_ruleset(context.lobby.ruleset).splitlines()
 
 
-@command("counting", "chat.help.counting")
+@command("counting", "!counting - toon hoe de punten geteld worden")
 def _counting(context: ChatContext) -> list[str]:
     if context.lobby is None:
-        return [context.catalog.render("chat.needs_lobby")]
+        return [NEEDS_LOBBY]
     return describe_scoring_scale(context.lobby.scoring).splitlines()
 
 
-@command("score", "chat.help.score")
+@command("score", "!score    - toon de huidige stand")
 def _score(context: ChatContext) -> list[str]:
     lobby = context.lobby
     if lobby is None:
-        return [context.catalog.render("chat.needs_lobby")]
+        return [NEEDS_LOBBY]
     if lobby.engine is None:
-        return [context.catalog.render("chat.score.no_game")]
+        return ["Er is nog geen spel bezig, dus er is nog geen stand."]
 
     from jwies_core.seats import Seat
 
@@ -94,43 +91,37 @@ def _score(context: ChatContext) -> list[str]:
         if member.seat is not None
     ]
     rows.sort(key=lambda row: row[1], reverse=True)
-    lines = [context.catalog.render("chat.score.header")]
-    for username, total in rows:
-        lines.append(
-            context.catalog.render(
-                "chat.score.line",
-                speler=username,
-                totaal=_decimal(total),  # type: ignore[arg-type]
-            )
-        )
-    return lines
+    return [
+        "Huidige stand:",
+        *(
+            f"  {username}: {_decimal(total)}"  # type: ignore[arg-type]
+            for username, total in rows
+        ),
+    ]
 
 
-@command("seats", "chat.help.seats")
+@command("seats", "!seats    - toon wie waar zit")
 def _seats(context: ChatContext) -> list[str]:
     lobby = context.lobby
     if lobby is None:
-        return [context.catalog.render("chat.needs_lobby")]
-    lines = [context.catalog.render("chat.seats.header")]
+        return [NEEDS_LOBBY]
+    lines = ["Aan tafel:"]
     for seat in range(4):
         member = lobby.member_at(seat)
         if member is None:
-            name = context.catalog.render("chat.seats.empty")
-            status = ""
+            name, status = "leeg", ""
         else:
             name = member.username
-            status = "" if member.connected else context.catalog.render("chat.seats.disconnected")
-        lines.append(
-            context.catalog.render("chat.seats.line", stoel=seat + 1, speler=name, status=status)
-        )
+            status = "" if member.connected else " (offline)"
+        lines.append(f"  stoel {seat + 1}: {name}{status}")
     return lines
 
 
-@command("version", "chat.help.version")
+@command("version", "!version  - toon de serverversie")
 def _version(context: ChatContext) -> list[str]:
     from jwies_server import __version__
 
-    return [context.catalog.render("chat.version", versie=__version__, protocol=PROTOCOL_VERSION)]
+    return [f"jwies-server {__version__}, protocol versie {PROTOCOL_VERSION}."]
 
 
 def handle_chat_command(text: str, context: ChatContext) -> list[str]:
@@ -141,8 +132,8 @@ def handle_chat_command(text: str, context: ChatContext) -> list[str]:
 
     entry = COMMANDS.get(name)
     if entry is None:
-        return [context.catalog.render("chat.unknown_command", commando=name)]
+        return [f"Onbekend commando '{name}'. Typ !help voor de lijst."]
 
-    handler, _help_key = entry
+    handler, _help_line = entry
     context.argument = argument.strip()
     return handler(context)

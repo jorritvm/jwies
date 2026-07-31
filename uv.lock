@@ -9,7 +9,6 @@ resolution-markers = [
 [manifest]
 members = [
     "jwies-core",
-    "jwies-protocol",
     "jwies-qt-client",
     "jwies-server",
     "jwies-web-client",
@@ -344,29 +343,16 @@ requires-dist = [
 ]
 
 [[package]]
-name = "jwies-protocol"
-version = "0.2.0"
-source = { editable = "packages/jwies-protocol" }
-dependencies = [
-    { name = "pydantic" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "pydantic", specifier = ">=2.9" }]
-
-[[package]]
 name = "jwies-qt-client"
 version = "0.2.0"
 source = { editable = "packages/jwies-qt-client" }
 dependencies = [
-    { name = "jwies-protocol" },
     { name = "pyqt6" },
     { name = "pyyaml" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "jwies-protocol", editable = "packages/jwies-protocol" },
     { name = "pyqt6", specifier = ">=6.9.1" },
     { name = "pyyaml", specifier = ">=6.0" },
 ]
@@ -378,7 +364,7 @@ source = { editable = "packages/jwies-server" }
 dependencies = [
     { name = "fastapi" },
     { name = "jwies-core" },
-    { name = "jwies-protocol" },
+    { name = "pydantic" },
     { name = "pyyaml" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -387,7 +373,7 @@ dependencies = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "jwies-core", editable = "packages/jwies-core" },
-    { name = "jwies-protocol", editable = "packages/jwies-protocol" },
+    { name = "pydantic", specifier = ">=2.9" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32" },
 ]

@@ -1,5 +1,29 @@
 # Simplification analysis
 
+> **Status: executed 2026-07-31.** All eight items below have landed on
+> `huge_refactor`. What actually changed, and where the analysis was wrong:
+>
+> | | outcome |
+> |---|---|
+> | **A** protocol package | `jwies_protocol` → `jwies_server.protocol`. Four packages now. The Qt client hardcodes `PROTOCOL_VERSION` and a test asserts it imports nothing from `jwies_server` or `jwies_core`. The `*Code` enums are now aliases (`SuitCode = Suit`), so the six parity tests are gone. `ClientKind` became a bounded string. |
+> | **B** snapshot-only state | Done, and further than proposed: `round_started`, `hand_dealt`, `trump_turned`, `trump_hidden`, `bid_placed`, `redeal`, `contract_established` and `prompt` are deleted outright. The clients fold in `snapshot` plus exactly three trick messages. `store.js` 197→149, `state.py` 143→124. |
+> | **C** dead code | All removed except `card_label()`, which the analysis got wrong: `table_scene.py:83` uses it for tooltips. |
+> | **D** duplicated tables | Half done via (A). The card→SVG tables stay duplicated across the JS↔Python boundary, with the parity test, as the doc recommends. |
+> | **E** dispatch layers | `_to_action` gone; each action message is a `GameAction` with `to_action()`. Two of the four `match` statements remain, both load-bearing. |
+> | **F** LobbyRuntime | 661→~535. `build_snapshot()` lives in `jwies_server/snapshot.py` as a pure function of `(lobby, occupants, engine, presenter, seat, paused, missing)`. The presenter is cached and invalidated on membership change. |
+> | **G** text catalog | **Decided: inlined.** `texts.py`, `texts/nl.yaml` and the key-parity tests are gone; every sentence reads at its call site. Two lookup tables survive (`CONTRACT_NAMES`, `SUIT_NAMES`) with coverage tests. |
+> | **H** modals in render | `refresh_prompt` is pure. `react_to_prompt` runs only from `on_message`, remembers the prompt it acted on, and is covered by six tests. `ConnectDialog` and the lobby page moved to `lobby_page.py` (`main_window.py` 427→372). |
+>
+> The line count did **not** land at 6 000: application Python is ~6 900,
+> because the deleted code was largely replaced by comments explaining the
+> invariants that replaced it. That trade was deliberate. The goal the doc
+> actually names - "how does a played card become pixels" - did land: one
+> message type, one reducer arm, one snapshot.
+>
+> The original analysis follows unchanged, as the record of why.
+
+---
+
 Written 2026-07-31, against `huge_refactor` at the point where `jwies-assets`
 was folded into the two clients.
 

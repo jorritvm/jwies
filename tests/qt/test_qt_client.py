@@ -117,20 +117,19 @@ class TestStateReducer:
 
     def test_pause_and_resume(self) -> None:
         state = ClientState()
-        state.apply_message({"type": "game_paused", "missing": ["Korneel"], "text": "..."})
+        state.apply_message(
+            {"type": "snapshot", "snapshot": {"paused": True, "missing_players": ["Korneel"]}}
+        )
         assert state["paused"] is True
         assert state["missing"] == ["Korneel"]
-        assert state["prompt"] is None
-        state.apply_message({"type": "game_resumed", "text": "..."})
+        state.apply_message({"type": "snapshot", "snapshot": {"paused": False}})
         assert state["paused"] is False
         assert state["missing"] == []
 
     def test_a_new_round_clears_the_previous_contract(self) -> None:
         state = ClientState()
         state.update(contract={"key": "misere"}, trump="H", turned_trump="AH")
-        state.apply_message(
-            {"type": "round_started", "round_number": 2, "dealer_seat": 1, "multiplier": "1"}
-        )
+        state.apply_message({"type": "snapshot", "snapshot": {"round_number": 2}})
         assert state["contract"] is None
         assert state["trump"] is None
         assert state["turned_trump"] is None
@@ -140,18 +139,40 @@ class TestStateReducer:
         state = ClientState()
         state.apply_message(
             {
-                "type": "prompt",
-                "prompt": {
-                    "kind": "play",
-                    "legal_cards": ["AH", "KH"],
-                    "bid_options": [],
-                    "cut_minimum": 0,
-                    "cut_maximum": 0,
+                "type": "snapshot",
+                "snapshot": {
+                    "prompt": {
+                        "kind": "play",
+                        "legal_cards": ["AH", "KH"],
+                        "bid_options": [],
+                        "cut_minimum": 0,
+                        "cut_maximum": 0,
+                    }
                 },
             }
         )
         # The client never works out follow-suit itself.
         assert state["prompt"]["legal_cards"] == ["AH", "KH"]
+
+    def test_an_announcement_changes_nothing(self) -> None:
+        """Only snapshots and the three trick messages may move state.
+
+        Everything else the server sends is news, and the snapshot behind it
+        already says what changed. This is what stops the PyQt client and the
+        browser client from ever disagreeing about what an event meant.
+        """
+        state = ClientState()
+        state.update(contract={"key": "misere"}, trump="H", totals={"Jan": "3"})
+        before = dict(state.data)
+        for message in (
+            {"type": "round_started", "round_number": 2, "dealer_seat": 1},
+            {"type": "trump_turned", "dealer_seat": 3, "card": "AH"},
+            {"type": "game_paused", "missing": ["Korneel"], "text": "..."},
+            {"type": "round_finished", "totals": {"Jan": "9"}, "text": "..."},
+            {"type": "player_left", "username": "Korneel"},
+        ):
+            state.apply_message(message)
+        assert state.data == before
 
 
 class TestSettings:
@@ -182,7 +203,13 @@ def test_bid_labels_are_dutch() -> None:
 
 
 def test_the_client_declares_no_dependency_on_the_engine() -> None:
-    """jwies-qt-client must not pull in jwies-core."""
+    """jwies-qt-client speaks JSON and nothing else.
+
+    It shares no Python at all with the server - not the rules engine, not the
+    protocol models. Every message type and field name it uses is a literal in
+    ``net.py`` and ``state.py``, exactly like the browser client's. The wire
+    format is the contract; the handshake catches a version mismatch.
+    """
     import tomllib
     from pathlib import Path
 
@@ -190,6 +217,10 @@ def test_the_client_declares_no_dependency_on_the_engine() -> None:
     manifest = root / "packages" / "jwies-qt-client" / "pyproject.toml"
     data = tomllib.loads(manifest.read_text(encoding="utf-8"))
     dependencies = " ".join(data["project"]["dependencies"])
-    assert "jwies-core" not in dependencies
-    assert "fastapi" not in dependencies
-    assert "uvicorn" not in dependencies
+    for forbidden in ("jwies-core", "jwies-server", "fastapi", "uvicorn"):
+        assert forbidden not in dependencies
+
+    package = root / "packages" / "jwies-qt-client" / "jwies_qt_client"
+    source = "\n".join(path.read_text(encoding="utf-8") for path in package.rglob("*.py"))
+    for forbidden in ("jwies_core", "jwies_server"):
+        assert forbidden not in source, f"qt-client importeert {forbidden}"

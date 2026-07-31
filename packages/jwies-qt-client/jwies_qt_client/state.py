@@ -76,10 +76,19 @@ class ClientState:
         )
 
     def apply_message(self, message: dict[str, Any]) -> None:
-        """Fold one server message into the state."""
+        """Fold one server message into the state.
+
+        Only these types change anything. Every other message the server sends
+        is an announcement - who won the trick, what the contract came out as,
+        that the game is paused - and the snapshot that follows it already says
+        so. Deriving the same facts a second time here is exactly how two
+        clients end up disagreeing.
+        """
         kind = message.get("type")
 
-        if kind == "hello_ok":
+        if kind == "snapshot":
+            self.apply_snapshot(message["snapshot"])
+        elif kind == "hello_ok":
             self.update(
                 username=message.get("username"),
                 rulesets=list(message.get("rulesets") or []),
@@ -95,35 +104,17 @@ class ClientState:
                 your_seat=message.get("your_seat"),
                 in_game=True,
             )
-        elif kind == "snapshot":
-            self.apply_snapshot(message["snapshot"])
-        elif kind == "hand_dealt":
-            self.update(hand=list(message.get("cards") or []), trick=[], last_trick=None)
-        elif kind == "round_started":
-            self.update(
-                round_number=message.get("round_number", 0),
-                dealer_seat=message.get("dealer_seat"),
-                contract=None,
-                trump=None,
-                turned_trump=None,
-                trick=[],
-                last_trick=None,
-                trick_counts={"declarers": 0, "defenders": 0},
-            )
-        elif kind == "trump_turned":
-            self.update(turned_trump=message.get("card"))
-        elif kind == "trump_hidden":
-            self.update(turned_trump=None)
-        elif kind == "contract_established":
-            contract = message["contract"]
-            self.update(contract=contract, trump=contract.get("trump"))
+        # The trick on the table. The engine collects a trick the moment it is
+        # won, so no snapshot can describe the seconds it stays there to be
+        # admired; these three carry the client across that gap.
         elif kind == "card_played":
-            trick = [*self["trick"], {"seat": message["seat"], "card": message["card"]}]
             hand = self["hand"]
-            if message["seat"] == self["your_seat"] and message["card"] in hand:
-                hand = [code for code in hand]
-                hand.remove(message["card"])
-            self.update(trick=trick, hand=hand)
+            if message["seat"] == self["your_seat"]:
+                hand = [code for code in hand if code != message["card"]]
+            self.update(
+                trick=[*self["trick"], {"seat": message["seat"], "card": message["card"]}],
+                hand=hand,
+            )
         elif kind == "trick_completed":
             self.update(
                 trick_counts=message.get("trick_counts") or {"declarers": 0, "defenders": 0},
@@ -131,13 +122,3 @@ class ClientState:
             )
         elif kind == "table_cleared":
             self.update(trick=[])
-        elif kind == "prompt":
-            self.update(prompt=message.get("prompt"))
-        elif kind == "prompt_cleared":
-            self.update(prompt=None)
-        elif kind == "round_finished":
-            self.update(totals=message.get("totals") or {}, prompt=None)
-        elif kind == "game_paused":
-            self.update(paused=True, missing=list(message.get("missing") or []), prompt=None)
-        elif kind == "game_resumed":
-            self.update(paused=False, missing=[])

@@ -83,7 +83,6 @@ class ServerConfig(DutchModel):
     ]
     default_ruleset: Annotated[str, Field(alias="standaard_regelset")]
     default_scoring: Annotated[str, Field(alias="standaard_puntenschaal")]
-    allowed_agents: Annotated[list[str], Field(alias="toegelaten_agents")] = []
     log: Annotated[LogSettings, Field(alias="logboek")] = LogSettings()
 
     @model_validator(mode="after")

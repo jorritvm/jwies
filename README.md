@@ -117,18 +117,18 @@ spelserver. Die twee weten niets van elkaar: `jwies-web` deelt enkel bestanden
 uit, `jwies-server` enkel spel. Ligt de spelserver even plat, dan laadt de
 pagina nog altijd.
 
-Vijf losse pakketten onder `packages/`, elk met hun eigen afhankelijkheden:
+Vier losse pakketten onder `packages/`, elk met hun eigen afhankelijkheden:
 
 | Pakket | Rol | Hangt af van |
 |---|---|---|
 | `jwies-core` | De spelregels en de puntentelling. Geen I/O, geen GUI, geen async. | pydantic, pyyaml |
-| `jwies-protocol` | Het berichtenschema. Enkel pydantic-modellen, geen spellogica. | pydantic |
 | `jwies-web-client` | De browserclient plus de webserver die hem uitdeelt. | starlette, uvicorn |
-| `jwies-server` | Lobby's, sessies, websockets. Deelt geen bestanden uit. | core, protocol, fastapi |
-| `jwies-qt-client` | De desktopclient. Tekent enkel wat de server stuurt. | protocol, pyqt6 |
+| `jwies-server` | Lobby's, sessies, websockets, en het berichtenschema. Deelt geen bestanden uit. | core, fastapi, pydantic |
+| `jwies-qt-client` | De desktopclient. Tekent enkel wat de server stuurt. | pyqt6, pyyaml |
 
-De server draait **nooit** PyQt en de desktopclient **nooit** FastAPI; ze delen
-alleen het berichtenschema. Wil je ze in aparte omgevingen installeren:
+De server draait **nooit** PyQt en de desktopclient **nooit** FastAPI. Ze delen
+zelfs geen Python: beide clients bouwen hun JSON met de hand op, dus het
+draadformaat is het enige contract. Wil je ze in aparte omgevingen installeren:
 
 ```powershell
 $env:UV_PROJECT_ENVIRONMENT=".venv-server"; uv sync --package jwies-server

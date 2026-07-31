@@ -1,8 +1,22 @@
 """Messages the server sends to a client.
 
-Every field that a player reads is already Dutch: the server renders it from
-its text catalog, so neither client has to own a translation table for game
-statements. Clients only supply Dutch for their own static widget labels.
+Every message is one of two kinds, and the split is the whole design:
+
+**State.** ``snapshot`` (and, before a game exists, ``lobby_state`` and
+``lobby_list``) is the *only* thing a client folds into what it believes about
+the table. A fresh per-seat snapshot follows every action that changes
+anything, so a client never derives state by replaying events and the two
+clients cannot disagree about what an event meant.
+
+**Announcements.** Everything else says what just happened and carries nothing
+a client must remember. The three exceptions are ``card_played``,
+``trick_completed`` and ``table_cleared``: between a trick being won and being
+swept, the table shows four cards that the engine has already collected, so the
+snapshot deliberately cannot describe that moment and the clients bridge it.
+
+Every field a player reads is already Dutch: the server renders it from its text
+catalog, so neither client owns a translation table for game statements. Clients
+only supply Dutch for their own static widget labels.
 """
 
 from __future__ import annotations
@@ -12,23 +26,18 @@ from typing import Annotated, Literal, TypeAlias
 
 from pydantic import Field
 
-from jwies_protocol.common import (
+from jwies_server.protocol.common import (
     CardCode,
     LobbyId,
-    PhaseCode,
     ProtocolModel,
     SeatIndex,
-    SuitCode,
     Username,
 )
-from jwies_protocol.errors import ErrorCode
-from jwies_protocol.snapshot import (
-    BidInfo,
-    ContractInfo,
+from jwies_server.protocol.errors import ErrorCode
+from jwies_server.protocol.snapshot import (
     LobbyState,
     LobbySummary,
     PlayedCardInfo,
-    Prompt,
     SeatInfo,
     Snapshot,
     TrickCounts,
@@ -43,6 +52,9 @@ class ChatKind(StrEnum):
     SYSTEM = "system"  # joins, leaves, errors
 
 
+# --- state -------------------------------------------------------------------
+
+
 class HelloOk(ProtocolModel):
     type: Literal["hello_ok"] = "hello_ok"
     player_id: str
@@ -55,12 +67,6 @@ class HelloOk(ProtocolModel):
     scorings: tuple[str, ...] = ()
 
 
-class Error(ProtocolModel):
-    type: Literal["error"] = "error"
-    code: ErrorCode
-    text: str  # Dutch, safe to show as-is
-
-
 class LobbyListing(ProtocolModel):
     type: Literal["lobby_list"] = "lobby_list"
     lobbies: tuple[LobbySummary, ...] = ()
@@ -71,77 +77,18 @@ class LobbyStateMessage(ProtocolModel):
     lobby: LobbyState
 
 
-class Chat(ProtocolModel):
-    type: Literal["chat"] = "chat"
-    kind: ChatKind
-    text: str
-    sender: Username | None = None
-    private: bool = False
-
-
-class GameStarted(ProtocolModel):
-    type: Literal["game_started"] = "game_started"
-    lobby_id: LobbyId
-    seats: tuple[SeatInfo, ...]
-    your_seat: SeatIndex
-
-
 class SnapshotMessage(ProtocolModel):
+    """Everything one player may know, including whose turn it is.
+
+    Built per recipient because it carries that player's hand, and sent after
+    every change - not only on request.
+    """
+
     type: Literal["snapshot"] = "snapshot"
     snapshot: Snapshot
 
 
-class PromptMessage(ProtocolModel):
-    type: Literal["prompt"] = "prompt"
-    prompt: Prompt
-
-
-class PromptCleared(ProtocolModel):
-    type: Literal["prompt_cleared"] = "prompt_cleared"
-
-
-class RoundStarted(ProtocolModel):
-    type: Literal["round_started"] = "round_started"
-    round_number: int
-    dealer_seat: SeatIndex
-    multiplier: str = "1"
-
-
-class HandDealt(ProtocolModel):
-    """Private: only ever sent to the owner of the hand."""
-
-    type: Literal["hand_dealt"] = "hand_dealt"
-    cards: tuple[CardCode, ...]
-
-
-class TrumpTurned(ProtocolModel):
-    type: Literal["trump_turned"] = "trump_turned"
-    dealer_seat: SeatIndex
-    card: CardCode
-
-
-class TrumpHidden(ProtocolModel):
-    type: Literal["trump_hidden"] = "trump_hidden"
-
-
-class BidPlaced(ProtocolModel):
-    type: Literal["bid_placed"] = "bid_placed"
-    seat: SeatIndex
-    bid: BidInfo
-    forced: bool = False
-    announcement: str = ""  # Dutch, e.g. "Jan: IK GA HARTEN VRAGEN"
-
-
-class Redeal(ProtocolModel):
-    type: Literal["redeal"] = "redeal"
-    reason: str
-    text: str
-
-
-class ContractEstablished(ProtocolModel):
-    type: Literal["contract_established"] = "contract_established"
-    contract: ContractInfo
-    text: str
+# --- the trick on the table --------------------------------------------------
 
 
 class CardPlayed(ProtocolModel):
@@ -165,7 +112,33 @@ class TableCleared(ProtocolModel):
     type: Literal["table_cleared"] = "table_cleared"
 
 
+# --- announcements -----------------------------------------------------------
+
+
+class Error(ProtocolModel):
+    type: Literal["error"] = "error"
+    code: ErrorCode
+    text: str  # Dutch, safe to show as-is
+
+
+class Chat(ProtocolModel):
+    type: Literal["chat"] = "chat"
+    kind: ChatKind
+    text: str
+    sender: Username | None = None
+    private: bool = False
+
+
+class GameStarted(ProtocolModel):
+    type: Literal["game_started"] = "game_started"
+    lobby_id: LobbyId
+    seats: tuple[SeatInfo, ...]
+    your_seat: SeatIndex
+
+
 class RoundFinished(ProtocolModel):
+    """The settlement. ``deltas`` is the one thing no snapshot carries."""
+
     type: Literal["round_finished"] = "round_finished"
     tricks_made: int
     made: bool
@@ -218,16 +191,6 @@ class Pong(ProtocolModel):
     type: Literal["pong"] = "pong"
 
 
-class PhaseChanged(ProtocolModel):
-    type: Literal["phase_changed"] = "phase_changed"
-    phase: PhaseCode
-
-
-class TrumpDecided(ProtocolModel):
-    type: Literal["trump_decided"] = "trump_decided"
-    trump: SuitCode | None = None
-
-
 ServerMessage: TypeAlias = Annotated[
     HelloOk
     | Error
@@ -236,16 +199,6 @@ ServerMessage: TypeAlias = Annotated[
     | Chat
     | GameStarted
     | SnapshotMessage
-    | PromptMessage
-    | PromptCleared
-    | RoundStarted
-    | HandDealt
-    | TrumpTurned
-    | TrumpHidden
-    | TrumpDecided
-    | BidPlaced
-    | Redeal
-    | ContractEstablished
     | CardPlayed
     | TrickCompleted
     | TableCleared
@@ -257,7 +210,6 @@ ServerMessage: TypeAlias = Annotated[
     | PlayerReconnected
     | GamePaused
     | GameResumed
-    | PhaseChanged
     | Pong,
     Field(discriminator="type"),
 ]

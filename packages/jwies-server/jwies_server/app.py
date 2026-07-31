@@ -20,14 +20,13 @@ from collections.abc import AsyncIterator
 
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import JSONResponse
-from jwies_protocol import PROTOCOL_VERSION
 
 from jwies_server import __version__
 from jwies_server.config import LoadedConfig
 from jwies_server.connection import handle_connection
 from jwies_server.lobby_manager import LobbyManager
+from jwies_server.protocol import PROTOCOL_VERSION
 from jwies_server.sessions import SessionRegistry
-from jwies_server.texts import TextCatalog
 
 __all__ = ["create_app"]
 
@@ -36,11 +35,10 @@ log = logging.getLogger(__name__)
 REAP_INTERVAL_SECONDS = 60
 
 
-def create_app(config: LoadedConfig, *, catalog: TextCatalog | None = None) -> FastAPI:
+def create_app(config: LoadedConfig) -> FastAPI:
     """Build the ASGI app for a loaded configuration."""
-    catalog = catalog or TextCatalog.load()
     sessions = SessionRegistry()
-    lobbies = LobbyManager(config, catalog)
+    lobbies = LobbyManager(config)
     started = time.monotonic()
 
     @contextlib.asynccontextmanager
@@ -63,7 +61,6 @@ def create_app(config: LoadedConfig, *, catalog: TextCatalog | None = None) -> F
     )
     app.state.sessions = sessions
     app.state.lobbies = lobbies
-    app.state.catalog = catalog
     app.state.config = config
 
     @app.get("/healthz")
@@ -84,7 +81,7 @@ def create_app(config: LoadedConfig, *, catalog: TextCatalog | None = None) -> F
 
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket) -> None:
-        await handle_connection(websocket, sessions=sessions, lobbies=lobbies, catalog=catalog)
+        await handle_connection(websocket, sessions=sessions, lobbies=lobbies)
 
     return app
 

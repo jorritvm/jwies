@@ -4,22 +4,28 @@ from __future__ import annotations
 
 from typing import Annotated, Literal, TypeAlias
 
+from jwies_core.bidding import Bid
+from jwies_core.cards import Card
+from jwies_core.events import Action, Cut, Shuffle
+from jwies_core.events import PlaceBid as PlaceBidAction
+from jwies_core.events import PlayCard as PlayCardAction
 from pydantic import Field
 
-from jwies_protocol.common import (
+from jwies_server.protocol.common import (
     CardCode,
-    ClientKind,
+    ClientName,
     LobbyId,
     ProtocolModel,
     Username,
 )
-from jwies_protocol.snapshot import BidInfo
+from jwies_server.protocol.snapshot import BidInfo
 
 __all__ = [
     "AnswerCut",
     "AnswerShuffle",
     "ChatSend",
     "ClientMessage",
+    "GameAction",
     "Hello",
     "LobbyCreate",
     "LobbyDelete",
@@ -34,6 +40,19 @@ __all__ = [
 ]
 
 
+class GameAction(ProtocolModel):
+    """A move at the table, as opposed to something about the lobby.
+
+    Each one knows how to become the engine's own action type. Keeping that
+    knowledge on the message removes the translation table the lobby used to
+    carry, and means a new move is one class rather than an entry in three
+    ``match`` statements.
+    """
+
+    def to_action(self) -> Action:
+        raise NotImplementedError
+
+
 class Hello(ProtocolModel):
     """First message on every connection.
 
@@ -43,7 +62,7 @@ class Hello(ProtocolModel):
 
     type: Literal["hello"] = "hello"
     username: Username
-    client: ClientKind
+    client: ClientName
     client_version: str = ""
     resume_token: str | None = None
 
@@ -81,9 +100,6 @@ class LobbyDelete(ProtocolModel):
 
 class LobbyStart(ProtocolModel):
     type: Literal["lobby_start"] = "lobby_start"
-    # Name of a registered agent factory used to fill empty seats. No agents
-    # ship today; the field is the hook a future AI player plugs into.
-    fill_with_agent: str | None = None
 
 
 class RequestSnapshot(ProtocolModel):
@@ -95,24 +111,39 @@ class ChatSend(ProtocolModel):
     text: Annotated[str, Field(min_length=1, max_length=500)]
 
 
-class AnswerShuffle(ProtocolModel):
+class AnswerShuffle(GameAction):
     type: Literal["answer_shuffle"] = "answer_shuffle"
     shuffle: bool
 
+    def to_action(self) -> Shuffle:
+        return Shuffle(shuffle=self.shuffle)
 
-class AnswerCut(ProtocolModel):
+
+class AnswerCut(GameAction):
     type: Literal["answer_cut"] = "answer_cut"
     count: int
 
+    def to_action(self) -> Cut:
+        return Cut(count=self.count)
 
-class PlaceBid(ProtocolModel):
+
+class PlaceBid(GameAction):
     type: Literal["place_bid"] = "place_bid"
     bid: BidInfo
 
+    def to_action(self) -> PlaceBidAction:
+        return PlaceBidAction(
+            bid=Bid(type=self.bid.type, tricks=self.bid.tricks, suit=self.bid.suit)
+        )
 
-class PlayCard(ProtocolModel):
+
+class PlayCard(GameAction):
     type: Literal["play_card"] = "play_card"
     card: CardCode
+
+    def to_action(self) -> PlayCardAction:
+        # The pattern on CardCode already rejected anything unparseable.
+        return PlayCardAction(card=Card.from_code(self.card))
 
 
 ClientMessage: TypeAlias = Annotated[

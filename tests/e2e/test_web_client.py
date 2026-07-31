@@ -239,7 +239,6 @@ def test_the_web_client_never_depends_on_the_game() -> None:
     dependencies = " ".join(data["project"]["dependencies"])
     assert "jwies-core" not in dependencies
     assert "jwies-server" not in dependencies
-    assert "jwies-protocol" not in dependencies
 
 
 def test_the_web_client_ships_no_game_logic_in_python() -> None:
@@ -256,5 +255,5 @@ def test_the_web_client_ships_no_game_logic_in_python() -> None:
     source = "\n".join(
         path.read_text(encoding="utf-8") for path in package.rglob("*.py")
     )
-    for forbidden in ("jwies_core", "jwies_protocol", "jwies_server"):
+    for forbidden in ("jwies_core", "jwies_server"):
         assert forbidden not in source, f"webclient importeert {forbidden}"

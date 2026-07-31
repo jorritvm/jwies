@@ -1,8 +1,8 @@
-"""The main window: connect dialog, lobby list and card table.
+"""The main window: the card table, and the router for incoming messages.
 
 All game logic is gone compared to the pre-refactor client. There is no ace
 counting, no bid ladder, no "Troel!" chat: the window enables the buttons the
-server's prompt names and draws the state the server sends.
+server's snapshot names and draws the state the server sends.
 """
 
 from __future__ import annotations
@@ -14,16 +14,10 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtSvg import QSvgRenderer
 from PyQt6.QtWidgets import (
-    QComboBox,
     QDialog,
-    QDialogButtonBox,
-    QFormLayout,
     QHBoxLayout,
     QInputDialog,
-    QLabel,
     QLineEdit,
-    QListWidget,
-    QListWidgetItem,
     QMainWindow,
     QMessageBox,
     QPlainTextEdit,
@@ -35,6 +29,7 @@ from PyQt6.QtWidgets import (
 )
 
 from jwies_qt_client import ASSETS
+from jwies_qt_client.lobby_page import ConnectDialog, LobbyPage
 from jwies_qt_client.net import ServerConnection
 from jwies_qt_client.settings import ClientSettings
 from jwies_qt_client.state import ClientState
@@ -59,14 +54,6 @@ BID_LABELS = {
     "pico": "Pico",
 }
 
-STATUS_LABELS = {
-    "waiting": "wacht op spelers",
-    "running": "bezig",
-    "paused": "gepauzeerd",
-    "finished": "afgelopen",
-    "broken": "fout",
-}
-
 SUIT_CHOOSING_BIDS = {"ask", "abondance", "solo"}
 
 
@@ -76,34 +63,6 @@ def bid_label(bid: dict[str, Any]) -> str:
     if bid.get("tricks") is not None and bid["type"] in ("abondance", "alone"):
         text = f"{text} {bid['tricks']}"
     return text
-
-
-class ConnectDialog(QDialog):
-    def __init__(self, settings: ClientSettings, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self.setWindowTitle("Verbinden met een server")
-
-        self.url_field = QLineEdit(settings.server_url)
-        self.name_field = QLineEdit(settings.username)
-        self.name_field.setMaxLength(20)
-
-        form = QFormLayout()
-        form.addRow("Serveradres", self.url_field)
-        form.addRow("Jouw naam", self.name_field)
-
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-
-        layout = QVBoxLayout()
-        layout.addLayout(form)
-        layout.addWidget(
-            QLabel("Je naam is ook waarmee je terug aan tafel komt\nals je verbinding wegvalt.")
-        )
-        layout.addWidget(buttons)
-        self.setLayout(layout)
 
 
 class MainWindow(QMainWindow):
@@ -126,8 +85,9 @@ class MainWindow(QMainWindow):
     # --- construction ------------------------------------------------------
 
     def _build_ui(self) -> None:
+        self.lobby_page = LobbyPage()
         self.stack = QStackedWidget()
-        self.stack.addWidget(self._build_lobby_page())
+        self.stack.addWidget(self.lobby_page)
         self.stack.addWidget(self._build_table_page())
         self.setCentralWidget(self.stack)
 
@@ -140,37 +100,6 @@ class MainWindow(QMainWindow):
         menu.addAction(leave_action)
 
         self.statusBar().showMessage("Niet verbonden")
-
-    def _build_lobby_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-
-        layout.addWidget(QLabel("<h2>Tafels</h2>"))
-        self.lobby_list = QListWidget()
-        layout.addWidget(self.lobby_list, 1)
-
-        row = QHBoxLayout()
-        self.join_button = QPushButton("Deelnemen")
-        self.delete_button = QPushButton("Verwijderen")
-        self.refresh_button = QPushButton("Vernieuwen")
-        row.addWidget(self.join_button)
-        row.addWidget(self.delete_button)
-        row.addWidget(self.refresh_button)
-        layout.addLayout(row)
-
-        layout.addWidget(QLabel("<h3>Nieuwe tafel</h3>"))
-        form = QFormLayout()
-        self.new_name = QLineEdit("Onze tafel")
-        self.ruleset_box = QComboBox()
-        self.scoring_box = QComboBox()
-        form.addRow("Naam", self.new_name)
-        form.addRow("Regelset", self.ruleset_box)
-        form.addRow("Puntentelling", self.scoring_box)
-        layout.addLayout(form)
-
-        self.create_button = QPushButton("Tafel aanmaken")
-        layout.addWidget(self.create_button)
-        return page
 
     def _build_table_page(self) -> QWidget:
         self.scene = TableScene(self.renderer, self.card_signals)
@@ -234,10 +163,19 @@ class MainWindow(QMainWindow):
         self.last_trick_button.toggled.connect(self.on_last_trick_toggled)
         self.chat_input.returnPressed.connect(self.on_chat_entered)
 
-        self.create_button.clicked.connect(self.on_create_lobby)
-        self.join_button.clicked.connect(self.on_join_lobby)
-        self.delete_button.clicked.connect(self.on_delete_lobby)
-        self.refresh_button.clicked.connect(lambda: self.connection.send("lobby_list"))
+        page = self.lobby_page
+        page.join_requested.connect(
+            lambda lobby_id: self.connection.send("lobby_join", lobby_id=lobby_id)
+        )
+        page.delete_requested.connect(
+            lambda lobby_id: self.connection.send("lobby_delete", lobby_id=lobby_id)
+        )
+        page.refresh_requested.connect(lambda: self.connection.send("lobby_list"))
+        page.create_requested.connect(
+            lambda name, ruleset, scoring: self.connection.send(
+                "lobby_create", name=name, ruleset=ruleset or None, scoring=scoring or None
+            )
+        )
 
     # --- connecting --------------------------------------------------------
 
@@ -273,10 +211,9 @@ class MainWindow(QMainWindow):
         if kind == "hello_ok":
             self.settings.resume_token = message.get("resume_token")
             self.settings.save()
-            self.ruleset_box.clear()
-            self.ruleset_box.addItems(message.get("rulesets") or [])
-            self.scoring_box.clear()
-            self.scoring_box.addItems(message.get("scorings") or [])
+            self.lobby_page.set_options(
+                message.get("rulesets") or [], message.get("scorings") or []
+            )
             self.statusBar().showMessage(f"Verbonden als {message.get('username')}")
             if not message.get("current_lobby"):
                 self.connection.send("lobby_list")
@@ -287,7 +224,7 @@ class MainWindow(QMainWindow):
             if message["code"] in ("username_taken", "username_invalid"):
                 QMessageBox.warning(self, "jwies", message["text"])
         elif kind == "lobby_list":
-            self.refresh_lobby_list()
+            self.lobby_page.show_lobbies(self.state.get("lobbies", []))
         elif kind in ("player_joined", "player_left", "player_disconnected", "player_reconnected"):
             self.connection.send("lobby_list")
 
@@ -296,21 +233,16 @@ class MainWindow(QMainWindow):
         if self.state.get("in_game"):
             self.refresh_table()
 
+        # Asking a question is a reaction to news, not part of drawing. It goes
+        # last because a modal spins a nested event loop: the table must already
+        # be drawn and consistent before one opens, and further messages will
+        # arrive while it is up.
+        self.react_to_prompt(self.state.get("prompt"))
+
     def append_chat(self, message: dict[str, Any]) -> None:
         sender = message.get("sender")
         text = message["text"]
         self.chat_log.appendPlainText(f"{sender}: {text}" if sender else text)
-
-    def refresh_lobby_list(self) -> None:
-        self.lobby_list.clear()
-        for lobby in self.state.get("lobbies", []):
-            status = STATUS_LABELS.get(lobby["status"], lobby["status"])
-            item = QListWidgetItem(
-                f"{lobby['name']} - {lobby['ruleset']} / {lobby['scoring']} - "
-                f"{lobby['players']}/4 spelers - {status}"
-            )
-            item.setData(Qt.ItemDataRole.UserRole, lobby["id"])
-            self.lobby_list.addItem(item)
 
     def refresh_table(self) -> None:
         state = dict(self.state.data)
@@ -319,6 +251,7 @@ class MainWindow(QMainWindow):
         self.refresh_prompt(state)
 
     def refresh_prompt(self, state: dict[str, Any]) -> None:
+        """Draw what the server is waiting for. Pure: opens nothing, sends nothing."""
         while self.bid_layout.count():
             item = self.bid_layout.takeAt(0)
             widget = item.widget()
@@ -345,26 +278,63 @@ class MainWindow(QMainWindow):
                 self.bid_layout.addWidget(button)
         elif kind == "play":
             self.play_button.setEnabled(self._selected_card is not None)
-        elif kind == "shuffle":
-            answer = QMessageBox.question(
-                self,
-                "jwies",
-                "Wil je de kaarten schudden?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            )
-            self.connection.send("answer_shuffle", shuffle=answer == QMessageBox.StandardButton.Yes)
-        elif kind == "cut":
-            low, high = prompt["cut_minimum"], prompt["cut_maximum"]
-            count, accepted = QInputDialog.getInt(
-                self,
-                "jwies",
-                f"Hoeveel kaarten neem je af? ({low} t.e.m. {high})",
-                (low + high) // 2,
-                low,
-                high,
-            )
-            if accepted:
-                self.connection.send("answer_cut", count=count)
+
+    # --- reacting ----------------------------------------------------------
+
+    _prompt_shown: dict[str, Any] | None = None
+    _dialog_open = False
+
+    def react_to_prompt(self, prompt: dict[str, Any] | None) -> None:
+        """Open a dialog for the two prompts that need one, once each.
+
+        Bidding and playing are answered with the widgets already on the table;
+        only shuffling and cutting ask a question. Answering one is a side
+        effect, so this runs from ``on_message`` and never from a refresh -
+        otherwise every snapshot that still carried the shuffle prompt would
+        open a second dialog on top of the first.
+        """
+        if self.state.get("paused"):
+            # Nothing is asked of anyone while the table waits for a player.
+            # The server re-offers the pending turn on resume, and the engine
+            # never recorded having asked, so forgetting is the whole recovery.
+            self._prompt_shown = None
+            return
+        if prompt == self._prompt_shown:
+            return
+        self._prompt_shown = prompt
+
+        if not prompt:
+            return
+        kind = prompt["kind"]
+        if kind not in ("shuffle", "cut") or self._dialog_open:
+            return
+
+        self._dialog_open = True
+        try:
+            if kind == "shuffle":
+                answer = QMessageBox.question(
+                    self,
+                    "jwies",
+                    "Wil je de kaarten schudden?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                )
+                self.connection.send(
+                    "answer_shuffle", shuffle=answer == QMessageBox.StandardButton.Yes
+                )
+            else:
+                low, high = prompt["cut_minimum"], prompt["cut_maximum"]
+                count, accepted = QInputDialog.getInt(
+                    self,
+                    "jwies",
+                    f"Hoeveel kaarten neem je af? ({low} t.e.m. {high})",
+                    (low + high) // 2,
+                    low,
+                    high,
+                )
+                if accepted:
+                    self.connection.send("answer_cut", count=count)
+        finally:
+            self._dialog_open = False
 
     # --- outgoing ----------------------------------------------------------
 
@@ -399,29 +369,3 @@ class MainWindow(QMainWindow):
         if text:
             self.connection.send("chat_send", text=text)
             self.chat_input.clear()
-
-    def on_create_lobby(self) -> None:
-        name = self.new_name.text().strip()
-        if not name:
-            QMessageBox.warning(self, "jwies", "Geef de tafel een naam.")
-            return
-        self.connection.send(
-            "lobby_create",
-            name=name,
-            ruleset=self.ruleset_box.currentText() or None,
-            scoring=self.scoring_box.currentText() or None,
-        )
-
-    def _selected_lobby_id(self) -> str | None:
-        item = self.lobby_list.currentItem()
-        return item.data(Qt.ItemDataRole.UserRole) if item else None
-
-    def on_join_lobby(self) -> None:
-        lobby_id = self._selected_lobby_id()
-        if lobby_id:
-            self.connection.send("lobby_join", lobby_id=lobby_id)
-
-    def on_delete_lobby(self) -> None:
-        lobby_id = self._selected_lobby_id()
-        if lobby_id:
-            self.connection.send("lobby_delete", lobby_id=lobby_id)

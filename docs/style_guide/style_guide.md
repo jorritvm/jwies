@@ -15,9 +15,12 @@ This is the rule that shapes the most decisions in the codebase.
 
 Concretely:
 
-- Server-side Dutch lives in `packages/jwies-server/jwies_server/texts/nl.yaml` and
-  nowhere else. Only `presenter.py` and `chat.py` may call `catalog.render(...)`.
-  A test asserts every key used in code exists, and that no key is unused.
+- Server-side Dutch lives in `presenter.py` and `chat.py`, as literals at the
+  place that sends them, plus the handful of error sentences at their raise
+  sites. There is no text catalog: jwies is Vlaamse wies, there is no second
+  language planned, and a key indirection costs a file lookup every time you
+  want to know what a line says. If a second language ever becomes real, those
+  two modules are the extraction points.
 - Each client owns Dutch **only** for its own widgets:
   `jwies_web_client/static/js/labels.js` and the label tables in
   `jwies_qt_client/main_window.py`. Game sentences
