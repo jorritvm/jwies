@@ -15,7 +15,7 @@ CARD_DECK_SVG = "svg-cards.svg"
 
 def asset_path(name: str) -> Traversable:
     """Return a traversable handle to a top-level asset."""
-    return files(__name__) / name
+    return files(__name__) / "assets" / name
 
 
 def icon_path(name: str) -> Traversable:
