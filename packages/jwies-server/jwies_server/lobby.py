@@ -19,27 +19,16 @@ from jwies_core.config import Ruleset, ScoringScale
 from jwies_core.engine import GameEngine, Phase, PromptKind
 from jwies_core.events import (
     Event,
+    GameFinished,
     IllegalAction,
     TrickCompleted,
 )
 from jwies_core.seats import ALL_SEATS, Seat
 
+from jwies_server import protocol
 from jwies_server.chat import ChatContext, handle_chat_command, is_command
 from jwies_server.presenter import Presenter
-from jwies_server.protocol import (
-    ChatKind,
-    ClientMessage,
-    ErrorCode,
-    LobbyMember,
-    LobbyState,
-    LobbyStatusCode,
-    LobbySummary,
-    ServerEnvelope,
-    ServerMessage,
-    Snapshot,
-    client_messages,
-    server_messages,
-)
+from jwies_server.protocol import ErrorCode, LobbyStatusCode
 from jwies_server.sessions import Session
 from jwies_server.snapshot import Occupant, build_snapshot, seat_infos
 
@@ -70,8 +59,7 @@ class Member:
 @dataclass
 class _Inbound:
     session: Session
-    message: ClientMessage
-    correlation: str | None = None
+    message: protocol.ClientMessage
 
 
 class LobbyRuntime:
@@ -165,6 +153,42 @@ class LobbyRuntime:
         self.last_activity = time.monotonic()
         self._presenter = None
 
+    async def send_table(self, session: Session) -> None:
+        """Seat one member at the table and hand them their cards.
+
+        What ``start_game`` does for everybody at once, for a single player who
+        arrived after the deal - taking over a seat somebody vacated. Without
+        this their client sits on the lobby page with a running game behind it,
+        because ``game_started`` and the first snapshot have long since gone.
+        """
+        member = self.members.get(session.username)
+        if self.engine is None or member is None or member.seat is None:
+            return
+        await self._send(
+            session,
+            protocol.GameStarted(
+                seats=seat_infos(self.occupants(), self.engine), your_seat=member.seat
+            ),
+        )
+        await self._send(
+            session, protocol.SnapshotMessage(snapshot=self.snapshot_for(session))
+        )
+
+    async def resume_if_nobody_is_missing(self) -> None:
+        """Unpause once the table is complete again.
+
+        Somebody who drops out and then leaves for good takes their name off the
+        missing list without ever coming back, which would otherwise leave the
+        other three paused on nobody at all.
+        """
+        if self.status is not LobbyStatusCode.PAUSED or self.missing:
+            return
+        self.status = LobbyStatusCode.RUNNING
+        await self.broadcast(protocol.GameResumed(text="Het spel gaat verder."))
+        await self.broadcast(self.presenter.chat("Het spel gaat verder."))
+        await self.broadcast_snapshots()
+        await self._announce_pending()
+
     def is_empty(self) -> bool:
         return not self.members
 
@@ -184,15 +208,9 @@ class LobbyRuntime:
                 await self._task
             self._task = None
 
-    def submit(
-        self,
-        session: Session,
-        message: ClientMessage,
-        *,
-        correlation: str | None = None,
-    ) -> None:
+    def submit(self, session: Session, message: protocol.ClientMessage) -> None:
         """Queue a message for this lobby. The only way in."""
-        self._inbox.put_nowait(_Inbound(session=session, message=message, correlation=correlation))
+        self._inbox.put_nowait(_Inbound(session=session, message=message))
 
     async def _run(self) -> None:
         while True:
@@ -203,7 +221,6 @@ class LobbyRuntime:
                 await self._send(
                     inbound.session,
                     self.presenter.error(ErrorCode.ILLEGAL_MOVE, str(error)),
-                    correlation=inbound.correlation,
                 )
             except Exception:
                 log.exception("lobby %s: onverwachte fout", self.id)
@@ -214,22 +231,20 @@ class LobbyRuntime:
 
     # --- sending -----------------------------------------------------------
 
-    async def _send(
-        self, session: Session, message: ServerMessage, *, correlation: str | None = None
-    ) -> None:
+    async def _send(self, session: Session, message: protocol.ServerMessage) -> None:
         agent = session.agent
         if agent is None:
             return
-        await agent.deliver(ServerEnvelope(msg=message, re=correlation))
+        await agent.deliver(protocol.ServerEnvelope(msg=message))
 
-    async def broadcast(self, message: ServerMessage) -> None:
+    async def broadcast(self, message: protocol.ServerMessage) -> None:
         for member in list(self.members.values()):
             await self._send(member.session, message)
 
     # --- state views -------------------------------------------------------
 
-    def lobby_state(self) -> LobbyState:
-        return LobbyState(
+    def lobby_state(self) -> protocol.LobbyState:
+        return protocol.LobbyState(
             id=self.id,
             name=self.name,
             host=self.host_username,
@@ -237,7 +252,7 @@ class LobbyRuntime:
             scoring=self.scoring_name,
             status=self.status,
             members=tuple(
-                LobbyMember(
+                protocol.LobbyMember(
                     username=member.username,
                     seat=member.seat,
                     connected=member.connected,
@@ -247,8 +262,8 @@ class LobbyRuntime:
             ),
         )
 
-    def summary(self) -> LobbySummary:
-        return LobbySummary(
+    def summary(self) -> protocol.LobbySummary:
+        return protocol.LobbySummary(
             id=self.id,
             name=self.name,
             ruleset=self.ruleset_name,
@@ -265,11 +280,10 @@ class LobbyRuntime:
             if member.seat is not None
         }
 
-    def snapshot_for(self, session: Session) -> Snapshot:
+    def snapshot_for(self, session: Session) -> protocol.Snapshot:
         """The complete render contract for one player."""
         member = self.members.get(session.username)
         return build_snapshot(
-            lobby=self.lobby_state(),
             occupants=self.occupants(),
             engine=self.engine,
             presenter=self.presenter,
@@ -286,17 +300,14 @@ class LobbyRuntime:
         self.last_activity = time.monotonic()
 
         match message:
-            case client_messages.ChatSend():
+            case protocol.ChatSend():
                 await self._handle_chat(session, message)
-            case client_messages.RequestSnapshot():
+            case protocol.RequestSnapshot():
                 await self._send(
                     session,
-                    server_messages.SnapshotMessage(snapshot=self.snapshot_for(session)),
-                    correlation=inbound.correlation,
+                    protocol.SnapshotMessage(snapshot=self.snapshot_for(session)),
                 )
-            case client_messages.LobbyStart():
-                await self._handle_start(session)
-            case client_messages.GameAction():
+            case protocol.GameAction():
                 await self._handle_game_action(session, message)
             case _:
                 await self._send(
@@ -304,10 +315,9 @@ class LobbyRuntime:
                     self.presenter.error(
                         ErrorCode.BAD_MESSAGE, "Onbegrijpelijk bericht ontvangen."
                     ),
-                    correlation=inbound.correlation,
                 )
 
-    async def _handle_chat(self, session: Session, message: client_messages.ChatSend) -> None:
+    async def _handle_chat(self, session: Session, message: protocol.ChatSend) -> None:
         text = message.text.strip()
         if is_command(text):
             replies = handle_chat_command(
@@ -317,36 +327,20 @@ class LobbyRuntime:
             for reply in replies:
                 await self._send(
                     session,
-                    server_messages.Chat(kind=ChatKind.SERVER, text=reply, private=True),
+                    protocol.Chat(kind=protocol.ChatKind.SERVER, text=reply),
                 )
             return
 
         await self.broadcast(
-            server_messages.Chat(kind=ChatKind.PLAYER, text=text, sender=session.username)
+            protocol.Chat(kind=protocol.ChatKind.PLAYER, text=text, sender=session.username)
         )
 
-    async def _handle_start(self, session: Session) -> None:
-        if session.username != self.host_username:
-            await self._send(
-                session,
-                self.presenter.error(
-                    ErrorCode.NOT_HOST, "Alleen wie de lobby aanmaakte kan dat doen."
-                ),
-            )
-            return
-        if len(self.members) < SEAT_COUNT:
-            await self._send(
-                session,
-                self.presenter.error(
-                    ErrorCode.GAME_NOT_RUNNING,
-                    f"Wachten op spelers: er zijn er nog {SEAT_COUNT - len(self.members)} nodig.",
-                ),
-            )
-            return
-        await self.start_game()
-
     async def start_game(self) -> None:
-        """Begin play. Called once all four seats are filled."""
+        """Begin play. Called once all four seats are filled.
+
+        There is no host-initiated start: the table fills up and the game
+        begins, which is what ``LobbyManager.is_startable`` decides.
+        """
         if self.engine is not None:
             return
         rng = random.Random(self.rng_seed) if self.rng_seed is not None else random.Random()
@@ -359,8 +353,7 @@ class LobbyRuntime:
                 continue
             await self._send(
                 member.session,
-                server_messages.GameStarted(
-                    lobby_id=self.id,
+                protocol.GameStarted(
                     seats=seat_infos(self.occupants(), self.engine),
                     your_seat=member.seat,
                 ),
@@ -370,7 +363,7 @@ class LobbyRuntime:
         await self._dispatch(events)
 
     async def _handle_game_action(
-        self, session: Session, message: client_messages.GameAction
+        self, session: Session, message: protocol.GameAction
     ) -> None:
         engine = self.engine
         if engine is None:
@@ -421,11 +414,17 @@ class LobbyRuntime:
             for message in presenter.messages_for(event):
                 await self.broadcast(message)
 
+            if isinstance(event, GameFinished):
+                # The last round of a bounded game has been scored. Without
+                # this the lobby stays RUNNING and the list keeps advertising a
+                # table that will never ask anyone for anything again.
+                self.status = LobbyStatusCode.FINISHED
+
             if isinstance(event, TrickCompleted):
                 # The engine has no timers; the delay lives here.
                 if self._pause_after_trick:
                     await asyncio.sleep(self._pause_after_trick)
-                await self.broadcast(server_messages.TableCleared())
+                await self.broadcast(protocol.TableCleared())
 
         await self.broadcast_snapshots()
         await self._announce_pending()
@@ -435,7 +434,7 @@ class LobbyRuntime:
         for member in list(self.members.values()):
             await self._send(
                 member.session,
-                server_messages.SnapshotMessage(snapshot=self.snapshot_for(member.session)),
+                protocol.SnapshotMessage(snapshot=self.snapshot_for(member.session)),
             )
 
     async def _announce_pending(self) -> None:
@@ -478,7 +477,7 @@ class LobbyRuntime:
         if member is None:
             return
         await self.broadcast(
-            server_messages.PlayerDisconnected(username=session.username, seat=member.seat)
+            protocol.PlayerDisconnected(username=session.username, seat=member.seat)
         )
 
         if self.engine is None or self.status not in (
@@ -493,7 +492,7 @@ class LobbyRuntime:
         self.status = LobbyStatusCode.PAUSED
         text = f"{session.username} is de verbinding kwijt. Het spel pauzeert tot hij terug is."
         await self.broadcast(
-            server_messages.GamePaused(missing=tuple(sorted(self.missing)), text=text)
+            protocol.GamePaused(missing=tuple(sorted(self.missing)), text=text)
         )
         await self.broadcast(self.presenter.chat(text))
         await self.broadcast_snapshots()
@@ -504,12 +503,12 @@ class LobbyRuntime:
         if member is None:
             return
 
-        await self._send(session, server_messages.LobbyStateMessage(lobby=self.lobby_state()))
+        await self._send(session, protocol.LobbyStateMessage(lobby=self.lobby_state()))
         await self._send(
-            session, server_messages.SnapshotMessage(snapshot=self.snapshot_for(session))
+            session, protocol.SnapshotMessage(snapshot=self.snapshot_for(session))
         )
         await self.broadcast(
-            server_messages.PlayerReconnected(username=session.username, seat=member.seat)
+            protocol.PlayerReconnected(username=session.username, seat=member.seat)
         )
 
         self.missing.discard(session.username)
@@ -518,7 +517,7 @@ class LobbyRuntime:
 
         self.status = LobbyStatusCode.RUNNING
         text = f"{session.username} is terug. Het spel gaat verder."
-        await self.broadcast(server_messages.GameResumed(text=text))
+        await self.broadcast(protocol.GameResumed(text=text))
         await self.broadcast(self.presenter.chat(text))
         # Idempotent: the engine never recorded that it already asked, so the
         # pending turn simply reappears in the snapshot everyone now gets.

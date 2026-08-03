@@ -31,6 +31,8 @@ export const LABELS = {
   },
 
   playCard: "Speel kaart",
+  fold: "Ronde opgeven ({aantal}/4)",
+  foldWaiting: "Opgegeven - wachten op de rest ({aantal}/4)",
   shuffleQuestion: "Wil je de kaarten schudden?",
   yes: "Ja",
   no: "Nee",

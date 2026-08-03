@@ -27,7 +27,10 @@ from PyQt6.QtWidgets import (
 
 from jwies_qt_client.settings import ClientSettings
 
-__all__ = ["STATUS_LABELS", "ConnectDialog", "LobbyPage"]
+__all__ = ["DEFAULT_TABLE_NAME", "STATUS_LABELS", "ConnectDialog", "LobbyPage"]
+
+# Replaced with "Tafel van <naam>" as soon as the server tells us who we are.
+DEFAULT_TABLE_NAME = "Onze tafel"
 
 STATUS_LABELS = {
     "waiting": "wacht op spelers",
@@ -92,7 +95,7 @@ class LobbyPage(QWidget):
         layout.addLayout(row)
 
         layout.addWidget(QLabel("<h3>Nieuwe tafel</h3>"))
-        self.new_name = QLineEdit("Onze tafel")
+        self.new_name = QLineEdit(DEFAULT_TABLE_NAME)
         self.ruleset_box = QComboBox()
         self.scoring_box = QComboBox()
         form = QFormLayout()
@@ -121,7 +124,29 @@ class LobbyPage(QWidget):
             box.clear()
             box.addItems(values)
 
+    def suggest_a_table_name(self, username: str) -> None:
+        """Name the table after whoever is making it.
+
+        Table names have to be unique on a server, and everybody starting from
+        the same suggestion means the second person to press the button gets
+        refused for no reason they can see. Left alone once it has been edited.
+        """
+        if self.new_name.text() == DEFAULT_TABLE_NAME:
+            self.new_name.setText(f"Tafel van {username}")
+
+    def show_error(self, text: str) -> None:
+        """Say what went wrong, here on the page where it went wrong.
+
+        Errors used to go only to the chat log, which lives on the table page -
+        so refusing to make a table looked exactly like the button doing
+        nothing. "Er is al een lobby met die naam" is the common one, because
+        the name field starts out the same for everybody.
+        """
+        self.error_label.setText(text)
+        self.error_label.show()
+
     def show_lobbies(self, lobbies: list[dict[str, Any]]) -> None:
+        self.error_label.hide()
         self.lobby_list.clear()
         for lobby in lobbies:
             status = STATUS_LABELS.get(lobby["status"], lobby["status"])

@@ -75,6 +75,7 @@ De testmappen volgen de pakketten:
 | `tests/core` | kaarten, biedladder, troel, contracten, slagen, puntentelling, de state machine |
 | `tests/config` | de meegeleverde templates laden, en elke instelling heeft uitleg |
 | `tests/server` | sessies, chatcommando's, de Nederlandse zinnen, en het berichtenschema |
+| `tests/e2e` | ook: of geen van beide clients achterloopt op het protocol |
 | `tests/e2e` | volledige rondes, herverbinden, en de webclient |
 | `tests/qt` | stoelafbeelding, de state reducer, en het venster offscreen |
 
@@ -86,7 +87,7 @@ nodig.
 ```powershell
 uv run ruff check .
 uv run ruff format .
-uv run mypy packages/jwies-core packages/jwies-server/jwies_server/protocol
+uv run mypy packages/jwies-core packages/jwies-server
 ```
 
 Zie [`style_guide/style_guide.md`](style_guide/style_guide.md).
@@ -119,19 +120,28 @@ plaats in plaats van drie.
 
 Is het echt een mededeling:
 
-1. Model toevoegen in `jwies_server/protocol/client_messages.py` of
-   `server_messages.py` en opnemen in de union onderaan. Een zet van een speler
-   erft van `GameAction` en vertaalt zichzelf via `to_action()`.
+1. Model toevoegen in `jwies_server/protocol.py` en opnemen in de union
+   onderaan. Een zet van een speler erft van `GameAction` en vertaalt zichzelf
+   via `to_action()`.
 2. Afhandelen in `jwies_server/connection.py` (lobbyniveau) of
    `jwies_server/lobby.py` (spelniveau).
-3. Tonen in beide clients. Alleen de drie slagberichten mogen toestand
+3. Beschrijven in [`protocol.md`](protocol.md), met een `#### `naam``-kop en een
+   tabelrij per veld. `tests/server/test_protocol_docs.py` faalt tot je dat doet
+   - dat is de bedoeling.
+4. Tonen in beide clients. Alleen de drie slagberichten mogen toestand
    veranderen; al de rest hoort in de chat of in een melding thuis.
 
-Het protocol heeft een versienummer (`PROTOCOL_VERSION` in
-`jwies_server/protocol/common.py`, en als los getal in `jwies_qt_client/net.py`
-en `js/net.js` - de clients importeren niets van de server). Breek je de
-compatibiliteit, verhoog het dan overal; de server weigert clients met een ander
-nummer met een nette Nederlandse melding.
+Verwijder je iets, of hernoem je een veld, dan is
+`tests/e2e/test_client_protocol_drift.py` wat merkt dat een client is blijven
+staan. Breek je de compatibiliteit, verhoog dan `PROTOCOL_VERSION` op alle drie
+de plaatsen (zie hieronder).
+
+Het versienummer staat op drie plaatsen, want de clients importeren niets van de
+server: `PROTOCOL_VERSION` in `jwies_server/protocol.py`, en als los getal in
+`jwies_qt_client/net.py` en `js/net.js`. Vergeet je er een, dan weigert de
+server die client met een nette Nederlandse melding - de envelop zelf negeert
+onbekende velden juist zodat een oude client tot aan die melding geraakt. Vergeet
+je `docs/protocol.md`, dan faalt `test_the_documented_version_matches_the_code`.
 
 ## Afhankelijkheden
 

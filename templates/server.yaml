@@ -27,8 +27,11 @@ netwerk:
   poort: 8000
 
 # ---------------------------------------------------------------------------
-# Hoeveel spellen mag de server tegelijk hosten, en hoe lang wacht hij op
-# spelers die de verbinding verliezen?
+# Hoeveel spellen mag de server tegelijk hosten?
+#
+# Een weggevallen speler houdt zijn stoel zolang de lobby bestaat: het spel
+# pauzeert en wacht op hem, en hij komt terug met dezelfde naam. Wil je zijn
+# stoel vrijgeven, dan verlaat hij de tafel of ruimt iemand de lobby op.
 # ---------------------------------------------------------------------------
 lobby:
   # Hoeveel lobby's mogen er tegelijk bestaan?
@@ -38,11 +41,6 @@ lobby:
   # Na hoeveel minuten zonder verbonden spelers wordt een lobby opgeruimd?
   # Toegelaten waarden: 1 of hoger
   opruimen_na_minuten: 60
-
-  # Na hoeveel minuten wordt de stoel van een weggevallen speler vrijgegeven?
-  # Zolang die tijd niet verstreken is, pauzeert het spel en wacht het op hem.
-  # Toegelaten waarden: 1 of hoger
-  stoel_vrijgeven_na_minuten: 30
 
 # Welke regelsets mogen spelers kiezen bij het maken van een lobby?
 # De naam links is wat spelers zien; rechts staat het pad naar het bestand,

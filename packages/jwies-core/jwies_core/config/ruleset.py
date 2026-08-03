@@ -206,6 +206,18 @@ class PlaySettings(DutchModel):
             description="Hoeveel seconden blijft een volle slag op tafel liggen?",
         ),
     ] = 2.0
+    folding_allowed: Annotated[
+        bool,
+        Field(
+            alias="opgeven_toegelaten",
+            description=(
+                "Mag de tafel een verloren ronde vroegtijdig stoppen? "
+                "Enkel wanneer het contract niet meer gehaald kan worden en de "
+                "punten al vastliggen, en enkel als alle vier de spelers akkoord "
+                "gaan. De kaarten worden dan opgeraapt zoals ze liggen."
+            ),
+        ),
+    ] = True
     round_count: Annotated[
         int,
         Field(

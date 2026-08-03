@@ -148,6 +148,11 @@
 #action-box:empty { display: none; }
 #action-box button { width: 100%; margin-top: 0.4rem; }
 
+/* Opgeven. Rustig, want het is een aanbod en geen vraag. */
+#fold-box:empty { display: none; }
+#fold-box button { width: 100%; }
+#fold-box button.pressed { background: #4a5a4a; color: #dfe7df; }
+
 #scoreboard table { width: 100%; border-collapse: collapse; }
 #scoreboard td { padding: 0.15rem 0; }
 #scoreboard td:last-child { text-align: right; font-variant-numeric: tabular-nums; }

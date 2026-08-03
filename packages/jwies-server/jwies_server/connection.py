@@ -10,23 +10,16 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import logging
 
 from fastapi import WebSocket
 from pydantic import ValidationError
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
-from jwies_server import __version__
+from jwies_server import protocol
 from jwies_server.lobby_manager import LobbyError, LobbyManager
-from jwies_server.protocol import (
-    PROTOCOL_VERSION,
-    ClientEnvelope,
-    ErrorCode,
-    ServerEnvelope,
-    ServerMessage,
-    client_messages,
-    server_messages,
-)
+from jwies_server.protocol import PROTOCOL_VERSION, ErrorCode
 from jwies_server.sessions import HelloOutcome, Session, SessionRegistry
 
 __all__ = ["WebsocketAgent", "handle_connection"]
@@ -44,7 +37,9 @@ class WebsocketAgent:
     def __init__(self, websocket: WebSocket, username: str) -> None:
         self.websocket = websocket
         self.username = username
-        self._queue: asyncio.Queue[ServerEnvelope | None] = asyncio.Queue(maxsize=WRITE_QUEUE_LIMIT)
+        self._queue: asyncio.Queue[protocol.ServerEnvelope | None] = asyncio.Queue(
+            maxsize=WRITE_QUEUE_LIMIT
+        )
         self._seq = 0
         self._writer: asyncio.Task[None] | None = None
         self.overflowed = False
@@ -52,7 +47,7 @@ class WebsocketAgent:
     def start(self) -> None:
         self._writer = asyncio.create_task(self._run_writer(), name=f"tx-{self.username}")
 
-    async def deliver(self, envelope: ServerEnvelope) -> None:
+    async def deliver(self, envelope: protocol.ServerEnvelope) -> None:
         self._seq += 1
         stamped = envelope.model_copy(update={"seq": self._seq})
         try:
@@ -89,10 +84,10 @@ class WebsocketAgent:
                 return
 
 
-async def _send_raw(websocket: WebSocket, message: ServerMessage) -> None:
+async def _send_raw(websocket: WebSocket, message: protocol.ServerMessage) -> None:
     """Send before an agent exists (during the handshake)."""
     with contextlib.suppress(Exception):
-        await websocket.send_text(ServerEnvelope(msg=message).model_dump_json())
+        await websocket.send_text(protocol.ServerEnvelope(msg=message).model_dump_json())
 
 
 async def handle_connection(
@@ -117,7 +112,7 @@ async def handle_connection(
             if envelope is None:
                 await _send_raw(
                     websocket,
-                    server_messages.Error(
+                    protocol.Error(
                         code=ErrorCode.BAD_MESSAGE,
                         text="Onbegrijpelijk bericht ontvangen.",
                     ),
@@ -140,11 +135,29 @@ async def handle_connection(
             await agent.close()
 
 
-def _parse(raw: str) -> ClientEnvelope | None:
+def _parse(raw: str) -> protocol.ClientEnvelope | None:
     try:
-        return ClientEnvelope.model_validate_json(raw)
+        return protocol.ClientEnvelope.model_validate_json(raw)
     except ValidationError:
         return None
+
+
+def _claimed_version(raw: str) -> int:
+    """The ``v`` of a raw envelope, before any model has seen it.
+
+    Read straight out of the JSON on purpose. A client one version behind is
+    also sending fields the models no longer have, so validating first would
+    answer "onbegrijpelijk bericht" when the useful answer is "werk je client
+    bij" - which is the entire point of having a version number.
+
+    Says nothing, or unreadable? Then assume current and let ``_parse`` give its
+    own verdict, exactly as ``ClientEnvelope.v`` defaults.
+    """
+    with contextlib.suppress(json.JSONDecodeError, AttributeError, TypeError):
+        version = json.loads(raw).get("v")
+        if isinstance(version, int):
+            return version
+    return PROTOCOL_VERSION
 
 
 async def _handshake(
@@ -153,25 +166,15 @@ async def _handshake(
     lobbies: LobbyManager,
 ) -> tuple[Session | None, WebsocketAgent | None]:
     raw = await websocket.receive_text()
-    envelope = _parse(raw)
 
-    if envelope is None or not isinstance(envelope.msg, client_messages.Hello):
+    claimed = _claimed_version(raw)
+    if claimed != PROTOCOL_VERSION:
         await _send_raw(
             websocket,
-            server_messages.Error(
-                code=ErrorCode.BAD_MESSAGE, text="Onbegrijpelijk bericht ontvangen."
-            ),
-        )
-        await websocket.close()
-        return None, None
-
-    if envelope.v != PROTOCOL_VERSION:
-        await _send_raw(
-            websocket,
-            server_messages.Error(
+            protocol.Error(
                 code=ErrorCode.PROTOCOL_VERSION,
                 text=(
-                    f"Deze client spreekt versie {envelope.v} van het protocol, "
+                    f"Deze client spreekt versie {claimed} van het protocol, "
                     f"de server versie {PROTOCOL_VERSION}. Werk je client bij."
                 ),
             ),
@@ -179,11 +182,20 @@ async def _handshake(
         await websocket.close(code=CLOSE_PROTOCOL_VERSION)
         return None, None
 
+    envelope = _parse(raw)
+    if envelope is None or not isinstance(envelope.msg, protocol.Hello):
+        await _send_raw(
+            websocket,
+            protocol.Error(code=ErrorCode.BAD_MESSAGE, text="Onbegrijpelijk bericht ontvangen."),
+        )
+        await websocket.close()
+        return None, None
+
     hello = envelope.msg
     if not sessions.is_valid_username(hello.username):
         await _send_raw(
             websocket,
-            server_messages.Error(
+            protocol.Error(
                 code=ErrorCode.USERNAME_INVALID,
                 text=("Ongeldige naam. Gebruik 2 tot 20 letters, cijfers, spaties, '-' of '_'."),
             ),
@@ -195,7 +207,7 @@ async def _handshake(
     if outcome is HelloOutcome.TAKEN:
         await _send_raw(
             websocket,
-            server_messages.Error(
+            protocol.Error(
                 code=ErrorCode.USERNAME_TAKEN,
                 text=(f"De naam '{hello.username}' is al in gebruik door iemand die online is."),
             ),
@@ -209,13 +221,9 @@ async def _handshake(
     session.touch()
 
     await agent.deliver(
-        ServerEnvelope(
-            re=envelope.id,
-            msg=server_messages.HelloOk(
-                player_id=session.player_id,
+        protocol.ServerEnvelope(
+            msg=protocol.HelloOk(
                 username=session.username,
-                server_version=__version__,
-                protocol_version=PROTOCOL_VERSION,
                 resume_token=session.resume_token,
                 current_lobby=session.lobby_id,
                 rulesets=tuple(sorted(lobbies.config.rulesets)),
@@ -229,11 +237,10 @@ async def _handshake(
         await lobby.on_reconnected(session)
     else:
         await agent.deliver(
-            ServerEnvelope(
-                msg=server_messages.Chat(
-                    kind=server_messages.ChatKind.SERVER,
+            protocol.ServerEnvelope(
+                msg=protocol.Chat(
+                    kind=protocol.ChatKind.SERVER,
                     text=f"Welkom {session.username}!",
-                    private=True,
                 )
             )
         )
@@ -241,7 +248,7 @@ async def _handshake(
 
 
 async def _route(
-    envelope: ClientEnvelope,
+    envelope: protocol.ClientEnvelope,
     session: Session,
     lobbies: LobbyManager,
 ) -> None:
@@ -249,24 +256,21 @@ async def _route(
     message = envelope.msg
     session.touch()
 
-    async def reply(payload: ServerMessage) -> None:
+    async def reply(payload: protocol.ServerMessage) -> None:
         if session.agent is not None:
-            await session.agent.deliver(ServerEnvelope(msg=payload, re=envelope.id))
+            await session.agent.deliver(protocol.ServerEnvelope(msg=payload))
 
     try:
         match message:
-            case client_messages.Ping():
-                await reply(server_messages.Pong())
-
-            case client_messages.Hello():
+            case protocol.Hello():
                 # A second hello on a live connection is meaningless; ignore it
                 # rather than tearing down a working session.
                 return
 
-            case client_messages.LobbyList():
-                await reply(server_messages.LobbyListing(lobbies=lobbies.list_summaries()))
+            case protocol.LobbyList():
+                await reply(protocol.LobbyListing(lobbies=lobbies.list_summaries()))
 
-            case client_messages.LobbyCreate():
+            case protocol.LobbyCreate():
                 lobby = lobbies.create(
                     session,
                     message.name,
@@ -274,47 +278,56 @@ async def _route(
                     scoring=message.scoring,
                     rng_seed=message.rng_seed,
                 )
-                await reply(server_messages.LobbyStateMessage(lobby=lobby.lobby_state()))
+                await reply(protocol.LobbyStateMessage(lobby=lobby.lobby_state()))
                 await lobby.broadcast(
-                    server_messages.PlayerJoined(username=session.username, seat=session.seat)
+                    protocol.PlayerJoined(username=session.username, seat=session.seat)
                 )
 
-            case client_messages.LobbyJoin():
+            case protocol.LobbyJoin():
                 lobby = lobbies.join(session, message.lobby_id)
-                await reply(server_messages.LobbyStateMessage(lobby=lobby.lobby_state()))
+                await reply(protocol.LobbyStateMessage(lobby=lobby.lobby_state()))
                 await lobby.broadcast(
-                    server_messages.PlayerJoined(username=session.username, seat=session.seat)
+                    protocol.PlayerJoined(username=session.username, seat=session.seat)
                 )
-                await lobby.broadcast(server_messages.LobbyStateMessage(lobby=lobby.lobby_state()))
+                await lobby.broadcast(protocol.LobbyStateMessage(lobby=lobby.lobby_state()))
                 await lobby.broadcast(lobby.presenter.chat(f"{session.username} komt aan tafel."))
                 if lobbies.is_startable(lobby):
                     await lobby.start_game()
+                else:
+                    # The game is already under way and this player has taken a
+                    # free seat, so they need the table itself, not just a lobby
+                    # row. Harmless when there is no game: it sends nothing.
+                    await lobby.send_table(session)
+                    await lobby.resume_if_nobody_is_missing()
 
-            case client_messages.LobbyLeave():
+            case protocol.LobbyLeave():
                 lobby = lobbies.leave(session)
+                # Answer the leaver first. They are no longer a member, so the
+                # broadcast below will not reach them - which is exactly why
+                # leaving used to look like nothing had happened at all.
+                await reply(protocol.LobbyListing(lobbies=lobbies.list_summaries()))
                 if lobby is not None:
-                    await lobby.broadcast(server_messages.PlayerLeft(username=session.username))
-                    await lobby.broadcast(
-                        server_messages.LobbyStateMessage(lobby=lobby.lobby_state())
-                    )
+                    await lobby.broadcast(protocol.PlayerLeft(username=session.username))
+                    await lobby.broadcast(protocol.LobbyStateMessage(lobby=lobby.lobby_state()))
+                    await lobby.resume_if_nobody_is_missing()
 
-            case client_messages.LobbyDelete():
+            case protocol.LobbyDelete():
                 await lobbies.delete(session, message.lobby_id)
-                await reply(server_messages.LobbyListing(lobbies=lobbies.list_summaries()))
+                await reply(protocol.LobbyListing(lobbies=lobbies.list_summaries()))
 
             case _:
                 lobby = lobbies.lobby_of(session)
                 if lobby is None:
                     await reply(
-                        server_messages.Error(
+                        protocol.Error(
                             code=ErrorCode.NOT_IN_LOBBY,
                             text="Je zit niet in een lobby.",
                         )
                     )
                     return
-                lobby.submit(session, message, correlation=envelope.id)
+                lobby.submit(session, message)
 
     except LobbyError as error:
         await reply(
-            server_messages.Error(code=error.code, text=error.text)  # type: ignore[arg-type]
+            protocol.Error(code=error.code, text=error.text)  # type: ignore[arg-type]
         )

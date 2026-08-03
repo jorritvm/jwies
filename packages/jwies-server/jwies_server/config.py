@@ -41,14 +41,6 @@ class LobbySettings(DutchModel):
             description="Na hoeveel minuten zonder spelers wordt een lobby opgeruimd?",
         ),
     ] = 60
-    release_seat_after_minutes: Annotated[
-        int,
-        Field(
-            ge=1,
-            alias="stoel_vrijgeven_na_minuten",
-            description="Na hoeveel minuten wordt de stoel van een weggevallen speler vrijgegeven?",
-        ),
-    ] = 30
 
 
 class LogSettings(DutchModel):

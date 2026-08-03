@@ -13,10 +13,15 @@ from typing import Any
 import pytest
 import uvicorn
 import websockets
+import yaml
 from jwies_server.app import create_app
 from jwies_server.config import load_server_config
 
 TEMPLATES = Path(__file__).resolve().parents[2] / "templates"
+
+# Hardcoded rather than imported, like both real clients do: this file's whole
+# point is to prove the wire format works without sharing Python with the server.
+PROTOCOL_VERSION = 2
 
 
 def free_port() -> int:
@@ -52,6 +57,28 @@ def fast_config_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
             f'  {name}: "../templates/scoring/{name}.yaml"',
             f'  {name}: "{(TEMPLATES / "scoring" / f"{name}.yaml").as_posix()}"',
         )
+    (directory / "server.yaml").write_text(server_yaml, encoding="utf-8")
+
+    # A second scale whose penalty does not depend on how short the declaring
+    # side finished. That is the only condition under which folding is offered
+    # before the last trick, so it is the only way to exercise it end to end.
+    flat = yaml.safe_load((TEMPLATES / "scoring" / "schaal_a.yaml").read_text(encoding="utf-8"))
+    for entry in flat["contracten"].values():
+        entry["per_slag_tekort"] = 0
+    (directory / "vlak.yaml").write_text(
+        yaml.safe_dump(flat, allow_unicode=True), encoding="utf-8"
+    )
+    server_yaml = server_yaml.replace(
+        "puntenschalen:", 'puntenschalen:\n  vlak: "vlak.yaml"', 1
+    )
+
+    # A ruleset that stops after one round. The shipped ones play forever, so
+    # this is the only way to reach the end of a game at all.
+    short = ruleset.replace("aantal_rondes: 0", "aantal_rondes: 1")
+    assert "aantal_rondes: 1" in short, "rondeteller niet gevonden"
+    (directory / "kort.yaml").write_text(short, encoding="utf-8")
+    server_yaml = server_yaml.replace("regelsets:", 'regelsets:\n  kort: "kort.yaml"', 1)
+
     (directory / "server.yaml").write_text(server_yaml, encoding="utf-8")
     return directory
 
@@ -98,7 +125,6 @@ class ScriptedClient:
         self.snapshot: dict[str, Any] = {}
         self.resume_token: str | None = None
         self.seat: int | None = None
-        self._counter = 0
 
     @property
     def hand(self) -> list[str]:
@@ -107,7 +133,7 @@ class ScriptedClient:
 
     async def __aenter__(self) -> ScriptedClient:
         self.socket = await websockets.connect(self.url)
-        await self.send("hello", username=self.username, client="web")
+        await self.send("hello", username=self.username)
         await self.wait_for("hello_ok")
         return self
 
@@ -120,8 +146,7 @@ class ScriptedClient:
             self.socket = None
 
     async def send(self, message_type: str, **fields: Any) -> None:
-        self._counter += 1
-        payload = {"v": 1, "id": str(self._counter), "msg": {"type": message_type, **fields}}
+        payload = {"v": PROTOCOL_VERSION, "msg": {"type": message_type, **fields}}
         await self.socket.send(json.dumps(payload))
 
     async def _recv(self, timeout: float = 5.0) -> dict[str, Any]:

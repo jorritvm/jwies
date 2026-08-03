@@ -15,7 +15,6 @@ pytestmark = pytest.mark.anyio if False else []
 # carry anyone else's, which is the structural half of the privacy guarantee;
 # test_a_player_never_sees_another_players_hand is the behavioural half.
 SNAPSHOT_FIELDS = {
-    "lobby",
     "phase",
     "round_number",
     "multiplier",
@@ -36,6 +35,8 @@ SNAPSHOT_FIELDS = {
     "prompt",
     "paused",
     "missing_players",
+    "folding_offered",
+    "folded",
 }
 
 

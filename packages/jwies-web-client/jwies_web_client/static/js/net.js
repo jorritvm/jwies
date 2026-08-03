@@ -5,7 +5,7 @@
 // wachttijd, en wordt dezelfde naam plus resume_token opnieuw aangeboden -
 // dat is wat de server aan je stoel terugbindt.
 
-const PROTOCOL_VERSION = 1;
+const PROTOCOL_VERSION = 2;
 const STORAGE_KEY = "jwies.session";
 const MAX_BACKOFF_MS = 30000;
 
@@ -15,7 +15,6 @@ export class Connection extends EventTarget {
     this.socket = null;
     this.username = null;
     this.resumeToken = null;
-    this.counter = 0;
     this.backoff = 1000;
     this.lastSeq = 0;
     this.wanted = false;
@@ -114,8 +113,6 @@ export class Connection extends EventTarget {
       this.lastSeq = 0;
       this.send("hello", {
         username: this.username,
-        client: "web",
-        client_version: "1",
         resume_token: this.resumeToken,
       });
       this.dispatchEvent(new CustomEvent("open"));
@@ -157,13 +154,6 @@ export class Connection extends EventTarget {
 
   send(type, fields = {}) {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return;
-    this.counter += 1;
-    this.socket.send(
-      JSON.stringify({
-        v: PROTOCOL_VERSION,
-        id: String(this.counter),
-        msg: { type, ...fields },
-      }),
-    );
+    this.socket.send(JSON.stringify({ v: PROTOCOL_VERSION, msg: { type, ...fields } }));
   }
 }

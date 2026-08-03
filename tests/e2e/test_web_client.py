@@ -103,7 +103,7 @@ def test_the_game_server_serves_no_web_client(game: TestClient) -> None:
 def test_the_game_server_still_answers_its_own_endpoints(game: TestClient) -> None:
     payload = game.get("/healthz").json()
     assert payload["status"] == "ok"
-    assert payload["protocol"] == 1
+    assert payload["protocol"] == 2
     assert game.get("/api/lobbies").json() == []
 
 

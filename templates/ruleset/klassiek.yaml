@@ -131,6 +131,17 @@ spel:
   # Toegelaten waarden: 0 t.e.m. 15
   pauze_na_slag_seconden: 2
 
+  # Mag de tafel een verloren ronde vroegtijdig stoppen ("opgeven")?
+  # Enkel wanneer het contract niet meer gehaald kan worden en de punten al
+  # vastliggen, en enkel als alle vier de spelers akkoord gaan. De kaarten
+  # worden dan opgeraapt zoals ze liggen.
+  # Let op: met de meegeleverde puntenschalen liggen de punten pas vast bij de
+  # laatste slag, want een gesneuveld contract betaalt per ontbrekende slag.
+  # Zet 'per_slag_tekort: 0' in je puntenschaal als je hier echt gebruik van
+  # wil maken.
+  # Toegelaten waarden: true of false
+  opgeven_toegelaten: true
+
   # Aantal rondes voor het spel eindigt. 0 = eindeloos doorspelen.
   # Kies een veelvoud van 4 zodat iedereen even vaak deelt.
   # Toegelaten waarden: 0 of hoger

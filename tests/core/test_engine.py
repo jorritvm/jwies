@@ -131,6 +131,48 @@ class TestTurnTaking:
         with pytest.raises(IllegalAction, match="niet jouw beurt"):
             engine.apply(other, PlaceBid(bid=Bid(BidType.PASS)))
 
+    def test_the_right_player_doing_the_wrong_thing_is_refused(
+        self, klassiek: Ruleset, schaal_a: ScoringScale
+    ) -> None:
+        """Being on turn is not enough - the action has to be the one asked for.
+
+        This used to fall straight through to ``_apply_play`` and raise a
+        ``KeyError`` on a hand that had not been dealt, which the server caught
+        as an unexpected error and marked the whole table broken. The way in was
+        ordinary: a card clicked a moment too late arrives in the next round,
+        where the very same seat may be the dealer and so pass the turn check.
+        """
+        engine = make_engine(klassiek, schaal_a)
+        prompt = engine.pending()
+        assert prompt is not None
+        assert prompt.kind is not PromptKind.PLAY
+
+        with pytest.raises(IllegalAction, match="dat kan nu niet"):
+            engine.apply(prompt.seat, PlayCard(card=Card.from_code("AH")))
+
+        # And the table is still perfectly playable afterwards.
+        assert engine.pending() == prompt
+
+    def test_every_action_is_accepted_at_its_own_prompt(
+        self, klassiek: Ruleset, schaal_a: ScoringScale
+    ) -> None:
+        """The guard must not have shut the door on the legitimate moves."""
+        engine = make_engine(klassiek, schaal_a)
+        seen = set()
+        for _ in range(200):
+            prompt = engine.pending()
+            if prompt is None or prompt.kind is PromptKind.PLAY:
+                break
+            seen.add(prompt.kind)
+            match prompt.kind:
+                case PromptKind.SHUFFLE:
+                    engine.apply(prompt.seat, Shuffle(shuffle=False))
+                case PromptKind.CUT:
+                    engine.apply(prompt.seat, Cut(count=prompt.cut_minimum))
+                case _:
+                    engine.apply(prompt.seat, PlaceBid(bid=prompt.bid_options[-1]))
+        assert {PromptKind.CUT, PromptKind.BID} <= seen
+
     def test_pending_is_idempotent(self, klassiek: Ruleset, schaal_a: ScoringScale) -> None:
         # Re-issuing a prompt after a reconnect must be free of side effects.
         engine = make_engine(klassiek, schaal_a)

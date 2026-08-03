@@ -35,6 +35,9 @@ const actions = {
   answerCut(count) {
     connection.send("answer_cut", { count });
   },
+  fold(agree) {
+    connection.send("fold", { fold: agree });
+  },
 };
 
 const table = new TableView(store, actions);

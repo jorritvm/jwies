@@ -67,7 +67,6 @@ class TestStateReducer:
             {
                 "type": "snapshot",
                 "snapshot": {
-                    "lobby": {"id": "l1"},
                     "your_seat": 2,
                     "dealer_seat": 1,
                     "your_hand": ["AH", "KD"],
@@ -85,18 +84,14 @@ class TestStateReducer:
     def test_playing_your_own_card_removes_it_from_your_hand(self) -> None:
         state = ClientState()
         state.update(your_seat=0, hand=["AH", "KD"])
-        state.apply_message(
-            {"type": "card_played", "seat": 0, "card": "AH", "position_in_trick": 1}
-        )
+        state.apply_message({"type": "card_played", "seat": 0, "card": "AH"})
         assert state["hand"] == ["KD"]
         assert state["trick"] == [{"seat": 0, "card": "AH"}]
 
     def test_another_players_card_leaves_your_hand_alone(self) -> None:
         state = ClientState()
         state.update(your_seat=0, hand=["AH", "KD"])
-        state.apply_message(
-            {"type": "card_played", "seat": 1, "card": "2C", "position_in_trick": 1}
-        )
+        state.apply_message({"type": "card_played", "seat": 1, "card": "2C"})
         assert state["hand"] == ["AH", "KD"]
 
     def test_the_table_is_swept_after_a_trick(self) -> None:
@@ -108,7 +103,6 @@ class TestStateReducer:
                 "winner_seat": 0,
                 "cards": [{"seat": 0, "card": "AH"}],
                 "trick_counts": {"declarers": 1, "defenders": 0},
-                "text": "Jan wint de slag.",
             }
         )
         assert state["last_trick"] == [{"seat": 0, "card": "AH"}]
@@ -165,11 +159,11 @@ class TestStateReducer:
         state.update(contract={"key": "misere"}, trump="H", totals={"Jan": "3"})
         before = dict(state.data)
         for message in (
-            {"type": "round_started", "round_number": 2, "dealer_seat": 1},
-            {"type": "trump_turned", "dealer_seat": 3, "card": "AH"},
             {"type": "game_paused", "missing": ["Korneel"], "text": "..."},
+            {"type": "game_resumed", "text": "..."},
             {"type": "round_finished", "totals": {"Jan": "9"}, "text": "..."},
             {"type": "player_left", "username": "Korneel"},
+            {"type": "player_joined", "username": "Korneel", "seat": 3},
         ):
             state.apply_message(message)
         assert state.data == before

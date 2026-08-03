@@ -164,16 +164,15 @@ class TableScene(QGraphicsScene):
 
         for index, code in enumerate(hand):
             card = self._card(code, 10 + index, self.own_hand)
+            # Which cards are legal still decides what you can click, but it is
+            # deliberately not drawn: your hand looks the same at every stage of
+            # the round, and a card you may not play simply does not lift.
             card.is_playable = code in playable
             card.is_trump_shown = bool(turned) and code == turned
             card.setPos(
                 X_CARD["SOUTH"] + index * XINC_CARD["SOUTH"],
                 card.base_y() - (0 if code != self.selected_card else 40),
             )
-            if code in playable:
-                card.setOpacity(1.0)
-            elif playable:
-                card.setOpacity(0.55)
             self.own_hand.append(card)
             self._add(card)
 

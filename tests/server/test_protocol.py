@@ -11,6 +11,7 @@ import json
 from typing import get_args
 
 import pytest
+from jwies_server import protocol
 from jwies_server.protocol import (
     PROTOCOL_VERSION,
     BidInfo,
@@ -20,8 +21,6 @@ from jwies_server.protocol import (
     ServerEnvelope,
     ServerMessage,
     SuitCode,
-    client_messages,
-    server_messages,
 )
 from pydantic import TypeAdapter, ValidationError
 
@@ -30,10 +29,7 @@ SERVER = TypeAdapter(ServerMessage)
 
 
 def test_a_client_envelope_round_trips_through_json() -> None:
-    envelope = ClientEnvelope(
-        id="abc",
-        msg=client_messages.PlayCard(card="AH"),
-    )
+    envelope = ClientEnvelope(msg=protocol.PlayCard(card="AH"))
     raw = envelope.model_dump_json()
     back = ClientEnvelope.model_validate_json(raw)
     assert back == envelope
@@ -43,7 +39,7 @@ def test_a_client_envelope_round_trips_through_json() -> None:
 def test_a_server_envelope_round_trips_through_json() -> None:
     envelope = ServerEnvelope(
         seq=7,
-        msg=server_messages.Chat(kind=server_messages.ChatKind.SERVER, text="Welkom!"),
+        msg=protocol.Chat(kind=protocol.ChatKind.SERVER, text="Welkom!"),
     )
     back = ServerEnvelope.model_validate_json(envelope.model_dump_json())
     assert back.msg.text == "Welkom!"  # type: ignore[union-attr]
@@ -58,7 +54,7 @@ def test_unknown_message_type_is_rejected_not_silently_accepted() -> None:
 
 def test_extra_fields_are_rejected() -> None:
     with pytest.raises(ValidationError):
-        CLIENT.validate_python({"type": "ping", "sneaky": 1})
+        CLIENT.validate_python({"type": "lobby_list", "sneaky": 1})
 
 
 def test_card_codes_are_validated() -> None:
@@ -69,27 +65,48 @@ def test_card_codes_are_validated() -> None:
 
 
 def test_usernames_are_validated() -> None:
-    CLIENT.validate_python({"type": "hello", "username": "Jan-Piet", "client": "web"})
+    CLIENT.validate_python({"type": "hello", "username": "Jan-Piet"})
     for bad in ("x", "a" * 21, "Jan;DROP"):
         with pytest.raises(ValidationError):
-            CLIENT.validate_python({"type": "hello", "username": bad, "client": "web"})
+            CLIENT.validate_python({"type": "hello", "username": bad})
 
 
 def test_a_browser_style_raw_dict_parses() -> None:
     # The web client sends hand-built JSON, not pydantic output. This is the
     # shape it produces.
     raw = {
-        "v": 1,
-        "id": "1",
+        "v": PROTOCOL_VERSION,
         "msg": {
             "type": "place_bid",
             "bid": {"type": "abondance", "tricks": 10, "suit": "S"},
         },
     }
     envelope = ClientEnvelope.model_validate(raw)
-    assert isinstance(envelope.msg, client_messages.PlaceBid)
+    assert isinstance(envelope.msg, protocol.PlaceBid)
     assert envelope.msg.bid.tricks == 10
     assert envelope.msg.bid.suit is SuitCode.SPADES
+
+
+def test_an_envelope_from_an_older_client_still_parses() -> None:
+    """So that a stale client is told to update, not called incomprehensible.
+
+    ``ClientEnvelope`` is the one model that ignores unknown fields. Version 1
+    carried an ``id`` for request/response correlation that nothing ever read; a
+    client still sending it must get as far as the version check.
+    """
+    envelope = ClientEnvelope.model_validate(
+        {"v": 1, "id": "7", "msg": {"type": "request_snapshot"}}
+    )
+    assert envelope.v == 1  # and the handshake will refuse it on that basis
+    assert not hasattr(envelope, "id")
+
+
+def test_the_messages_themselves_still_refuse_extras() -> None:
+    """The envelope is lenient; what it carries is not."""
+    with pytest.raises(ValidationError):
+        ClientEnvelope.model_validate(
+            {"v": PROTOCOL_VERSION, "msg": {"type": "request_snapshot", "sneaky": 1}}
+        )
 
 
 def test_optional_bid_fields_may_be_omitted() -> None:
@@ -121,10 +138,9 @@ def test_every_server_message_round_trips() -> None:
     # Guards against a model that cannot actually be serialised, e.g. because
     # of a field type JSON has no representation for.
     samples: list[ServerMessage] = [
-        server_messages.Pong(),
-        server_messages.TableCleared(),
-        server_messages.CardPlayed(seat=2, card="QD", position_in_trick=3),
-        server_messages.RoundFinished(
+        protocol.TableCleared(),
+        protocol.CardPlayed(seat=2, card="QD"),
+        protocol.RoundFinished(
             tricks_made=8, made=True, deltas={"Jan": "2"}, totals={"Jan": "2"}, text="ok"
         ),
     ]

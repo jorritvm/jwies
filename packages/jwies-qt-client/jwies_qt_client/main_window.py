@@ -56,6 +56,10 @@ BID_LABELS = {
 
 SUIT_CHOOSING_BIDS = {"ask", "abondance", "solo"}
 
+# Enough for a wrapped chat line plus the scrollbar. Also the width the chat
+# opens at, three times over for the table beside it.
+CHAT_MINIMUM_WIDTH = 260
+
 
 def bid_label(bid: dict[str, Any]) -> str:
     """Dutch label for a bid option offered by the server."""
@@ -96,7 +100,7 @@ class MainWindow(QMainWindow):
         connect_action.triggered.connect(self.ask_to_connect)
         menu.addAction(connect_action)
         leave_action = QAction("Tafel &verlaten", self)
-        leave_action.triggered.connect(lambda: self.connection.send("lobby_leave"))
+        leave_action.triggered.connect(self.leave_table)
         menu.addAction(leave_action)
 
         self.statusBar().showMessage("Niet verbonden")
@@ -116,11 +120,18 @@ class MainWindow(QMainWindow):
         self.play_button.setEnabled(False)
         self.last_trick_button = QPushButton("Toon laatste slag")
         self.last_trick_button.setCheckable(True)
+        # Deliberately a button and not a dialog: a round nobody can win any
+        # more is exactly the wrong moment to interrupt the table with a modal.
+        # It sits there quietly and is hidden whenever folding is not on offer.
+        self.fold_button = QPushButton("Ronde opgeven")
+        self.fold_button.setCheckable(True)
+        self.fold_button.hide()
 
         buttons = QWidget()
         button_layout = QVBoxLayout(buttons)
         button_layout.addWidget(self.bid_holder, 1)
         button_layout.addWidget(self.play_button)
+        button_layout.addWidget(self.fold_button)
         button_layout.addWidget(self.last_trick_button)
 
         left = QWidget()
@@ -136,16 +147,25 @@ class MainWindow(QMainWindow):
         chat_layout = QVBoxLayout(chat)
         chat_layout.addWidget(self.chat_log, 1)
         chat_layout.addWidget(self.chat_input)
+        # Without this the chat is squeezed to a sliver: the graphics view's
+        # size hint is large, and a splitter divides space by hint before the
+        # stretch factors get a say.
+        chat.setMinimumWidth(CHAT_MINIMUM_WIDTH)
 
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.addWidget(left)
-        splitter.addWidget(chat)
-        splitter.setStretchFactor(0, 3)
-        splitter.setStretchFactor(1, 1)
+        self.splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.splitter.addWidget(left)
+        self.splitter.addWidget(chat)
+        self.splitter.setStretchFactor(0, 3)
+        self.splitter.setStretchFactor(1, 1)
+        # The default 4px handle is nearly invisible between a green table and a
+        # white chat box, which makes the split look fixed when it is not.
+        self.splitter.setHandleWidth(8)
+        self.splitter.setChildrenCollapsible(False)
+        self.splitter.setSizes([CHAT_MINIMUM_WIDTH * 3, CHAT_MINIMUM_WIDTH])
 
         page = QWidget()
         page_layout = QVBoxLayout(page)
-        page_layout.addWidget(splitter)
+        page_layout.addWidget(self.splitter)
         return page
 
     def _wire(self) -> None:
@@ -160,6 +180,9 @@ class MainWindow(QMainWindow):
 
         self.card_signals.selected.connect(self.on_card_selected)
         self.play_button.clicked.connect(self.on_play_clicked)
+        self.fold_button.clicked.connect(
+            lambda checked: self.connection.send("fold", fold=checked)
+        )
         self.last_trick_button.toggled.connect(self.on_last_trick_toggled)
         self.chat_input.returnPressed.connect(self.on_chat_entered)
 
@@ -194,6 +217,32 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("Verbinden...")
         self.connection.connect_to(url, username, self.settings.resume_token)
 
+    def leave_table(self) -> None:
+        """Get up from the table and go back to the list.
+
+        The switch happens here rather than on a reply, because the moment the
+        server takes you off the member list you stop receiving anything that
+        lobby sends - so waiting for confirmation means waiting forever. The
+        server cannot refuse a leave, so acting on it immediately is safe; the
+        lobby listing it sends back then fills the page.
+        """
+        self.connection.send("lobby_leave")
+        self.state.update(
+            in_game=False,
+            prompt=None,
+            hand=[],
+            trick=[],
+            last_trick=None,
+            contract=None,
+            seats=[],
+            folding_offered=False,
+            folded=[],
+        )
+        self._selected_card = None
+        self._prompt_shown = None
+        self.stack.setCurrentIndex(0)
+        self.statusBar().showMessage("Je hebt de tafel verlaten.")
+
     def autoconnect(self) -> None:
         if self.settings.username:
             self.connection.connect_to(
@@ -214,6 +263,7 @@ class MainWindow(QMainWindow):
             self.lobby_page.set_options(
                 message.get("rulesets") or [], message.get("scorings") or []
             )
+            self.lobby_page.suggest_a_table_name(str(message.get("username") or ""))
             self.statusBar().showMessage(f"Verbonden als {message.get('username')}")
             if not message.get("current_lobby"):
                 self.connection.send("lobby_list")
@@ -223,6 +273,10 @@ class MainWindow(QMainWindow):
             self.append_chat({"text": message["text"], "kind": "system"})
             if message["code"] in ("username_taken", "username_invalid"):
                 QMessageBox.warning(self, "jwies", message["text"])
+            elif self.stack.currentIndex() == 0:
+                # The chat log is on the table page, so on the lobby page that
+                # append above is written into thin air.
+                self.lobby_page.show_error(message["text"])
         elif kind == "lobby_list":
             self.lobby_page.show_lobbies(self.state.get("lobbies", []))
         elif kind in ("player_joined", "player_left", "player_disconnected", "player_reconnected"):
@@ -261,6 +315,7 @@ class MainWindow(QMainWindow):
         prompt = state.get("prompt")
         paused = state.get("paused")
         self.play_button.setEnabled(False)
+        self.refresh_fold_button(state)
 
         if paused:
             self.statusBar().showMessage(
@@ -278,6 +333,26 @@ class MainWindow(QMainWindow):
                 self.bid_layout.addWidget(button)
         elif kind == "play":
             self.play_button.setEnabled(self._selected_card is not None)
+
+    def refresh_fold_button(self, state: dict[str, Any]) -> None:
+        """Show the fold offer, and how many have agreed so far.
+
+        The server decides whether folding is on the table at all - the client
+        neither knows nor guesses when a contract is beyond saving.
+        """
+        offered = bool(state.get("folding_offered"))
+        self.fold_button.setVisible(offered)
+        if not offered:
+            self.fold_button.setChecked(False)
+            return
+
+        folded = state.get("folded") or []
+        mine = state.get("your_seat")
+        # setChecked without blocking would re-emit `clicked`? It does not -
+        # only user interaction emits that - but the state must still follow the
+        # server rather than the last click, in case the vote was refused.
+        self.fold_button.setChecked(mine in folded)
+        self.fold_button.setText(f"Ronde opgeven ({len(folded)}/4)")
 
     # --- reacting ----------------------------------------------------------
 

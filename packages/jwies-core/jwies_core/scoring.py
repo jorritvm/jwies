@@ -17,7 +17,7 @@ from jwies_core.config.scoring_scale import ScoringScale, SoloPayment
 from jwies_core.contracts import Contract
 from jwies_core.seats import Seat
 
-__all__ = ["RoundResult", "score_round"]
+__all__ = ["RoundResult", "payout_is_settled", "score_round"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,6 +58,32 @@ def _contract_value(result: RoundResult, scale: ScoringScale) -> Decimal:
     if scale.losing_is_double:
         value *= 2
     return -value
+
+
+def payout_is_settled(
+    contract: Contract,
+    taken: int,
+    remaining: int,
+    scale: ScoringScale,
+    multiplier: Decimal = Decimal(1),
+) -> bool:
+    """Whether the money is already fixed, however the remaining tricks fall.
+
+    This is what makes folding safe to offer: if every reachable outcome pays
+    exactly the same, nobody can be worse off for agreeing to stop, so consent
+    costs nothing.
+
+    Be warned that it is rarely true. A contract that has gone down is paid per
+    missing trick, and ``per_slag_tekort`` defaults to the full ``basis`` - so on
+    all three shipped scales a bust declarer is still playing for real money
+    with every trick he claws back. It settles only where a scale sets
+    ``per_slag_tekort: 0``, or on the last trick.
+    """
+    values = {
+        _contract_value(RoundResult(contract, total, multiplier), scale)
+        for total in contract.reachable_tricks(taken, remaining)
+    }
+    return len(values) == 1
 
 
 def score_round(result: RoundResult, scale: ScoringScale) -> dict[Seat, Decimal]:

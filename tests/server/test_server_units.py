@@ -96,6 +96,50 @@ class TestChatCommands:
         assert "nog geen" in score_text  # no game running yet
 
 
+class TestTheDeadContractAnnouncement:
+    """The one sentence that has to change a player's mind.
+
+    Seeing "solo slim is niet meer te halen" and then being made to play on
+    looks like the game is wasting your time. It is not: the penalty is charged
+    per missing trick, so the rest of the round is still worth money. If that
+    sentence does not say why, nobody will believe it.
+    """
+
+    @staticmethod
+    def _lost(*, folding_offered: bool) -> object:
+        from jwies_core.contracts import CONTRACT_CATALOG, Contract, ContractKey
+        from jwies_core.events import ContractLost
+
+        spec = CONTRACT_CATALOG[ContractKey.SOLO_SLIM]
+        contract = Contract(
+            spec=spec,
+            declarers=(0,),
+            defenders=(1, 2, 3),
+            trump=None,
+            tricks_required=13,
+            leader=0,
+        )
+        return ContractLost(contract=contract, folding_offered=folding_offered)
+
+    def _sentence(self, *, folding_offered: bool) -> str:
+        from jwies_server.presenter import Presenter
+
+        messages = Presenter({}).messages_for(self._lost(folding_offered=folding_offered))
+        assert len(messages) == 1
+        return str(messages[0].text)
+
+    def test_it_explains_why_the_round_carries_on(self) -> None:
+        sentence = self._sentence(folding_offered=False)
+        assert "solo slim" in sentence
+        assert "niet meer te halen" in sentence
+        assert "per ontbrekende slag" in sentence, "zonder de reden is het gewoon vervelend"
+
+    def test_it_offers_the_way_out_when_there_is_one(self) -> None:
+        sentence = self._sentence(folding_offered=True)
+        assert "mag de ronde stoppen" in sentence
+        assert "per ontbrekende slag" not in sentence
+
+
 class TestDutchSentences:
     """The server renders every player-visible sentence, so nothing may be missing.
 

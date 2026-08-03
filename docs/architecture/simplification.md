@@ -20,6 +20,33 @@
 > actually names - "how does a played card become pixels" - did land: one
 > message type, one reducer arm, one snapshot.
 >
+> **Follow-up, 2026-08-03: the protocol package, revisited.** Item (A) folded
+> `jwies-protocol` into the server but left it as seven files. The question that
+> reopened it was "isn't ~760 lines of pydantic overkill for a hobby project -
+> can't both sides use literals and a `protocol.md` instead?" An audit said the
+> instinct was right and the diagnosis was not: the models are the only inbound
+> validation there is and the only strict-typed part of the server, while three
+> whole messages (`ping`/`pong`, `game_finished`, `lobby_start`) and ~15 fields
+> had **zero readers anywhere**. So the dead surface went and the models stayed:
+>
+> - seven files → one `jwies_server/protocol.py`, 760 → 576 lines. The cut is
+>   smaller than the deleted surface suggests, because the single file carries a
+>   30-line module docstring and a 65-line `__all__` that the seven files spread
+>   between them. File count and indirection were the point, not raw lines.
+> - `lobby_start` was unreachable (the game auto-starts on the fourth join);
+>   `ServerEnvelope.ts` and `.re` were written and never read, so the whole
+>   half-built correlation loop went with them, including `correlation=` threaded
+>   through four `LobbyRuntime` methods
+> - `PROTOCOL_VERSION` is 2, and `ClientEnvelope` alone now ignores unknown
+>   fields so a stale client reaches the version check instead of being told
+>   "onbegrijpelijk bericht"
+> - **[`docs/protocol.md`](../protocol.md)** now exists - the contract for anyone
+>   writing a client, which previously could only be read off server-side pydantic
+> - two new tests: `test_protocol_docs.py` fails when a message or field is
+>   undocumented, and `test_client_protocol_drift.py` is the first thing in the
+>   repo that would notice a client falling behind the server. Both were verified
+>   by deliberately breaking them.
+>
 > The original analysis follows unchanged, as the record of why.
 
 ---

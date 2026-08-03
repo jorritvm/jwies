@@ -39,6 +39,8 @@ class ClientState:
             "pending_seat": None,
             "paused": False,
             "missing": [],
+            "folding_offered": False,
+            "folded": [],
             "round_number": 0,
             "in_game": False,
         }
@@ -54,7 +56,6 @@ class ClientState:
 
     def apply_snapshot(self, snapshot: dict[str, Any]) -> None:
         self.update(
-            lobby=snapshot.get("lobby"),
             seats=snapshot.get("seats") or [],
             your_seat=snapshot.get("your_seat"),
             dealer_seat=snapshot.get("dealer_seat"),
@@ -71,6 +72,8 @@ class ClientState:
             pending_seat=snapshot.get("pending_seat"),
             paused=bool(snapshot.get("paused")),
             missing=snapshot.get("missing_players") or [],
+            folding_offered=bool(snapshot.get("folding_offered")),
+            folded=snapshot.get("folded") or [],
             round_number=snapshot.get("round_number") or 0,
             in_game=True,
         )

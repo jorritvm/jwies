@@ -213,6 +213,11 @@ class BidLadder:
         for key in self._order:
             if key is ContractKey.ALLIANCE:
                 continue  # handled below as ask/join
+            if key is ContractKey.TROEL:
+                # Never a choice. Troel is a fact about the deal - three or four
+                # aces in one hand - so the engine detects it and forces the bid
+                # itself. Offering it here would let anyone claim it.
+                continue
             rank = self.ruleset.rank_of(key)
             if rank is not None and rank >= floor:
                 options.append(_contract_key_to_bid(key))

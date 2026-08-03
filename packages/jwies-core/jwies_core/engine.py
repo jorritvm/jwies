@@ -41,10 +41,13 @@ from jwies_core.events import (
     CardPlayed,
     CardsDealt,
     ContractEstablished,
+    ContractLost,
     Cut,
     DealerAnnounced,
     DeckCut,
     Event,
+    Fold,
+    FoldingChanged,
     GameFinished,
     IllegalAction,
     PlaceBid,
@@ -56,7 +59,7 @@ from jwies_core.events import (
     TrumpTurned,
 )
 from jwies_core.resolution import RedealReason, resolve_contract
-from jwies_core.scoring import RoundResult, score_round
+from jwies_core.scoring import RoundResult, payout_is_settled, score_round
 from jwies_core.seats import (
     ALL_SEATS,
     FIRST_SEAT,
@@ -103,6 +106,21 @@ class Prompt:
     cut_maximum: int = 0
 
 
+_PROMPT_FOR_ACTION: dict[type, PromptKind] = {
+    Shuffle: PromptKind.SHUFFLE,
+    Cut: PromptKind.CUT,
+    PlaceBid: PromptKind.BID,
+    PlayCard: PromptKind.PLAY,
+}
+
+_WHAT_IS_ASKED: dict[PromptKind, str] = {
+    PromptKind.SHUFFLE: "een antwoord over het schudden",
+    PromptKind.CUT: "een aantal kaarten om af te nemen",
+    PromptKind.BID: "een bod",
+    PromptKind.PLAY: "een kaart",
+}
+
+
 @dataclass
 class _RoundState:
     """Everything that resets between rounds."""
@@ -124,6 +142,9 @@ class _RoundState:
     defender_won: list[tuple[Card, ...]] = field(default_factory=list)
     tricks_played: int = 0
     to_play: Seat | None = None
+    # Seats willing to stop this round early. Cleared with the round.
+    folded: set[Seat] = field(default_factory=set)
+    contract_lost_announced: bool = False
 
     @property
     def declarer_tricks(self) -> int:
@@ -267,11 +288,31 @@ class GameEngine:
 
     def apply(self, seat: Seat, action: Action) -> list[Event]:
         """Apply one action, returning the events it caused."""
+        # Folding is the table deciding something together rather than one
+        # player taking his turn, so it is the one action that does not wait
+        # for the prompt to come round.
+        if isinstance(action, Fold):
+            return self._apply_fold(seat, action)
+
         prompt = self.pending()
         if prompt is None:
             raise IllegalAction("er wordt op dit moment niets van je verwacht")
         if prompt.seat != seat:
             raise IllegalAction("het is niet jouw beurt")
+
+        # Being the right player is not enough: the action has to be the one
+        # actually being asked for. A card played a moment too late arrives in
+        # the next round, where the same seat may well be the dealer and so pass
+        # the check above - and then a play would run against a hand that has
+        # not been dealt yet. That is a crash, and a crash takes the table down
+        # with it, so it is refused here as an ordinary illegal move.
+        expected = _PROMPT_FOR_ACTION.get(type(action))
+        if expected is None:
+            raise IllegalAction("onbekende actie")
+        if prompt.kind is not expected:
+            raise IllegalAction(
+                f"dat kan nu niet: er wordt {_WHAT_IS_ASKED[prompt.kind]} van je verwacht"
+            )
 
         match action:
             case Shuffle():
@@ -283,6 +324,50 @@ class GameEngine:
             case PlayCard():
                 return self._apply_play(seat, action)
         raise IllegalAction("onbekende actie")
+
+    # --- folding ----------------------------------------------------------
+
+    def tricks_remaining(self) -> int:
+        return CARDS_PER_HAND - self.round.tricks_played
+
+    def folding_is_offered(self) -> bool:
+        """Whether stopping early is on the table right now.
+
+        Three things must hold at once: the ruleset allows it, the contract can
+        no longer be made, and the money is already fixed however the rest falls.
+        That last one is what makes agreeing to stop free of consequence - and
+        also what makes the offer rare, since a contract that has gone down is
+        normally paid per missing trick. See ``payout_is_settled``.
+        """
+        contract = self.round.contract
+        if not self.ruleset.play.folding_allowed or contract is None:
+            return False
+        if self.phase is not Phase.PLAYING:
+            return False
+
+        taken, remaining = self.round.declarer_tricks, self.tricks_remaining()
+        if contract.can_still_be_made(taken, remaining):
+            return False
+        return payout_is_settled(contract, taken, remaining, self.scale, self.round.multiplier)
+
+    def _apply_fold(self, seat: Seat, action: Fold) -> list[Event]:
+        if not self.folding_is_offered():
+            raise IllegalAction("er valt op dit moment niets op te geven")
+
+        before = set(self.round.folded)
+        if action.fold:
+            self.round.folded.add(seat)
+        else:
+            self.round.folded.discard(seat)
+        if self.round.folded == before:
+            return []
+
+        events: list[Event] = [FoldingChanged(folded=frozenset(self.round.folded))]
+        if len(self.round.folded) < len(ALL_SEATS):
+            return events
+
+        # Everyone agreed. The cards are gathered up exactly as they lie.
+        return events + self._score_round(folded=True)
 
     def _apply_shuffle(self, action: Shuffle) -> list[Event]:
         if action.shuffle:
@@ -469,9 +554,28 @@ class GameEngine:
 
         if self.round.tricks_played == CARDS_PER_HAND:
             events.extend(self._score_round())
+            return events
+
+        events.extend(self._announce_if_the_contract_just_died())
         return events
 
-    def _score_round(self) -> list[Event]:
+    def _announce_if_the_contract_just_died(self) -> list[Event]:
+        """Say so once, the first trick after the contract becomes unmakeable.
+
+        Players reasonably assume a dead contract makes the rest of the round
+        pointless. It usually is not: the penalty is charged per missing trick,
+        so what happens next still moves money. Nothing else in the game would
+        tell them that.
+        """
+        contract = self.round.contract
+        if contract is None or self.round.contract_lost_announced:
+            return []
+        if contract.can_still_be_made(self.round.declarer_tricks, self.tricks_remaining()):
+            return []
+        self.round.contract_lost_announced = True
+        return [ContractLost(contract=contract, folding_offered=self.folding_is_offered())]
+
+    def _score_round(self, *, folded: bool = False) -> list[Event]:
         contract = self.round.contract
         assert contract is not None
         result = RoundResult(
@@ -494,6 +598,7 @@ class GameEngine:
                 made=result.made,
                 deltas=dict(deltas),
                 totals=dict(self.totals),
+                folded=folded,
             )
         ]
 
@@ -514,6 +619,11 @@ class GameEngine:
         for seat in seat_order_from(left_of(self.round.dealer)):
             self._deck.extend(self.round.hands.get(seat, []))
             self.round.hands[seat] = []
+        # A fold can land halfway through a trick, leaving cards on the table
+        # that nobody won. They are scooped up with the hands, which is what
+        # happens in the flesh. Empty after a round that ran its full course.
+        self._deck.extend(played.card for played in self.round.trick)
+        self.round.trick = []
         for won in [*self.round.declarer_won, *self.round.defender_won]:
             self._deck.extend(won)
         self.round.declarer_won.clear()

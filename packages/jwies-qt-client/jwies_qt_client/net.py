@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 # and reads them by hand, exactly like the browser client does. So the version
 # lives here as a plain number rather than being imported from the server; the
 # handshake is what catches a mismatch.
-PROTOCOL_VERSION = 1
+PROTOCOL_VERSION = 2
 
 INITIAL_BACKOFF_MS = 1000
 MAX_BACKOFF_MS = 30000
@@ -44,7 +44,6 @@ class ServerConnection(QObject):
         self.url = ""
         self.username = ""
         self.resume_token: str | None = None
-        self._counter = 0
         self._backoff = INITIAL_BACKOFF_MS
         self._wanted = False
         self._last_seq = 0
@@ -71,13 +70,7 @@ class ServerConnection(QObject):
     def _on_connected(self) -> None:
         self._backoff = INITIAL_BACKOFF_MS
         self._last_seq = 0
-        self.send(
-            "hello",
-            username=self.username,
-            client="qt",
-            client_version="1",
-            resume_token=self.resume_token,
-        )
+        self.send("hello", username=self.username, resume_token=self.resume_token)
         self.connected.emit()
 
     def _on_disconnected(self) -> None:
@@ -119,10 +112,5 @@ class ServerConnection(QObject):
     def send(self, message_type: str, **fields: object) -> None:
         if self.socket.state().value != 3:  # QAbstractSocket.SocketState.ConnectedState
             return
-        self._counter += 1
-        payload = {
-            "v": PROTOCOL_VERSION,
-            "id": str(self._counter),
-            "msg": {"type": message_type, **fields},
-        }
+        payload = {"v": PROTOCOL_VERSION, "msg": {"type": message_type, **fields}}
         self.socket.sendTextMessage(json.dumps(payload))

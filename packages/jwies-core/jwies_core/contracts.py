@@ -195,3 +195,17 @@ class Contract:
         if self.spec.comparison == "exactly":
             return tricks_by_declarers == self.tricks_required
         return tricks_by_declarers >= self.tricks_required
+
+    def reachable_tricks(self, taken: int, remaining: int) -> range:
+        """Every total the declaring side could still finish on."""
+        return range(taken, taken + remaining + 1)
+
+    def can_still_be_made(self, taken: int, remaining: int) -> bool:
+        """Whether any way of playing the rest still fulfils the promise.
+
+        Written as a search over the reachable totals rather than as arithmetic,
+        so it holds for both comparisons without a special case: a misere dies
+        the moment its declarer takes one trick, a solo slim the moment he drops
+        one, and both fall out of ``is_made``.
+        """
+        return any(self.is_made(total) for total in self.reachable_tricks(taken, remaining))

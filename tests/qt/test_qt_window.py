@@ -16,7 +16,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from jwies_qt_client.main_window import MainWindow
+from jwies_qt_client.main_window import CHAT_MINIMUM_WIDTH, MainWindow
 from jwies_qt_client.settings import ClientSettings
 from PyQt6.QtWidgets import QApplication, QInputDialog, QMessageBox
 
@@ -36,15 +36,6 @@ def window(application: QApplication, tmp_path) -> MainWindow:
 SNAPSHOT = {
     "type": "snapshot",
     "snapshot": {
-        "lobby": {
-            "id": "l1",
-            "name": "Testtafel",
-            "host": "Jan",
-            "ruleset": "klassiek",
-            "scoring": "schaal_a",
-            "status": "running",
-            "members": [],
-        },
         "phase": "playing",
         "round_number": 1,
         "multiplier": "1",
@@ -56,32 +47,24 @@ SNAPSHOT = {
                 "username": "Jan",
                 "connected": True,
                 "is_dealer": False,
-                "is_declarer": True,
-                "total": "0",
             },
             {
                 "seat": 1,
                 "username": "Piet",
                 "connected": True,
                 "is_dealer": False,
-                "is_declarer": False,
-                "total": "0",
             },
             {
                 "seat": 2,
                 "username": "Joris",
                 "connected": False,
                 "is_dealer": False,
-                "is_declarer": False,
-                "total": "0",
             },
             {
                 "seat": 3,
                 "username": "Korneel",
                 "connected": True,
                 "is_dealer": True,
-                "is_declarer": False,
-                "total": "0",
             },
         ],
         "your_hand": ["AH", "KD", "10S", "2C", "QH"],
@@ -94,9 +77,7 @@ SNAPSHOT = {
             "name": "alleen gaan",
             "tricks_required": 5,
             "declarers": [0],
-            "defenders": [1, 2, 3],
             "trump": "H",
-            "open_hand": False,
         },
         "current_trick": [{"seat": 3, "card": "3H"}],
         "last_trick": None,
@@ -136,6 +117,104 @@ def snapshot(**overrides: Any) -> dict[str, Any]:
     return {"type": "snapshot", "snapshot": {**SNAPSHOT["snapshot"], **overrides}}
 
 
+class TestFolding:
+    """Stopping a lost round early is offered as a button, never as a dialog.
+
+    A round nobody can win any more is the worst possible moment to interrupt
+    the table with a modal, so this one deliberately does not go through
+    ``react_to_prompt``. It is drawn from the snapshot like everything else.
+    """
+
+    def test_it_is_hidden_until_the_server_offers_it(self, window: MainWindow) -> None:
+        window.on_message(SNAPSHOT)
+        assert window.fold_button.isHidden()
+
+    def test_it_appears_with_the_tally(self, window: MainWindow) -> None:
+        window.show()
+        window.on_message(snapshot(folding_offered=True, folded=[1, 3]))
+        assert window.fold_button.isVisible()
+        assert "2/4" in window.fold_button.text()
+
+    def test_it_shows_whether_you_agreed(self, window: MainWindow) -> None:
+        window.on_message(snapshot(folding_offered=True, folded=[1, 3]))
+        assert not window.fold_button.isChecked(), "stoel 0 heeft niet opgegeven"
+        window.on_message(snapshot(folding_offered=True, folded=[0, 1, 3]))
+        assert window.fold_button.isChecked()
+
+    def test_the_server_has_the_last_word(self, window: MainWindow) -> None:
+        """A click is a request, not a decision - the snapshot corrects it."""
+        window.on_message(snapshot(folding_offered=True, folded=[]))
+        window.fold_button.setChecked(True)
+        window.on_message(snapshot(folding_offered=True, folded=[]))
+        assert not window.fold_button.isChecked()
+
+    def test_it_disappears_again_when_the_offer_lapses(self, window: MainWindow) -> None:
+        window.show()
+        window.on_message(snapshot(folding_offered=True, folded=[0]))
+        assert window.fold_button.isVisible()
+        window.on_message(snapshot(folding_offered=False, folded=[]))
+        assert window.fold_button.isHidden()
+        assert not window.fold_button.isChecked()
+
+    def test_offering_it_opens_no_dialog(
+        self, window: MainWindow, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        opened: list[str] = []
+
+        def refuse_to_be_opened(*_args: object, **_kwargs: object) -> tuple[int, bool]:
+            opened.append("dialog")
+            return 0, False
+
+        monkeypatch.setattr(QMessageBox, "question", staticmethod(refuse_to_be_opened))
+        monkeypatch.setattr(QInputDialog, "getInt", staticmethod(refuse_to_be_opened))
+        window.on_message(snapshot(folding_offered=True, folded=[0, 1, 2]))
+        window.refresh_table()
+        assert opened == []
+
+
+class TestErrorsOnTheLobbyPage:
+    """A refusal has to be visible on the page you are looking at.
+
+    Errors went only to the chat log, which lives on the table page - so being
+    refused a new table looked exactly like the button doing nothing, and the
+    obvious conclusion was that the server could only host one game.
+    """
+
+    def test_a_refusal_is_shown_on_the_lobby_page(self, window: MainWindow) -> None:
+        window.on_message(
+            {"type": "error", "code": "lobby_exists", "text": "Er is al een lobby met die naam."}
+        )
+        assert window.lobby_page.error_label.isVisible() or not window.lobby_page.isVisible()
+        assert "al een lobby" in window.lobby_page.error_label.text()
+
+    def test_a_fresh_listing_clears_it(self, window: MainWindow) -> None:
+        window.on_message({"type": "error", "code": "lobby_exists", "text": "Bezet."})
+        window.on_message({"type": "lobby_list", "lobbies": []})
+        assert window.lobby_page.error_label.isHidden()
+
+    def test_at_the_table_it_still_goes_to_the_chat(self, window: MainWindow) -> None:
+        window.on_message(SNAPSHOT)  # switches to the table page
+        window.on_message({"type": "error", "code": "illegal_move", "text": "Mag niet."})
+        assert "Mag niet." in window.chat_log.toPlainText()
+        assert window.lobby_page.error_label.text() == ""
+
+    def test_the_suggested_table_name_is_your_own(self, window: MainWindow) -> None:
+        """Everybody starting from the same name is what caused the clash."""
+        window.on_message(
+            {"type": "hello_ok", "username": "Korneel", "resume_token": "t",
+             "current_lobby": None, "rulesets": [], "scorings": []}
+        )
+        assert window.lobby_page.new_name.text() == "Tafel van Korneel"
+
+    def test_a_name_you_typed_yourself_is_left_alone(self, window: MainWindow) -> None:
+        window.lobby_page.new_name.setText("De Kaartclub")
+        window.on_message(
+            {"type": "hello_ok", "username": "Korneel", "resume_token": "t",
+             "current_lobby": None, "rulesets": [], "scorings": []}
+        )
+        assert window.lobby_page.new_name.text() == "De Kaartclub"
+
+
 def test_the_window_builds(window: MainWindow) -> None:
     assert window.windowTitle().startswith("jwies")
 
@@ -151,6 +230,55 @@ def test_only_the_legal_cards_are_clickable(window: MainWindow) -> None:
     window.on_message(SNAPSHOT)
     playable = {card.code for card in window.scene.own_hand if card.is_playable}
     assert playable == {"AH", "QH"}
+
+
+def test_your_hand_is_never_drawn_faded(window: MainWindow) -> None:
+    """Your cards look the same at every stage of the round.
+
+    The illegal ones used to be drawn at 55% opacity while it was your turn,
+    which made the whole hand look greyed out at exactly the moment you were
+    being asked to act. Legality decides what you can click, not how it looks.
+    """
+    window.on_message(SNAPSHOT)  # a `play` prompt where only AH and QH are legal
+    assert window.state["prompt"]["kind"] == "play"
+    faded = {card.code: card.opacity() for card in window.scene.own_hand if card.opacity() < 1.0}
+    assert not faded, f"deze kaarten zijn doorschijnend: {faded}"
+
+
+class TestTheChatIsUsable:
+    """The chat pane opens wide enough to read, and the split can be dragged.
+
+    It used to open at about 100px: a splitter divides space by size hint before
+    the stretch factors get a say, and the graphics view's hint is large. The
+    handle was 4px, which between a green table and a white box reads as no
+    handle at all.
+    """
+
+    def test_it_opens_wide_enough_to_read(self, window: MainWindow) -> None:
+        window.show()
+        table, chat = window.splitter.sizes()
+        assert chat >= CHAT_MINIMUM_WIDTH, f"chat opent op {chat}px"
+        assert table > chat, "de tafel hoort nog altijd het grootste deel te krijgen"
+
+    def test_the_handle_can_be_grabbed(self, window: MainWindow) -> None:
+        assert window.splitter.handleWidth() >= 6
+
+    def test_the_split_is_set_explicitly(self, window: MainWindow) -> None:
+        """Left to its own devices the splitter gave the chat about 9%.
+
+        A share is asserted rather than a pixel count: the offscreen platform
+        decides how wide the window really is, and at any width the chat should
+        get a usable fraction of it.
+        """
+        window.show()
+        table, chat = window.splitter.sizes()
+        share = chat / (table + chat)
+        assert share > 0.2, f"chat krijgt maar {share:.0%} van de breedte"
+
+    def test_neither_side_can_be_collapsed_away(self, window: MainWindow) -> None:
+        window.show()
+        window.splitter.setSizes([2000, 0])
+        assert min(window.splitter.sizes()) > 0
 
 
 def test_the_trick_counter_shows_dutch(window: MainWindow) -> None:
@@ -196,7 +324,6 @@ def test_chat_text_from_the_server_is_shown_as_is(window: MainWindow) -> None:
             "kind": "server",
             "text": "Jan wint de slag.",
             "sender": None,
-            "private": False,
         }
     )
     assert "Jan wint de slag." in window.chat_log.toPlainText()

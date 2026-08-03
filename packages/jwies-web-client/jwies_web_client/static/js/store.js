@@ -36,6 +36,8 @@ export class Store extends EventTarget {
       pendingSeat: null,
       paused: false,
       missing: [],
+      foldingOffered: false,
+      folded: [],
       chat: [],
       showLastTrick: false,
       roundNumber: 0,
@@ -55,7 +57,6 @@ export class Store extends EventTarget {
 
   applySnapshot(snapshot) {
     this.update({
-      lobby: snapshot.lobby,
       seats: snapshot.seats,
       yourSeat: snapshot.your_seat,
       dealerSeat: snapshot.dealer_seat,
@@ -72,6 +73,8 @@ export class Store extends EventTarget {
       pendingSeat: snapshot.pending_seat,
       paused: snapshot.paused,
       missing: snapshot.missing_players ?? [],
+      foldingOffered: snapshot.folding_offered ?? false,
+      folded: snapshot.folded ?? [],
       roundNumber: snapshot.round_number ?? 0,
       screen: "table",
     });

@@ -36,6 +36,7 @@ export class TableView {
     this.pauseOverlay = document.getElementById("pause-overlay");
     this.pauseText = document.getElementById("pause-text");
     this.lastTrickButton = document.getElementById("btn-last-trick");
+    this.foldBox = document.getElementById("fold-box");
 
     this.lastTrickButton.addEventListener("click", () => {
       const showing = this.lastTrickButton.getAttribute("aria-pressed") === "true";
@@ -46,6 +47,7 @@ export class TableView {
 
   render() {
     const state = this.store.state;
+    this.renderFold(state);
     this.renderSeats(state);
     this.renderTrick(state);
     this.renderTrump(state);
@@ -236,6 +238,26 @@ export class TableView {
       button.disabled = !this.selected;
       this.actionBox.append(heading(LABELS.yourTurn), button);
     }
+  }
+
+  /** De knop om een verloren ronde vroegtijdig te stoppen.
+   *
+   * Bewust een knop naast de tafel en geen dialoogvenster: een ronde die
+   * niemand nog kan winnen is precies het verkeerde moment om de tafel te
+   * onderbreken. De server beslist of opgeven uberhaupt aan de orde is.
+   */
+  renderFold(state) {
+    this.foldBox.replaceChildren();
+    if (!state.foldingOffered || state.paused) return;
+
+    const folded = state.folded ?? [];
+    const mine = folded.includes(state.yourSeat);
+    const button = actionButton(
+      fill(mine ? LABELS.foldWaiting : LABELS.fold, { aantal: folded.length }),
+      () => this.actions.fold(!mine),
+    );
+    button.classList.toggle("pressed", mine);
+    this.foldBox.appendChild(button);
   }
 
   renderScoreboard(state) {

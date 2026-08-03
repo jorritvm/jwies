@@ -21,10 +21,13 @@ __all__ = [
     "CardPlayed",
     "CardsDealt",
     "ContractEstablished",
+    "ContractLost",
     "Cut",
     "DealerAnnounced",
     "DeckCut",
     "Event",
+    "Fold",
+    "FoldingChanged",
     "GameFinished",
     "IllegalAction",
     "PlaceBid",
@@ -71,7 +74,19 @@ class PlayCard:
     card: Card
 
 
-Action = Shuffle | Cut | PlaceBid | PlayCard
+@dataclass(frozen=True, slots=True)
+class Fold:
+    """Vote to stop a lost round early, or withdraw that vote.
+
+    Unlike every other action this one is not taken in turn: the table is
+    deciding something together, so any seat may cast or change its vote at any
+    moment while the offer stands.
+    """
+
+    fold: bool = True
+
+
+Action = Shuffle | Cut | PlaceBid | PlayCard | Fold
 
 
 # --- events ------------------------------------------------------------------
@@ -144,12 +159,36 @@ class TrickCompleted:
 
 
 @dataclass(frozen=True, slots=True)
+class ContractLost:
+    """The contract can no longer be made. Emitted once, the moment it happens.
+
+    Worth saying out loud because what follows is counter-intuitive: the round
+    normally carries on, and it still matters. A contract that goes down is paid
+    per missing trick, so every trick the declaring side claws back from here
+    lowers what they owe. ``folding_offered`` says whether this table is instead
+    free to stop, which it only is when the penalty does not vary.
+    """
+
+    contract: Contract
+    folding_offered: bool
+
+
+@dataclass(frozen=True, slots=True)
+class FoldingChanged:
+    """The set of seats willing to stop early has changed."""
+
+    folded: frozenset[Seat]
+
+
+@dataclass(frozen=True, slots=True)
 class RoundScored:
     contract: Contract
     tricks_made: int
     made: bool
     deltas: dict[Seat, Decimal]
     totals: dict[Seat, Decimal]
+    # True when the table agreed to stop before the last trick was played.
+    folded: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -168,6 +207,8 @@ Event = (
     | ContractEstablished
     | CardPlayed
     | TrickCompleted
+    | ContractLost
+    | FoldingChanged
     | RoundScored
     | GameFinished
 )

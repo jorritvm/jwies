@@ -139,8 +139,11 @@ VERBONDEN --(socket dicht)--> WEG
 WEG --(hello, zelfde naam)--> VERBONDEN
     hello_ok -> lobby_state -> snapshot   (volledige resync)
     is niemand meer weg: game_resumed + iedereen een nieuwe snapshot
-WEG --(na stoel_vrijgeven_na_minuten)--> stoel vrij
+WEG --(lobby_leave, of de lobby wordt opgeruimd)--> stoel vrij
 ```
+
+Een stoel komt niet vanzelf vrij: het spel blijft wachten. Wie weg is, blijft
+zijn stoel houden zolang de lobby bestaat.
 
 Omdat `pending()` idempotent is, staat de openstaande beurt gewoon weer in de
 volgende momentopname. De server houdt nooit bij dat hij iemand al iets gevraagd
@@ -171,18 +174,25 @@ observatie van een AI.
 Elk bericht zit in een envelop:
 
 ```json
-{"v": 1, "id": "7", "msg": {"type": "play_card", "card": "AH"}}
+{"v": 2, "msg": {"type": "play_card", "card": "AH"}}
 ```
 
-De server antwoordt met `{"v":1,"seq":42,"re":"7","ts":"...","msg":{...}}`.
-`seq` loopt op per verbinding; een gat betekent dat de client iets miste en
-een nieuwe snapshot moet vragen. `re` verwijst naar de `id` van het bericht dat
-het antwoord uitlokte.
+De server antwoordt met `{"v":2,"seq":42,"msg":{...}}`. `seq` loopt op per
+verbinding; een gat betekent dat de client iets miste en een nieuwe momentopname
+moet vragen.
 
-De volledige berichtenlijst staat in
-`packages/jwies-server/jwies_server/protocol/client_messages.py` en `server_messages.py`.
-Dat zijn pydantic-modellen met een discriminator op `type`, dus een onbekend
-berichttype is een validatiefout en geen stilzwijgend genegeerd bericht.
+**Het volledige protocol staat in [`docs/protocol.md`](../protocol.md)** - elk
+bericht, elk veld, elke foutcode. Dat document is het contract voor wie een
+client schrijft.
+
+De server dwingt het af met pydantic-modellen in
+`packages/jwies-server/jwies_server/protocol.py`, met een discriminator op
+`type`, dus een onbekend berichttype is een validatiefout en geen stilzwijgend
+genegeerd bericht. Geen van beide clients importeert die modellen: allebei
+bouwen ze hun JSON met de hand op. Twee tests houden dat eerlijk -
+`tests/server/test_protocol_docs.py` bewaakt dat het document niet achterloopt
+op de modellen, en `tests/e2e/test_client_protocol_drift.py` dat geen client een
+naam gebruikt die niet meer bestaat.
 
 ## Wat er van de oude versie overbleef
 

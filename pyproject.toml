@@ -45,7 +45,7 @@ ignore = [
 # as a field default is safe here (and is the documented way to write it).
 "packages/jwies-core/jwies_core/config/*.py" = ["RUF012"]
 "packages/jwies-server/jwies_server/config.py" = ["RUF012"]
-"packages/jwies-server/jwies_server/protocol/*.py" = ["RUF012"]
+"packages/jwies-server/jwies_server/protocol.py" = ["RUF012"]
 
 [tool.mypy]
 python_version = "3.13"
@@ -55,7 +55,7 @@ no_implicit_optional = true
 strict_equality = true
 
 [[tool.mypy.overrides]]
-module = ["jwies_core.*", "jwies_server.protocol.*"]
+module = ["jwies_core.*", "jwies_server.protocol"]
 strict = true
 
 [tool.pytest.ini_options]

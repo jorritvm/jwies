@@ -10,7 +10,6 @@ from __future__ import annotations
 import re
 import secrets
 import time
-import uuid
 from dataclasses import dataclass, field
 from enum import Enum, auto
 
@@ -34,8 +33,9 @@ class HelloOutcome(Enum):
 class Session:
     """One player's identity, independent of any particular connection."""
 
+    # The username *is* the identity: sessions are keyed by it case-insensitively
+    # and reconnect binds on it, so there is no separate player id to keep.
     username: str
-    player_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     resume_token: str = field(default_factory=lambda: secrets.token_urlsafe(16))
     lobby_id: str | None = None
     seat: int | None = None

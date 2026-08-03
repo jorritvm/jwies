@@ -20,13 +20,15 @@ from decimal import Decimal
 from jwies_core.bidding import Bid, BidType
 from jwies_core.cards import Suit
 from jwies_core.contracts import Contract, ContractKey
-from jwies_core.engine import Prompt as EnginePrompt
+from jwies_core.engine import Prompt
 from jwies_core.events import (
     BidPlaced,
     CardPlayed,
     ContractEstablished,
+    ContractLost,
     DealerAnnounced,
     Event,
+    FoldingChanged,
     GameFinished,
     RedealRequired,
     RoundScored,
@@ -35,15 +37,10 @@ from jwies_core.events import (
 )
 from jwies_core.seats import Seat
 
-from jwies_server.protocol import (
-    BidInfo,
-    ContractInfo,
-    PlayedCardInfo,
-    Prompt,
-    ServerMessage,
-    TrickCounts,
-    server_messages,
-)
+# Qualified rather than imported by name: half of the engine's event types share
+# a name with the wire message they turn into, which is the clearest possible
+# sign that they are two different things.
+from jwies_server import protocol
 
 __all__ = ["Presenter"]
 
@@ -140,23 +137,21 @@ class Presenter:
     # --- conversions -------------------------------------------------------
 
     @staticmethod
-    def bid_info(bid: Bid) -> BidInfo:
-        return BidInfo(type=bid.type, tricks=bid.tricks, suit=bid.suit)
+    def bid_info(bid: Bid) -> protocol.BidInfo:
+        return protocol.BidInfo(type=bid.type, tricks=bid.tricks, suit=bid.suit)
 
-    def contract_info(self, contract: Contract) -> ContractInfo:
+    def contract_info(self, contract: Contract) -> protocol.ContractInfo:
         trump = contract.trump
-        return ContractInfo(
+        return protocol.ContractInfo(
             key=contract.key,
             name=self.contract_name(contract),
             tricks_required=contract.tricks_required,
             declarers=tuple(contract.declarers),
-            defenders=tuple(contract.defenders),
             trump=trump if isinstance(trump, Suit) else None,
-            open_hand=contract.spec.open_hand,
         )
 
-    def prompt(self, prompt: EnginePrompt) -> Prompt:
-        return Prompt(
+    def prompt(self, prompt: Prompt) -> protocol.Prompt:
+        return protocol.Prompt(
             kind=prompt.kind,
             bid_options=tuple(self.bid_info(bid) for bid in prompt.bid_options),
             legal_cards=tuple(card.code for card in prompt.legal_cards),
@@ -179,7 +174,7 @@ class Presenter:
 
     # --- events ------------------------------------------------------------
 
-    def messages_for(self, event: Event) -> list[ServerMessage]:
+    def messages_for(self, event: Event) -> list[protocol.ServerMessage]:
         """What one engine event puts on the wire.
 
         Most events produce only their Dutch sentence: the state they describe
@@ -190,7 +185,7 @@ class Presenter:
         """
         match event:
             case DealerAnnounced():
-                messages: list[ServerMessage] = [
+                messages: list[protocol.ServerMessage] = [
                     self.chat(
                         f"Ronde {event.round_number}. De deler is {self.name_of(event.dealer)}."
                     )
@@ -218,54 +213,71 @@ class Presenter:
 
             case CardPlayed():
                 return [
-                    server_messages.CardPlayed(
-                        seat=int(event.seat),
-                        card=event.card.code,
-                        position_in_trick=event.position_in_trick,
-                    )
+                    protocol.CardPlayed(seat=int(event.seat), card=event.card.code)
                 ]
 
             case TrickCompleted():
                 text = f"{self.name_of(event.winner)} wint de slag."
                 return [
-                    server_messages.TrickCompleted(
+                    protocol.TrickCompleted(
                         winner_seat=int(event.winner),
                         cards=tuple(
-                            PlayedCardInfo(seat=int(seat), card=card.code)
+                            protocol.PlayedCardInfo(seat=int(seat), card=card.code)
                             for seat, card in event.cards
                         ),
-                        trick_counts=TrickCounts(
+                        trick_counts=protocol.TrickCounts(
                             declarers=event.declarer_tricks,
                             defenders=event.defender_tricks,
                         ),
-                        text=text,
                     ),
                     self.chat(text),
+                ]
+
+            case ContractLost():
+                name = self.contract_name(event.contract)
+                if event.folding_offered:
+                    return [
+                        self.chat(
+                            f"{name} is niet meer te halen. De punten liggen vast, "
+                            "dus de tafel mag de ronde stoppen."
+                        )
+                    ]
+                # The counter-intuitive case, and the reason to say anything at
+                # all: a dead contract is not a dead round.
+                return [
+                    self.chat(
+                        f"{name} is niet meer te halen. Er wordt toch uitgespeeld: "
+                        "de boete wordt per ontbrekende slag gerekend, dus elke slag "
+                        "die de spelende partij nog binnenhaalt, scheelt punten."
+                    )
+                ]
+
+            case FoldingChanged():
+                if not event.folded:
+                    return [self.chat("De ronde wordt toch uitgespeeld.")]
+                names = ", ".join(sorted(self.name_of(seat) for seat in event.folded))
+                return [
+                    self.chat(f"Wil stoppen: {names} ({len(event.folded)} van de 4).")
                 ]
 
             case RoundScored():
                 return self._round_scored(event)
 
             case GameFinished():
-                totals = {
-                    self.name_of(seat): _decimal(value) for seat, value in event.totals.items()
-                }
-                text = "Het spel is afgelopen."
-                return [
-                    server_messages.GameFinished(totals=totals, text=text),
-                    self.chat(text),
-                ]
+                return [self.chat("Het spel is afgelopen.")]
 
             case _:
                 return []
 
-    def _round_scored(self, event: RoundScored) -> list[ServerMessage]:
+    def _round_scored(self, event: RoundScored) -> list[protocol.ServerMessage]:
         verdict = "Contract gehaald!" if event.made else "Contract niet gehaald:"
         lines = [
             f"{verdict} {event.tricks_made} van de {event.contract.tricks_required} "
             "beloofde slagen.",
-            "Punten deze ronde:",
         ]
+        if event.folded:
+            lines.append("De tafel is akkoord om de ronde hier te stoppen.")
+        lines.append("Punten deze ronde:")
         for seat, delta in event.deltas.items():
             lines.append(
                 f"  {self.name_of(seat)}: {_decimal(delta)} (totaal {_decimal(event.totals[seat])})"
@@ -273,7 +285,7 @@ class Presenter:
         text = "\n".join(lines)
 
         return [
-            server_messages.RoundFinished(
+            protocol.RoundFinished(
                 tricks_made=event.tricks_made,
                 made=event.made,
                 deltas={
@@ -289,10 +301,8 @@ class Presenter:
 
     # --- helpers -----------------------------------------------------------
 
-    def chat(self, text: str, *, private: bool = False) -> server_messages.Chat:
-        return server_messages.Chat(
-            kind=server_messages.ChatKind.SERVER, text=text, private=private
-        )
+    def chat(self, text: str) -> protocol.Chat:
+        return protocol.Chat(kind=protocol.ChatKind.SERVER, text=text)
 
-    def error(self, code: str, text: str) -> server_messages.Error:
-        return server_messages.Error(code=code, text=text)  # type: ignore[arg-type]
+    def error(self, code: str, text: str) -> protocol.Error:
+        return protocol.Error(code=code, text=text)  # type: ignore[arg-type]

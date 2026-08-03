@@ -64,7 +64,7 @@ async def test_a_disconnect_pauses_the_game_and_a_return_resumes_it(server: str)
         # While paused, moves are refused rather than silently swallowed.
         await jan.send("play_card", card="AH")
         error = await jan.wait_for("error", timeout=10)
-        assert error["code"] in ("game_paused", "not_your_turn", "illegal_move")
+        assert error["code"] in ("game_paused", "illegal_move")
 
         # Chat keeps working so people can say they are coming back.
         await piet.send("chat_send", text="even wachten op Korneel")
@@ -146,6 +146,31 @@ async def test_the_outstanding_prompt_is_reissued_after_resuming(server: str) ->
             await client.close()
 
 
+async def test_an_outdated_client_is_told_to_update(server: str) -> None:
+    """Not "onbegrijpelijk bericht" - that is what the version number is for.
+
+    The trap this guards: a client one version behind is also sending fields the
+    current models have dropped, so validating the envelope before reading ``v``
+    answers "unparseable" and the player learns nothing. This is a real v1
+    handshake, ``id`` and ``client`` included.
+    """
+    import json
+
+    import websockets
+
+    async with websockets.connect(server) as socket:
+        await socket.send(
+            json.dumps(
+                {"v": 1, "id": "7", "msg": {"type": "hello", "username": "Jan", "client": "qt"}}
+            )
+        )
+        message = json.loads(await asyncio.wait_for(socket.recv(), timeout=10))["msg"]
+
+    assert message["type"] == "error"
+    assert message["code"] == "protocol_version"
+    assert "versie 1" in message["text"] and "versie 2" in message["text"]
+
+
 async def test_a_second_client_cannot_steal_a_live_username(server: str) -> None:
     clients = await seat_four(server)
     try:
@@ -153,7 +178,7 @@ async def test_a_second_client_cannot_steal_a_live_username(server: str) -> None
         import websockets
 
         impostor.socket = await websockets.connect(server)
-        await impostor.send("hello", username="Jan", client="web")
+        await impostor.send("hello", username="Jan")
         message = await impostor._recv(timeout=10)
         assert message["type"] == "error"
         assert message["code"] == "username_taken"
@@ -182,7 +207,7 @@ async def test_a_dead_session_can_be_rebound_without_a_token(server: str) -> Non
 
         back.socket = await websockets.connect(server)
         # No resume_token at all - the requirement says the username binds.
-        await back.send("hello", username="Korneel", client="qt")
+        await back.send("hello", username="Korneel")
         hello = await back.wait_for("hello_ok", timeout=10)
         assert hello["username"] == "Korneel"
         assert hello["current_lobby"] is not None

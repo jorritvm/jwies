@@ -23,7 +23,6 @@ from jwies_core.trick import PlayedCard
 from jwies_server.presenter import Presenter, _decimal
 from jwies_server.protocol import (
     BidRecord,
-    LobbyState,
     PhaseCode,
     PlayedCardInfo,
     SeatInfo,
@@ -44,7 +43,6 @@ class Occupant:
 
 def build_snapshot(
     *,
-    lobby: LobbyState,
     occupants: Mapping[int, Occupant],
     engine: GameEngine | None,
     presenter: Presenter,
@@ -55,7 +53,6 @@ def build_snapshot(
     """Everything the player in ``your_seat`` may know about this table."""
     if engine is None:
         return Snapshot(
-            lobby=lobby,
             phase=PhaseCode.WAITING_FOR_SHUFFLE,
             your_seat=your_seat,
             seats=seat_infos(occupants, None),
@@ -69,7 +66,6 @@ def build_snapshot(
     trump = engine.round.trump
 
     return Snapshot(
-        lobby=lobby,
         phase=engine.phase,
         round_number=engine.round_number,
         multiplier=_decimal(engine.round.multiplier),
@@ -96,7 +92,6 @@ def build_snapshot(
             BidRecord(
                 seat=int(entry.seat),
                 bid=presenter.bid_info(entry.bid),
-                forced=entry.forced,
                 announcement=presenter.bid_announcement(entry.seat, entry.bid),
             )
             for entry in engine.round.bids
@@ -116,6 +111,10 @@ def build_snapshot(
         prompt=presenter.prompt(pending) if on_turn and pending else None,
         paused=paused,
         missing_players=tuple(sorted(missing)),
+        # Everyone sees the same offer and the same tally: it is a decision the
+        # table takes together, so there is nothing private about it.
+        folding_offered=engine.folding_is_offered(),
+        folded=tuple(sorted(int(seat) for seat in engine.round.folded)),
     )
 
 
@@ -123,15 +122,12 @@ def seat_infos(
     occupants: Mapping[int, Occupant], engine: GameEngine | None
 ) -> tuple[SeatInfo, ...]:
     """One row per seat, occupied or not. Also what ``game_started`` carries."""
-    contract = engine.round.contract if engine else None
     return tuple(
         SeatInfo(
             seat=int(seat),
             username=occupants[int(seat)].username if int(seat) in occupants else None,
             connected=int(seat) in occupants and occupants[int(seat)].connected,
             is_dealer=bool(engine and engine.round.dealer == seat),
-            is_declarer=bool(contract and int(seat) in contract.declarers),
-            total=_total(engine, int(seat)),
         )
         for seat in ALL_SEATS
     )

@@ -73,12 +73,6 @@ Meegeleverd:
 | `templates/scoring/schaal_b.yaml` | Grote schaal (o.a. Sporza): het bedrag wordt gedeeld. |
 | `templates/scoring/jwies_v0.yaml` | De bedragen uit de oude `controller.ini`. |
 
-Had je een `controller.ini` van voor de refactor met eigen aanpassingen?
-
-```powershell
-uv run python scripts\convert_ini_to_yaml.py pad\naar\controller.ini config\
-```
-
 Een typfout in een instelling geeft een duidelijke Nederlandse foutmelding bij
 het opstarten, in plaats van stilzwijgend genegeerd te worden.
 
@@ -164,6 +158,11 @@ uv run mypy packages/jwies-core    # typecontrole
 
 Meer in [`docs/developer_documentation.md`](docs/developer_documentation.md) en
 [`docs/architecture/overview.md`](docs/architecture/overview.md).
+
+Wil je een eigen client schrijven, dan heb je aan
+[`docs/protocol.md`](docs/protocol.md) genoeg: daar staat elk bericht, elk veld
+en elke foutcode in. Je hebt niets van deze codebase nodig - allebei de
+meegeleverde clients bouwen hun JSON ook gewoon met de hand op.
 
 De spelregels zelf staan uitgebreid beschreven in
 [`docs/game_rules.md`](docs/game_rules.md).
