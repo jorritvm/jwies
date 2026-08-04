@@ -1,0 +1,83 @@
+# =============================================================================
+#  jwies - serverinstellingen
+#
+#  Pas dit bestand aan en start de server met:
+#
+#      jwies-server --config config/server.yaml
+#
+#  Wil je een eigen variant naast deze houden, kopieer dit bestand dan onder
+#  een andere naam in config/.
+#
+#  De server blijft draaien en host meerdere spellen tegelijk (lobby's).
+# =============================================================================
+
+# Versie van het bestandsformaat. Niet met de hand wijzigen.
+# Toegelaten waarden: 1
+schema_versie: 1
+
+# ---------------------------------------------------------------------------
+# Waar is de server bereikbaar? Zowel de webclient als de PyQt-client
+# verbinden met dit adres en deze poort.
+# ---------------------------------------------------------------------------
+netwerk:
+  # Op welk adres luistert de server?
+  # 127.0.0.1 = enkel deze computer, 0.0.0.0 = bereikbaar op het hele netwerk.
+  adres: "0.0.0.0"
+
+  # Op welke poort luistert de server?
+  # Toegelaten waarden: 1 t.e.m. 65535
+  poort: 8000
+
+# ---------------------------------------------------------------------------
+# Hoeveel spellen mag de server tegelijk hosten?
+#
+# Een weggevallen speler houdt zijn stoel zolang de lobby bestaat: het spel
+# pauzeert en wacht op hem, en hij komt terug met dezelfde naam. Wil je zijn
+# stoel vrijgeven, dan verlaat hij de tafel of ruimt iemand de lobby op.
+# ---------------------------------------------------------------------------
+lobby:
+  # Hoeveel lobby's mogen er tegelijk bestaan?
+  # Toegelaten waarden: 1 of hoger
+  maximum_aantal: 20
+
+  # Na hoeveel minuten zonder verbonden spelers wordt een lobby opgeruimd?
+  # Toegelaten waarden: 1 of hoger
+  opruimen_na_minuten: 60
+
+# Welke regelsets mogen spelers kiezen bij het maken van een lobby?
+# De naam links is wat spelers zien; rechts staat het pad naar het bestand,
+# relatief ten opzichte van dit serverbestand.
+regelsets:
+  # De traditionele regels uit docs/game/rules.md.
+  klassiek: "ruleset/klassiek.yaml"
+  # 3-3-3-4 deling, de jwies_v0-variant.
+  jwies_v0: "ruleset/jwies_v0.yaml"
+
+# Welke puntenschalen mogen spelers kiezen bij het maken van een lobby?
+puntenschalen:
+  # Kleine schaal: elke tegenstander betaalt het volledige bedrag.
+  schaal_a: "scoring/schaal_a.yaml"
+  # Grote schaal (o.a. Sporza): het bedrag wordt over de tegenstanders verdeeld.
+  schaal_b: "scoring/schaal_b.yaml"
+  # Puntenschaal bij de jwies_v0-regelset.
+  jwies_v0: "scoring/jwies_v0.yaml"
+
+# Welke regelset wordt voorgesteld wanneer een speler niets kiest?
+# Moet hierboven bij 'regelsets' gedefinieerd zijn.
+standaard_regelset: klassiek
+
+# Welke puntenschaal wordt voorgesteld wanneer een speler niets kiest?
+# Moet hierboven bij 'puntenschalen' gedefinieerd zijn.
+standaard_puntenschaal: schaal_a
+
+# ---------------------------------------------------------------------------
+# Logboek.
+# ---------------------------------------------------------------------------
+logboek:
+  # Hoeveel detail wil je in het logboek?
+  # Toegelaten waarden: DEBUG, INFO, WARNING, ERROR
+  niveau: INFO
+
+  # Naar welk bestand wordt gelogd? Leeg laten = enkel naar het scherm (stdout),
+  # wat de juiste keuze is wanneer je de server in Docker draait.
+  bestand: ""

@@ -1,0 +1,60 @@
+[project]
+name = "jwies-server"
+version = "0.2.0"
+description = "Headless lobbyserver voor Vlaamse wies - websockets en JSON"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+jwies-server = "jwies_server.cli:main"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.13",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "ruff>=0.8",
+    "httpx>=0.28",
+    "websockets>=14.0",
+    "types-pyyaml>=6.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# jwies_core lives here too: it is only ever used by this server, so it is a
+# plain second source package in this project rather than a dependency.
+packages = ["jwies_server", "jwies_core"]
+
+[tool.ruff]
+extend = "../ruff.toml"
+
+[tool.ruff.lint.per-file-ignores]
+# Pydantic deep-copies mutable defaults per instance, so a literal {} or []
+# as a field default is safe here (and is the documented way to write it).
+"jwies_core/config/*.py" = ["RUF012"]
+"jwies_server/config.py" = ["RUF012"]
+"jwies_server/protocol.py" = ["RUF012"]
+
+[tool.mypy]
+python_version = "3.13"
+warn_unused_configs = true
+warn_redundant_casts = true
+no_implicit_optional = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = ["jwies_core.*", "jwies_server.protocol"]
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

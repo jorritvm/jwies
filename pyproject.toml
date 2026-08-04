@@ -1,67 +1,7 @@
-[project]
-name = "jwies-workspace"
-version = "0.2.0"
-description = "Vlaamse wies implementatie in Python - workspace root"
-readme = "README.md"
-requires-python = ">=3.13"
-dependencies = []
-
-[tool.uv.workspace]
-members = ["packages/*"]
-
-[tool.uv.sources]
-jwies-core = { workspace = true }
-jwies-web-client = { workspace = true }
-
-[dependency-groups]
-dev = [
-    "bump-my-version>=1.4.1",
-    "mypy>=1.13",
-    "pytest>=8.3",
-    "pytest-asyncio>=0.24",
-    "pytest-cov>=6.0",
-    "ruff>=0.8",
-    "httpx>=0.28",
-    "websockets>=14.0",
-    "types-pyyaml>=6.0",
-]
-
-[tool.ruff]
-line-length = 100
-target-version = "py313"
-
-[tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
-ignore = [
-    # Field(...) as a default is how pydantic is meant to be used.
-    "B008",
-    # PEP 695 "type X = ..." aliases are lazily evaluated, which pydantic
-    # cannot resolve for Annotated field types. TypeAlias stays.
-    "UP040",
-]
-
-[tool.ruff.lint.per-file-ignores]
-# Pydantic deep-copies mutable defaults per instance, so a literal {} or []
-# as a field default is safe here (and is the documented way to write it).
-"packages/jwies-core/jwies_core/config/*.py" = ["RUF012"]
-"packages/jwies-server/jwies_server/config.py" = ["RUF012"]
-"packages/jwies-server/jwies_server/protocol.py" = ["RUF012"]
-
-[tool.mypy]
-python_version = "3.13"
-warn_unused_configs = true
-warn_redundant_casts = true
-no_implicit_optional = true
-strict_equality = true
-
-[[tool.mypy.overrides]]
-module = ["jwies_core.*", "jwies_server.protocol"]
-strict = true
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-asyncio_mode = "auto"
-
+# Not a uv project: jwies-server, jwies-qt-client and jwies-web-client are each
+# fully independent uv projects with their own venv and lockfile (see their own
+# pyproject.toml). This file exists only to give bump-my-version one place to
+# keep the four components on the same version number and git tag.
 [tool.bumpversion]
 current_version = "0.2.0"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
@@ -83,13 +23,10 @@ commit_args = ""
 filename = "pyproject.toml"
 
 [[tool.bumpversion.files]]
-filename = "packages/jwies-core/pyproject.toml"
+filename = "jwies-server/pyproject.toml"
 
 [[tool.bumpversion.files]]
-filename = "packages/jwies-web-client/pyproject.toml"
+filename = "jwies-web-client/pyproject.toml"
 
 [[tool.bumpversion.files]]
-filename = "packages/jwies-server/pyproject.toml"
-
-[[tool.bumpversion.files]]
-filename = "packages/jwies-qt-client/pyproject.toml"
+filename = "jwies-qt-client/pyproject.toml"

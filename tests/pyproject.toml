@@ -1,0 +1,26 @@
+[project]
+name = "jwies-integration-tests"
+version = "0.0.0"
+description = "Cross-package checks that need more than one component installed together - never shipped"
+requires-python = ">=3.13"
+dependencies = [
+    "jwies-server",
+    "jwies-qt-client",
+    "jwies-web-client",
+    "pytest>=8.3",
+    "ruff>=0.8",
+]
+
+[tool.uv.sources]
+jwies-server = { path = "../jwies-server", editable = true }
+jwies-qt-client = { path = "../jwies-qt-client", editable = true }
+jwies-web-client = { path = "../jwies-web-client", editable = true }
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+extend = "../ruff.toml"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

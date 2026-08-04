@@ -1,0 +1,12 @@
+line-length = 100
+target-version = "py313"
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+    # Field(...) as a default is how pydantic is meant to be used.
+    "B008",
+    # PEP 695 "type X = ..." aliases are lazily evaluated, which pydantic
+    # cannot resolve for Annotated field types. TypeAlias stays.
+    "UP040",
+]

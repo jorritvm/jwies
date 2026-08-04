@@ -1,0 +1,141 @@
+# =============================================================================
+#  jwies - regelset "jwies v0"
+#
+#  Deze regelset reproduceert exact de instellingen van config/controller.ini
+#  uit de versie van voor de refactor. Gebruik ze om het gedrag van de nieuwe
+#  server te vergelijken met de oude applicatie.
+#
+#  Voor een nieuwe kaartclub kies je beter config/ruleset/klassiek.yaml.
+# =============================================================================
+
+# Versie van het bestandsformaat. Niet met de hand wijzigen.
+# Toegelaten waarden: 1
+schema_versie: 1
+
+# Naam die spelers te zien krijgen in de lobby en bij het chatcommando !ruleset.
+naam: "jwies v0 (zoals controller.ini)"
+
+# ---------------------------------------------------------------------------
+# Instellingen rond het delen van de kaarten.
+# ---------------------------------------------------------------------------
+delen:
+  # Grootte van elk pakje dat de deler uitdeelt, in volgorde. Som moet 13 zijn.
+  # De oude applicatie deelde 3-3-3-4 (deal_1 t.e.m. deal_4).
+  pakjes: [3, 3, 3, 4]
+
+  # Mag de deler het pak schudden voor hij deelt?
+  # Oude instelling: dealer_can_shuffle = True
+  # Toegelaten waarden: true, false
+  deler_mag_schudden: true
+
+  # Minimum aantal kaarten dat de coupeur mag afnemen.
+  # Oude instelling: minimum_cards_to_cut = 1
+  # Toegelaten waarden: 1 t.e.m. 51, kleiner dan coupeer_maximum.
+  coupeer_minimum: 1
+
+  # Maximum aantal kaarten dat de coupeur mag afnemen.
+  # Oude instelling: maximum_cards_to_cut = 51
+  # Toegelaten waarden: 1 t.e.m. 51, groter dan coupeer_minimum.
+  coupeer_maximum: 51
+
+# ---------------------------------------------------------------------------
+# Instellingen rond de biedronde.
+# ---------------------------------------------------------------------------
+bieden:
+  # Welke contracten mogen geboden worden, van laag naar hoog.
+  # Dit is exact de biedladder van de oude get_remaining_bid_options().
+  # Toegelaten waarden: alliance, alone, abondance_9, abondance_9_trump,
+  #   misere, abondance_10, abondance_11, abondance_12, troel,
+  #   misere_ouverte, solo, solo_slim
+  volgorde:
+    - alliance
+    - alone
+    - abondance_9
+    - misere
+    - abondance_10
+    - abondance_11
+    - abondance_12
+    - troel
+    - misere_ouverte
+    - solo
+    - solo_slim
+
+  # Staat troel boven alle andere contracten?
+  # Oude instelling: trull_above_all_else = True
+  # Toegelaten waarden: true, false
+  troel_boven_alles: true
+
+  # Welke contracten mogen een troel toch nog overtroeven?
+  # Oude instellingen: soloslim_beats_trull = True, solo_beats_trull = False,
+  # misere_ouverte_beats_trull = False.
+  # Toegelaten waarden: een lijst met contractnamen uit 'volgorde', of []
+  troel_kan_overboden_worden_door: [solo_slim]
+
+  # Hoeveel slagen belooft wie alleen gaat?
+  # De oude code had 5 hard gecodeerd in process_game().
+  # Toegelaten waarden: 5, 6
+  slagen_bij_alleen_gaan: 5
+
+  # Hoeveel slagen belooft een troelduo?
+  # Oude instelling: trulltricks = 8
+  # Toegelaten waarden: 8, 9
+  slagen_bij_troel: 8
+
+  # Wat gebeurt er als iedereen past?
+  # Oude instelling: when_all_pass_points_are_double = True
+  # Toegelaten waarden: herdelen, volgende_ronde_dubbel, dames_rapen
+  iedereen_past: volgende_ronde_dubbel
+
+# ---------------------------------------------------------------------------
+# Wie speelt de eerste kaart van de ronde, per contract?
+# ---------------------------------------------------------------------------
+uitkomen:
+  # Komt de aanvaller zelf uit? Oude instellingen: *_plays_first = True.
+  # Toegelaten waarden per contract: true, false
+
+  # Oude instelling: abondance_plays_first = True
+  abondance: true
+
+  # Oude instelling: misere_plays_first = True
+  misere: true
+
+  # Oude instelling: misere_ouverte_plays_first = True
+  misere_ouverte: true
+
+  # Oude instelling: solo_plays_first = True
+  solo: true
+
+  # Oude instelling: soloslim_plays_first = True
+  solo_slim: true
+
+  # In de oude code kwam bij troel altijd de troel-2 speler uit.
+  troel: true
+
+# ---------------------------------------------------------------------------
+# Instellingen die gelden tijdens het uitspelen van de kaarten.
+# ---------------------------------------------------------------------------
+spel:
+  # Moet de troelspeler zijn hoogste troef als eerste kaart spelen?
+  # De oude code deed dit wanneer trulltricks == 8.
+  # Toegelaten waarden: true, false
+  hoogste_troef_verplicht_bij_troel: true
+
+  # Hoeveel seconden blijft een volle slag op tafel liggen?
+  # De oude code gebruikte QTimer.singleShot(2000, ...).
+  # Toegelaten waarden: 0 t.e.m. 15
+  pauze_na_slag_seconden: 2
+
+  # Mag de tafel een verloren ronde vroegtijdig stoppen ("opgeven")?
+  # Enkel wanneer het contract niet meer gehaald kan worden en de punten al
+  # vastliggen, en enkel als alle vier de spelers akkoord gaan. De kaarten
+  # worden dan opgeraapt zoals ze liggen.
+  # Let op: met de meegeleverde puntenschalen liggen de punten pas vast bij de
+  # laatste slag, want een gesneuveld contract betaalt per ontbrekende slag.
+  # Zet 'per_slag_tekort: 0' in je puntenschaal als je hier echt gebruik van
+  # wil maken.
+  # Toegelaten waarden: true of false
+  opgeven_toegelaten: true
+
+  # Aantal rondes voor het spel eindigt. 0 = eindeloos, zoals de oude applicatie.
+  # Toegelaten waarden: 0 of hoger
+  aantal_rondes: 0

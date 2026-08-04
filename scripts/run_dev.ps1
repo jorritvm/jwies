@@ -17,22 +17,18 @@ $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
 $configPath = Join-Path $root "config\server.yaml"
-if (-not (Test-Path $configPath)) {
-    Write-Host "Geen config\server.yaml gevonden; ik gebruik templates\server.yaml."
-    $configPath = Join-Path $root "templates\server.yaml"
-}
 
 # Twee aparte processen: de spelserver en de webserver die de browserclient
 # uitdeelt. Zo blijft de pagina laden wanneer je de spelserver herstart.
 Write-Host "Spelserver starten op poort $Port..."
 $server = Start-Process -PassThru -FilePath "uv" -ArgumentList @(
-    "run", "--package", "jwies-server", "jwies-server",
+    "run", "--project", (Join-Path $root "jwies-server"), "jwies-server",
     "--config", $configPath, "--port", $Port
 )
 
 Write-Host "Webclient starten op poort $WebPort..."
 $web = Start-Process -PassThru -FilePath "uv" -ArgumentList @(
-    "run", "--package", "jwies-web-client", "jwies-web",
+    "run", "--project", (Join-Path $root "jwies-web-client"), "jwies-web",
     "--port", $WebPort,
     "--game-server", "ws://127.0.0.1:$Port/ws"
 )
@@ -47,7 +43,7 @@ if (-not $ServerOnly) {
     $names = @("Jan", "Piet", "Joris", "Korneel")
     for ($i = 0; $i -lt $Clients; $i++) {
         $processes += Start-Process -PassThru -FilePath "uv" -ArgumentList @(
-            "run", "--package", "jwies-qt-client", "jwies",
+            "run", "--project", (Join-Path $root "jwies-qt-client"), "jwies",
             "--username", $names[$i],
             "--server", "ws://127.0.0.1:$Port/ws"
         )

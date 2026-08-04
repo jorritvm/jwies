@@ -1,0 +1,148 @@
+# =============================================================================
+#  jwies - regelset "Klassiek wiezen"
+#
+#  Kopieer dit bestand en pas het aan naar de afspraken van jouw kaartclub.
+#  Elke instelling staat hieronder uitgelegd. Onbekende instellingen geven een
+#  foutmelding bij het opstarten van de server, zodat een typfout niet stil
+#  genegeerd wordt.
+#
+#  Deze regelset volgt de traditionele regels zoals beschreven in
+#  docs/game/rules.md.
+# =============================================================================
+
+# Versie van het bestandsformaat. Niet met de hand wijzigen.
+# Toegelaten waarden: 1
+schema_versie: 1
+
+# Naam die spelers te zien krijgen in de lobby en bij het chatcommando !ruleset.
+naam: "Klassiek wiezen"
+
+# ---------------------------------------------------------------------------
+# Instellingen rond het delen van de kaarten.
+# ---------------------------------------------------------------------------
+delen:
+  # Grootte van elk pakje dat de deler uitdeelt, in volgorde.
+  # De som moet exact 13 zijn.
+  # Klassiek is [4, 4, 5]; veel clubs delen [3, 3, 3, 4].
+  pakjes: [4, 4, 5]
+
+  # Mag de deler het pak schudden voor hij deelt?
+  # In het traditionele wiezen wordt enkel voor het allereerste spel geschud,
+  # daarna blijven de slagen liggen zoals ze gewonnen zijn.
+  # Toegelaten waarden: true, false
+  deler_mag_schudden: false
+
+  # Hoeveel kaarten mag de coupeur minimaal afnemen?
+  # Toegelaten waarden: 1 t.e.m. 51, en kleiner dan coupeer_maximum.
+  # De klassieke afspraak is dat elke stapel minstens 4 kaarten telt.
+  coupeer_minimum: 4
+
+  # Hoeveel kaarten mag de coupeur maximaal afnemen?
+  # Toegelaten waarden: 1 t.e.m. 51, en groter dan coupeer_minimum.
+  coupeer_maximum: 48
+
+# ---------------------------------------------------------------------------
+# Instellingen rond de biedronde.
+# ---------------------------------------------------------------------------
+bieden:
+  # Welke contracten mogen geboden worden, van laag naar hoog.
+  # Toegelaten waarden: alliance, alone, abondance_9, abondance_9_trump,
+  #   misere, abondance_10, abondance_11, abondance_12, troel,
+  #   misere_ouverte, solo, solo_slim
+  # Contracten die je hier weglaat, bestaan niet in dit spel.
+  # (pico is gekend maar nog niet ondersteund en geeft een foutmelding)
+  volgorde:
+    - alliance
+    - alone
+    - abondance_9
+    - misere
+    - abondance_10
+    - abondance_11
+    - abondance_12
+    - troel
+    - misere_ouverte
+    - solo
+    - solo_slim
+
+  # Staat troel boven alle andere contracten? Dan wordt er na een troel niet
+  # verder geboden, tenzij via 'troel_kan_overboden_worden_door'.
+  # Toegelaten waarden: true, false
+  troel_boven_alles: true
+
+  # Welke contracten mogen een troel toch nog overtroeven?
+  # Enkel van toepassing wanneer troel_boven_alles true is.
+  # Toegelaten waarden: een lijst met contractnamen uit 'volgorde', of []
+  troel_kan_overboden_worden_door: [solo_slim]
+
+  # Hoeveel slagen belooft wie alleen gaat? In Vlaanderen meestal 5, elders 6.
+  # Toegelaten waarden: 5, 6
+  slagen_bij_alleen_gaan: 5
+
+  # Hoeveel slagen belooft een troelduo? Bij open troel meestal 8,
+  # bij gesloten (blinde) troel meestal 9.
+  # Toegelaten waarden: 8, 9
+  slagen_bij_troel: 8
+
+  # Wat gebeurt er als iedereen past?
+  # Toegelaten waarden:
+  #   herdelen               - dezelfde deler deelt opnieuw
+  #   volgende_ronde_dubbel  - herdelen, maar de volgende ronde telt dubbel
+  #   dames_rapen            - NOG NIET ONDERSTEUND (geeft een opstartfout)
+  iedereen_past: volgende_ronde_dubbel
+
+# ---------------------------------------------------------------------------
+# Wie speelt de eerste kaart van de ronde, per contract?
+# ---------------------------------------------------------------------------
+uitkomen:
+  # Komt de aanvaller zelf uit bij deze contracten?
+  # Staat een contract op false, dan komt de speler links van de deler uit.
+  # Toegelaten waarden per contract: true, false
+
+  # Geldt voor abondance 9, 10, 11, 12 en abondance in troef.
+  abondance: true
+
+  # Komt de miseriespeler zelf uit?
+  misere: true
+
+  # Komt de speler van miserie bloot zelf uit?
+  misere_ouverte: true
+
+  # Komt de solospeler zelf uit?
+  solo: true
+
+  # Komt de solo slim-speler zelf uit?
+  solo_slim: true
+
+  # Bij troel komt de partner (de houder van de vierde aas) uit.
+  # Op false komt de speler links van de deler uit.
+  troel: true
+
+# ---------------------------------------------------------------------------
+# Instellingen die gelden tijdens het uitspelen van de kaarten.
+# ---------------------------------------------------------------------------
+spel:
+  # Moet de troelspeler zijn hoogste troef als eerste kaart spelen?
+  # Klassieke afspraak wanneer er 8 slagen gevraagd worden. Heeft de speler
+  # geen enkele troef op de hand, dan vervalt de verplichting.
+  # Toegelaten waarden: true, false
+  hoogste_troef_verplicht_bij_troel: true
+
+  # Hoeveel seconden blijft een volle slag op tafel liggen voor hij geruimd wordt?
+  # Toegelaten waarden: 0 t.e.m. 15
+  pauze_na_slag_seconden: 2
+
+  # Mag de tafel een verloren ronde vroegtijdig stoppen ("opgeven")?
+  # Enkel wanneer het contract niet meer gehaald kan worden en de punten al
+  # vastliggen, en enkel als alle vier de spelers akkoord gaan. De kaarten
+  # worden dan opgeraapt zoals ze liggen.
+  # Let op: met de meegeleverde puntenschalen liggen de punten pas vast bij de
+  # laatste slag, want een gesneuveld contract betaalt per ontbrekende slag.
+  # Zet 'per_slag_tekort: 0' in je puntenschaal als je hier echt gebruik van
+  # wil maken.
+  # Toegelaten waarden: true of false
+  opgeven_toegelaten: true
+
+  # Aantal rondes voor het spel eindigt. 0 = eindeloos doorspelen.
+  # Kies een veelvoud van 4 zodat iedereen even vaak deelt.
+  # Toegelaten waarden: 0 of hoger
+  aantal_rondes: 0

@@ -1,4 +1,4 @@
-# Spelregels — Vlaamse Wies (Wiezen)
+# Spelregels — Vlaamse Wies
 
 > Dit document beschrijft **klassiek/traditioneel wiezen**, in Vlaanderen ook "Vlaamse wies"
 > of gewoon "wiezen" genoemd.   
@@ -18,9 +18,11 @@
     * [3.2 Schudden en couperen](#32-schudden-en-couperen)
     * [3.3 Delen](#33-delen)
     * [3.4 De geblekte troef](#34-de-geblekte-troef)
-      * [Variant: gedekte troef en de "pas troel"-ronde](#variant-gedekte-troef-en-de-pas-troel-ronde)
+      * [Variant: de "pas troel"-ronde](#variant-de-pas-troel-ronde)
+      * [Variant: de troef pas na de eerste slag tonen](#variant-de-troef-pas-na-de-eerste-slag-tonen)
   * [4. De biedronde](#4-de-biedronde)
     * [4.1 Rangorde van de contracten (laag → hoog)](#41-rangorde-van-de-contracten-laag--hoog)
+      * [Variant: Troel boven alles](#variant-troel-boven-alles)
     * [4.2 Wat als iedereen past?](#42-wat-als-iedereen-past)
   * [5. De contracten in detail](#5-de-contracten-in-detail)
     * [5.1 Vragen en meegaan](#51-vragen-en-meegaan)
@@ -37,16 +39,11 @@
     * [6.2 Renonce (verzaken)](#62-renonce-verzaken)
   * [7. Puntentelling](#7-puntentelling)
     * [7.1 Basisprincipe](#71-basisprincipe)
-    * [7.2 Schaal A — kleine schaal (kaartclubs, per tegenstander)](#72-schaal-a--kleine-schaal-kaartclubs-per-tegenstander)
-    * [7.3 Schaal B — grote schaal (o.a. Sporza-versie)](#73-schaal-b--grote-schaal-oa-sporza-versie)
+    * [7.2 Kleine schaal (kaartclubs)](#72-kleine-schaal-kaartclubs)
+    * [7.3 Grote schaal (o.a. Sporza-versie)](#73-grote-schaal-oa-sporza-versie)
     * [7.4 Gebruikelijke extra afspraken](#74-gebruikelijke-extra-afspraken)
-  * [8. Verschil met kleurenwiezen](#8-verschil-met-kleurenwiezen)
-  * [9. Samenvatting in tien regels](#9-samenvatting-in-tien-regels)
-  * [10. Bronnen](#10-bronnen)
-  * [Bijlage — Wat jwies implementeert](#bijlage--wat-jwies-implementeert)
-    * [Regelset](#regelset)
-    * [Puntenschaal](#puntenschaal)
-    * [Ondersteunde contracten](#ondersteunde-contracten)
+  * [Bijlage: Bronnen](#bijlage-bronnen)
+  * [Bijlage: jwies implementatie](#bijlage-jwies-implementatie)
     * [Wat jwies (nog) niet ondersteunt](#wat-jwies-nog-niet-ondersteunt)
 <!-- TOC -->
 
@@ -358,7 +355,7 @@ Wie kleur kan volgen maar het niet doet, **verzaakt** (renonce).
 
 ---
 
-## Bijlage -  Bronnen
+## Bijlage: Bronnen
 
 - [Wiezen — Wikipedia (NL)](https://nl.wikipedia.org/wiki/Wiezen)
 - [Kaartspel/Wiezen — Wikibooks](https://nl.wikibooks.org/wiki/Kaartspel/Wiezen)
@@ -369,10 +366,10 @@ Wie kleur kan volgen maar het niet doet, **verzaakt** (renonce).
 - [Wiezen spelregels met varianten, Kleurenwiezen en Puntentelling — top-casino.nl](https://www.top-casino.nl/drank-gokspellen/wiezen/)
 
 
-## Bijlage — Wat jwies implementeert
+## Bijlage: jwies implementatie
 
 Welke variant een tafel speelt, bepaal je in twee YAML-bestanden: een **regelset**
-(`templates/ruleset/*.yaml`) en een **puntenschaal** (`templates/scoring/*.yaml`).
+(`config/ruleset/*.yaml`) en een **puntenschaal** (`config/scoring/*.yaml`).
 Bij elke instelling staat in het bestand zelf wat ze doet en welke waarden mogen.
 
 ### Wat jwies (nog) niet ondersteunt

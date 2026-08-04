@@ -1,6 +1,6 @@
 # Glossary
 
-Whist card game terms and their dutch translations.
+Whist card game terms and their dutch translations.  
 Wies spel termen en hun engelse vertalingen.
 
 ## Kaarten
