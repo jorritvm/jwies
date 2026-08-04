@@ -1,14 +1,54 @@
 # Spelregels — Vlaamse Wies (Wiezen)
 
 > Dit document beschrijft **klassiek/traditioneel wiezen**, in Vlaanderen ook "Vlaamse wies"
-> of gewoon "wiezen" genoemd. Dit is **niet** kleurenwiezen (kleurenwies), waar de troefkleur
+> of gewoon "wiezen" genoemd.   
+> Dit is **niet** kleurenwiezen (kleurenwies), waar de troefkleur
 > tijdens het bieden wordt gekozen en waar geen troefkaart wordt geblekt.
 >
-> Wiezen kent zeer veel regionale varianten — per streek, per kaartclub en zelfs per toernooi.
+> Wiezen kent zeer veel regionale varianten — per streek, per kaartclub en zelfs per toernooi.  
 > Dit document beschrijft de meest verspreide gemeenschappelijke kern, en vermeldt expliciet
 > waar de varianten uiteenlopen.
 
----
+<!-- TOC -->
+* [Spelregels — Vlaamse Wies (Wiezen)](#spelregels--vlaamse-wies-wiezen)
+  * [1. Overzicht](#1-overzicht)
+  * [2. Materiaal en kaartwaarde](#2-materiaal-en-kaartwaarde)
+  * [3. Zitplaatsen, delen en troef](#3-zitplaatsen-delen-en-troef)
+    * [3.1 Richting](#31-richting)
+    * [3.2 Schudden en couperen](#32-schudden-en-couperen)
+    * [3.3 Delen](#33-delen)
+    * [3.4 De geblekte troef](#34-de-geblekte-troef)
+      * [Variant: gedekte troef en de "pas troel"-ronde](#variant-gedekte-troef-en-de-pas-troel-ronde)
+  * [4. De biedronde](#4-de-biedronde)
+    * [4.1 Rangorde van de contracten (laag → hoog)](#41-rangorde-van-de-contracten-laag--hoog)
+    * [4.2 Wat als iedereen past?](#42-wat-als-iedereen-past)
+  * [5. De contracten in detail](#5-de-contracten-in-detail)
+    * [5.1 Vragen en meegaan](#51-vragen-en-meegaan)
+    * [5.2 Alleen gaan](#52-alleen-gaan)
+    * [5.3 Abondance](#53-abondance)
+    * [5.4 Miserie](#54-miserie)
+    * [5.5 Miserie op tafel (miserie bloot / open miserie)](#55-miserie-op-tafel-miserie-bloot--open-miserie)
+    * [5.6 Troel (troela)](#56-troel-troela)
+    * [5.7 Solo](#57-solo)
+    * [5.8 Solo slim](#58-solo-slim)
+    * [5.9 Pico / piccolo (optioneel)](#59-pico--piccolo-optioneel)
+  * [6. Het spel zelf](#6-het-spel-zelf)
+    * [6.1 Nakijken van slagen](#61-nakijken-van-slagen)
+    * [6.2 Renonce (verzaken)](#62-renonce-verzaken)
+  * [7. Puntentelling](#7-puntentelling)
+    * [7.1 Basisprincipe](#71-basisprincipe)
+    * [7.2 Schaal A — kleine schaal (kaartclubs, per tegenstander)](#72-schaal-a--kleine-schaal-kaartclubs-per-tegenstander)
+    * [7.3 Schaal B — grote schaal (o.a. Sporza-versie)](#73-schaal-b--grote-schaal-oa-sporza-versie)
+    * [7.4 Gebruikelijke extra afspraken](#74-gebruikelijke-extra-afspraken)
+  * [8. Verschil met kleurenwiezen](#8-verschil-met-kleurenwiezen)
+  * [9. Samenvatting in tien regels](#9-samenvatting-in-tien-regels)
+  * [10. Bronnen](#10-bronnen)
+  * [Bijlage — Wat jwies implementeert](#bijlage--wat-jwies-implementeert)
+    * [Regelset](#regelset)
+    * [Puntenschaal](#puntenschaal)
+    * [Ondersteunde contracten](#ondersteunde-contracten)
+    * [Wat jwies (nog) niet ondersteunt](#wat-jwies-nog-niet-ondersteunt)
+<!-- TOC -->
 
 ## 1. Overzicht
 
@@ -16,29 +56,19 @@ Wiezen is een slagenspel voor **4 spelers**, afgeleid van het Engelse *whist*, m
 meer contractmogelijkheden. Elke ronde beloven één of twee spelers een bepaald aantal slagen
 te halen. Lukt dat, dan winnen zij punten van de tegenstanders; lukt het niet, dan betalen zij.
 
-Het spel wordt in Vlaanderen traditioneel in cafés en kaartclubs gespeeld; er bestaan zelfs
-kampioenschappen. Sinds enkele jaren staat het kaartspel op de Vlaamse Inventaris
-Immaterieel Erfgoed.
-
----
 
 ## 2. Materiaal en kaartwaarde
 
 - Eén gewoon spel van **52 kaarten**, zonder jokers.
 - Vier kleuren: **harten**, **koeken** (ruiten), **klaveren**, **schoppen**.
-- Rangorde binnen een kleur, van hoog naar laag:
-
-  **Aas > Heer > Dame > Boer > 10 > 9 > 8 > 7 > 6 > 5 > 4 > 3 > 2**
-
+- Rangorde binnen een kleur, van hoog naar laag:  
+  `Aas > Heer > Dame > Boer > 10 > 9 > 8 > 7 > 6 > 5 > 4 > 3 > 2`
 - Er is geen puntenwaarde per kaart: enkel het **aantal gewonnen slagen** telt.
 - Papier en pen (of een scorebord) om de punten bij te houden.
+- Bij sommige contracten geldt ook een rangorde tussen de **kleuren onderling** (om te bepalen
+wie een gelijk bod overtroeft). De meest gebruikte volgorde, van hoog naar laag, is:  
+      `harten > koeken > klaveren > schoppen`
 
-Bij sommige contracten geldt ook een rangorde tussen de **kleuren onderling** (om te bepalen
-wie een gelijk bod overtroeft). De meest gebruikte volgorde, van hoog naar laag, is:
-
-**harten > koeken > klaveren > schoppen**
-
----
 
 ## 3. Zitplaatsen, delen en troef
 
@@ -79,12 +109,10 @@ doen. De troefkaart mag geblekt worden bij het begin van het delen, of op het ei
 de deler het belieft te doen."* Troel wordt gewoon binnen de normale biedronde aangekondigd:
 *"Na het delen wordt dadelijk begonnen met bieden. Geen 'pas troel', dus."*
 
-#### Variant: gedekte troef en de "pas troel"-ronde
+#### Variant: de "pas troel"-ronde
 
-Sommige groepen laten de laatste kaart **gedekt** liggen en tonen ze pas later. Er zijn twee
-gangbare vormen:
-
-1. **Pas-troel-ronde vooraf.** Vóór het echte bieden gaat de tafel één keer rond waarbij
+In deze variant blijft de laatste kaart **gedekt** liggen: en start er eerst een  **Pas-troel-ronde vooraf.** 
+Vóór het echte bieden gaat de tafel één keer rond waarbij
    elke speler **"pas troel"** zegt, of net troel aankondigt. Pas als iedereen troel gepast
    heeft, wordt de troefkaart omgedraaid en begint de gewone biedronde. Zit er wél een troel
    in, dan wordt de kaart **nooit getoond** en neemt de deler ze gedekt in zijn hand.
@@ -93,22 +121,16 @@ gangbare vormen:
    Die kaart doet er dan dus niet toe, en de deler hoeft ze niet prijs te geven.
 
    Deze vorm hoort strikt genomen niet bij het traditionele wiezen — ze is vooral bekend uit
-   **rikken**. Rijk van Afdronk beschrijft ze wel expliciet als ondersteunde variant in hun
-   software: *"Bij het traditioneel wiezen is pas-troel niet aan de orde, maar als u bijv.
-   Rikken speelt, is dat wel van belang"*, voor spelvormen waarbij *"de troef pas getoond
-   wordt na de 'pas-troel'"*.
+   **rikken**. 
 
-2. **Tonen na de eerste slag.** Bij o.a. Kaartclub The Whiskies wordt de troefkaart pas
+#### Variant: de troef pas na de eerste slag tonen
+In deze variant blijft de laatste kaart **gedekt** liggen en wordt de troefkaart pas
    **na de eerste slag** getoond, en **helemaal niet** bij pico, miserie, troel, abondance
    en solo slim — precies die contracten waar de geblekte troef geen rol speelt.
 
 > ⚠️ **Let op bij het invoeren van deze variant:** de troef gedekt houden tijdens het bieden
 > is geen detail. Bij **vragen**, **alleen gaan** en **solo slim** speel je juist *in* de
-> geblekte troef — kent niemand die kleur, dan bied je blind. Daarom beperkt de
-> pas-troel-variant zich meestal tot één aparte ronde vóór het bieden: eerst troel
-> afhandelen, dan de troef tonen, dan pas normaal bieden.
-
----
+> geblekte troef — kent niemand die kleur, dan bied je blind.
 
 ## 4. De biedronde
 
@@ -144,22 +166,22 @@ De exacte rangorde verschilt per streek. Onderstaande volgorde is de meest gangb
 | 10 | **Solo** | 13 | alleen | zelf gekozen |
 | 11 | **Solo slim** | 13 | alleen | geblekte troef |
 
-> **Let op:** de positie van **troel** in de rangorde is de meest omstreden regel. In veel
-> streken staat troel **boven alles** (troel wordt verplicht aangekondigd nog vóór de
-> gewone biedronde), in andere kan enkel solo slim of miserie op tafel er nog over.
-> Spreek dit af vóór de eerste ronde.
+
+#### Variant: Troel boven alles
+De positie van **troel** in de rangorde is de meest omstreden regel. In veel
+streken staat troel **boven alles** (troel wordt verplicht aangekondigd nog vóór de
+gewone biedronde), in andere kan enkel solo slim of miserie op tafel er nog over.
+Spreek dit af vóór de eerste ronde.
 
 ### 4.2 Wat als iedereen past?
 
 Twee gangbare oplossingen:
 
-1. **Herdelen** — de kaarten worden opnieuw gedeeld door dezelfde of de volgende deler.
+1. **Herdelen** — de kaarten worden opnieuw gedeeld door dezelfde (iedereen heeft gepast) of de volgende deler (er werd gevraagd maar niemand ging mee en de vrager gaat niet alleen). 
 2. **Voor de dames spelen** ("dames rapen") — er wordt zonder troef gespeeld en wie een
    dame in een slag binnenhaalt, verliest strafpunten (vaak 3 per dame).
+3. **Punten verdubbelen** - de punten van de volgende ronde worden verdubbelt.
 
-Een derde variant verdubbelt de punten van de volgende ronde als iedereen past.
-
----
 
 ## 5. De contracten in detail
 
@@ -208,7 +230,7 @@ geblekte kaart telt niet mee.
 - Meerdere spelers kunnen in dezelfde ronde miserie spelen; ze spelen dan elk voor zich
   tegen alle anderen.
 - De speler links van de deler komt uit (miserie-speler komt in sommige varianten zelf uit).
-- Er bestaat **geen** "kleine miserie" in het traditionele wiezen; wat men soms zo noemt is
+> Er bestaat **geen** "kleine miserie" in het traditionele wiezen; wat men soms zo noemt is
   gewoon de gewone miserie.
 
 ### 5.5 Miserie op tafel (miserie bloot / open miserie)
@@ -248,7 +270,6 @@ Niet overal in gebruik. De speler belooft **exact één slag** te halen — niet
 minder — zonder troef. Sommige reglementen beperken dit tot 2 pico-pogingen per speler per
 ronde.
 
----
 
 ## 6. Het spel zelf
 
@@ -280,7 +301,6 @@ Wie kleur kan volgen maar het niet doet, **verzaakt** (renonce).
 - Wordt het **pas later** ontdekt, dan is de straf veel zwaarder (bv. −15 punten) en/of
   verliest de verzakende partij de ronde automatisch.
 
----
 
 ## 7. Puntentelling
 
@@ -299,7 +319,8 @@ Wie kleur kan volgen maar het niet doet, **verzaakt** (renonce).
 - **Te weinig slagen** (down) kost punten volgens dezelfde schaal, in veel reglementen
   **dubbel** ("verliezen is dubbel").
 
-### 7.2 Schaal A — kleine schaal (kaartclubs, per tegenstander)
+### 7.2 Kleine schaal (kaartclubs)
+- puntentelling per tegenstander
 
 | Contract | Gehaald | Per extra slag | Alle 13 | Mislukt |
 |---|---|---|---|---|
@@ -312,7 +333,8 @@ Wie kleur kan volgen maar het niet doet, **verzaakt** (renonce).
 | Miserie op tafel | 10 (×3 = 30) | — | — | −30 |
 | Solo slim | 20 (×3 = 60) | — | — | −60 |
 
-### 7.3 Schaal B — grote schaal (o.a. Sporza-versie)
+### 7.3 Grote schaal (o.a. Sporza-versie)
+- puntentelling totaal te delen over alle spelers
 
 | Contract | Punten |
 |---|---|
@@ -336,36 +358,7 @@ Wie kleur kan volgen maar het niet doet, **verzaakt** (renonce).
 
 ---
 
-## 8. Verschil met kleurenwiezen
-
-Ter verduidelijking, want de twee worden vaak verward:
-
-| | **Vlaamse wies (traditioneel wiezen)** | **Kleurenwiezen** |
-|---|---|---|
-| Troefbepaling | Laatste kaart wordt **geblekt** en bepaalt troef | Troefkleur wordt **tijdens het bieden gekozen** |
-| Vragen | 8 slagen samen | 8 slagen samen, vrager moet er zelf 6 |
-| Bieden | Eén ronde, vast contractenlijstje | Meerdere biedrondes met over-bieden |
-| Complexiteit | Eenvoudiger, sneller | Complexer, meer tactiek in het bieden |
-
----
-
-## 9. Samenvatting in tien regels
-
-1. 4 spelers, 52 kaarten, 13 kaarten elk, gedeeld 4-4-5 met de klok mee.
-2. De laatste kaart wordt geblekt: die kleur is troef.
-3. Links van de deler spreekt eerst; er wordt één biedronde gehouden.
-4. Vragen = 8 slagen met een partner; alleen gaan = 5 slagen in je eentje.
-5. Abondance = 9 slagen alleen in eigen troef; miserie = 0 slagen zonder troef.
-6. 3 azen ⇒ verplicht troel; de vierde aas is je partner en zijn kleur is troef.
-7. Solo = alle 13 in eigen troef; solo slim = alle 13 in de geblekte troef.
-8. Kleur volgen is verplicht; kan je niet volgen, dan mag je kopen of weggooien.
-9. Hoogste troef wint, anders de hoogste kaart van de uitgekomen kleur.
-10. Lukt het contract, dan betalen de tegenstanders; lukt het niet, dan betaal je zelf
-    (meestal dubbel).
-
----
-
-## 10. Bronnen
+## Bijlage -  Bronnen
 
 - [Wiezen — Wikipedia (NL)](https://nl.wikipedia.org/wiki/Wiezen)
 - [Kaartspel/Wiezen — Wikibooks](https://nl.wikibooks.org/wiki/Kaartspel/Wiezen)
@@ -375,54 +368,12 @@ Ter verduidelijking, want de twee worden vaak verward:
 - [Reglement wiezen — Kaartclub The Whiskies](https://kaartclub-the-whiskies.webnode.be/reglement-wiezen/)
 - [Wiezen spelregels met varianten, Kleurenwiezen en Puntentelling — top-casino.nl](https://www.top-casino.nl/drank-gokspellen/wiezen/)
 
----
 
 ## Bijlage — Wat jwies implementeert
 
 Welke variant een tafel speelt, bepaal je in twee YAML-bestanden: een **regelset**
 (`templates/ruleset/*.yaml`) en een **puntenschaal** (`templates/scoring/*.yaml`).
 Bij elke instelling staat in het bestand zelf wat ze doet en welke waarden mogen.
-
-### Regelset
-
-| Instelling | `klassiek` | Betekenis |
-|---|---|---|
-| `delen.pakjes` | `[4, 4, 5]` | grootte van elk pakje; de som moet 13 zijn |
-| `delen.deler_mag_schudden` | `false` | mag de deler schudden voor hij deelt |
-| `delen.coupeer_minimum` / `_maximum` | 4 / 48 | hoeveel kaarten de coupeur mag afnemen |
-| `bieden.volgorde` | zie bestand | welke contracten bestaan, van laag naar hoog |
-| `bieden.troel_boven_alles` | `true` | troel gaat boven de andere contracten |
-| `bieden.troel_kan_overboden_worden_door` | `[solo_slim]` | wat een troel toch nog verslaat |
-| `bieden.slagen_bij_alleen_gaan` | 5 | 5 of 6 slagen bij alleen gaan |
-| `bieden.slagen_bij_troel` | 8 | 8 of 9 slagen bij troel |
-| `bieden.iedereen_past` | `volgende_ronde_dubbel` | herdelen, of herdelen met dubbele inzet |
-| `uitkomen.*` | `true` | komt de aanvaller zelf uit, per contract |
-| `spel.hoogste_troef_verplicht_bij_troel` | `true` | troel-8: eerste kaart is je hoogste troef |
-| `spel.pauze_na_slag_seconden` | 2 | hoe lang een volle slag blijft liggen |
-| `spel.aantal_rondes` | 0 | 0 = eindeloos doorspelen |
-
-### Puntenschaal
-
-| Instelling | Betekenis |
-|---|---|
-| `betaling_solospel` | `per_tegenstander` (Schaal A) of `gedeeld` (Schaal B) |
-| `verliezen_is_dubbel` | een mislukt contract kost het dubbele |
-| `iedereen_past_verdubbelt` | past iedereen, dan telt de volgende ronde dubbel |
-| `contracten.<naam>.basis` | punten bij het exact halen van het contract |
-| `contracten.<naam>.per_overslag` | extra punten per slag boven het beloofde aantal |
-| `contracten.<naam>.per_slag_tekort` | punten per ontbrekende slag |
-| `contracten.<naam>.alle_dertien` | vaste waarde bij alle 13 slagen |
-
-Meegeleverd zijn `schaal_a.yaml` en `schaal_b.yaml` (de twee schalen uit
-hoofdstuk 7 hierboven) en `jwies_v0.yaml` (de bedragen van voor de refactor).
-
-De punten zijn een nulsomspel: elke ronde telt op tot nul.
-
-### Ondersteunde contracten
-
-`alliance` (vragen en meegaan), `alone`, `abondance_9`, `abondance_9_trump`,
-`abondance_10`, `abondance_11`, `abondance_12`, `misere`, `misere_ouverte`,
-`troel`, `solo`, `solo_slim`.
 
 ### Wat jwies (nog) niet ondersteunt
 
@@ -433,5 +384,3 @@ De punten zijn een nulsomspel: elke ronde telt op tot nul.
 | **Voor de dames spelen** ("dames rapen") | `iedereen_past: dames_rapen` wordt herkend maar geweigerd |
 | **Renonce-straffen** | bewust niet: de server dwingt kleur volgen af, dus een renonce is onmogelijk. Je krijgt bij elke beurt de toegelaten kaarten mee, en een andere kaart wordt geweigerd. |
 
-Deze vier zijn geen vergetelheden maar keuzes; ze staan hier zodat je weet wat
-je aan tafel zelf moet afspreken.

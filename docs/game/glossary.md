@@ -1,10 +1,12 @@
-# Whist card game terms
+# Glossary
 
+Whist card game terms and their dutch translations.
+Wies spel termen en hun engelse vertalingen.
+
+## Kaarten
 | English        	| Dutch         	|
 |----------------	|---------------	|
 | deck           	| dek           	|
-| cut the deck   	| dek splitsen  	|
-| shuffle        	| schudden      	|
 | suit           	| kleur         	|
 | hearts         	| harten        	|
 | diamonds       	| koeken        	|
@@ -14,10 +16,18 @@
 | queen          	| dame          	|
 | king           	| heer          	|
 | ace            	| aas           	|
-|                	|               	|
+
+## Delen
+| English        	| Dutch         	|
+|----------------	|---------------	|
+| cut the deck   	| dek splitsen  	|
+| shuffle        	| schudden      	|
 | deal           	| delen         	|
 | redeal         	| herdelen      	|
-|                	|               	|
+
+## Bieden
+| English        	| Dutch         	|
+|----------------	|---------------	|
 | auction        	| biedronde     	|
 | bieden         	| bid           	|
 | ask            	| vragen        	|
@@ -26,7 +36,10 @@
 | abundance      	| abondance     	|
 | misere         	| miserie       	|
 | misere ouverte 	| miserie bloot 	|
-|                	|               	|
+
+## Ronde
+| English        	| Dutch         	|
+|----------------	|---------------	|
 | turn           	| beurt         	|
 | trick          	| slag          	|
 | play           	| spel / spelen 	|
