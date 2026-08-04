@@ -28,7 +28,11 @@ build-backend = "hatchling.build"
 packages = ["jwies_web_client"]
 
 [tool.ruff]
-extend = "../ruff.toml"
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

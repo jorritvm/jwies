@@ -98,13 +98,14 @@ Alles in één keer (sync, ruff, pytest per project, en mypy):
 De Qt-tests draaien met `QT_QPA_PLATFORM=offscreen`.
 
 ### Linting en formatting
-De hoofdmap is geen uv-project, dus ruff draai je daar met `uvx`; die pikt
-`ruff.toml` uit de hoofdmap op en dekt zo alle projecten tegelijk.
+Elk project draagt zijn eigen ruff-instellingen in zijn `pyproject.toml`, dus
+lint je per project (of in één keer met `check_all.ps1` hierboven):
 
 ```powershell
-uvx ruff check .
-uvx ruff format .
-cd jwies-server; uv run mypy jwies_core jwies_server; cd ..
+cd jwies-server
+uv run ruff check .
+uv run ruff format .
+uv run mypy jwies_core jwies_server
 ```
 
 ### Bumping
