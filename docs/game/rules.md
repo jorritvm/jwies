@@ -10,7 +10,7 @@
 > waar de varianten uiteenlopen.
 
 <!-- TOC -->
-* [Spelregels — Vlaamse Wies (Wiezen)](#spelregels--vlaamse-wies-wiezen)
+* [Spelregels — Vlaamse Wies](#spelregels--vlaamse-wies)
   * [1. Overzicht](#1-overzicht)
   * [2. Materiaal en kaartwaarde](#2-materiaal-en-kaartwaarde)
   * [3. Zitplaatsen, delen en troef](#3-zitplaatsen-delen-en-troef)
@@ -377,7 +377,7 @@ Bij elke instelling staat in het bestand zelf wat ze doet en welke waarden mogen
 | Regel | Stand van zaken |
 |---|---|
 | **Pico / piccolo** | gekend maar nog niet speelbaar; zet je hem in `volgorde`, dan weigert de server op te starten met een duidelijke melding |
-| **Meerdere gelijktijdige miseries** | gemodelleerd (`TeamMode.INDIVIDUAL`) maar niet geimplementeerd |
+| **Meerdere gelijktijdige miseries** | gemodelleerd (`TeamMode.INDIVIDUAL`) maar niet geïmplementeerd |
 | **Voor de dames spelen** ("dames rapen") | `iedereen_past: dames_rapen` wordt herkend maar geweigerd |
 | **Renonce-straffen** | bewust niet: de server dwingt kleur volgen af, dus een renonce is onmogelijk. Je krijgt bij elke beurt de toegelaten kaarten mee, en een andere kaart wordt geweigerd. |
 

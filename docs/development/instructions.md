@@ -47,7 +47,7 @@
   uv run --project jwies-server jwies-server --config config/server.yaml
   ```
 
-- Open http://localhost:8000 in een browser, je ziet dan een JSON-antwoord van de server
+- Open http://localhost:8000/healthz in een browser, je ziet dan een JSON-antwoord van de server
 
 ### jwies-qt-client opzetten
 - start de client  
@@ -56,7 +56,7 @@
   ```
 
 ### jwies-web-client opzetten
-- start de spelserver   
+- start de webserver die de browserclient uitdeelt  
   ```powershell
   uv run --project jwies-web-client jwies-web --game-server ws://127.0.0.1:8000/ws
   ```
@@ -71,10 +71,18 @@ Als test kan je alles tegelijk opstarten dankzij:
 
 ### Testing
 
+Elk project heeft zijn eigen venv, dus je test per project:
+
 ```powershell
 cd jwies-server
 uv run pytest                  # alle serverkant-tests
 uv run pytest tests/core       # enkel de spelregels
+```
+
+Alles in één keer (sync, ruff, pytest per project, en mypy):
+
+```powershell
+.\scripts\check_all.ps1
 ```
 
 | Map | Wat |
@@ -85,21 +93,29 @@ uv run pytest tests/core       # enkel de spelregels
 | `jwies-server/tests/e2e` | volledige rondes, herverbinden, en of geen van beide clients achterloopt op het protocol |
 | `jwies-qt-client/tests` | stoelafbeelding, de state reducer, en het venster offscreen |
 | `jwies-web-client/tests` | de webclient |
-| `integration-tests` | checks die meer dan één project tegelijk nodig hebben, bv. kaart-ids die JS en Python delen |
+| `tests` | checks die meer dan één project tegelijk nodig hebben, bv. kaart-ids die JS en Python delen |
 
 De Qt-tests draaien met `QT_QPA_PLATFORM=offscreen`.
 
 ### Linting en formatting
+De hoofdmap is geen uv-project, dus ruff draai je daar met `uvx`; die pikt
+`ruff.toml` uit de hoofdmap op en dekt zo alle projecten tegelijk.
+
 ```powershell
-uv run ruff check .
-uv run ruff format .
+uvx ruff check .
+uvx ruff format .
 cd jwies-server; uv run mypy jwies_core jwies_server; cd ..
 ```
 
 ### Bumping
+`bump-my-version` staat in geen enkel project als afhankelijkheid; draai het met
+`uvx`. Zet eerst de output op UTF-8, anders struikelt het over de pijltjes in
+zijn eigen uitvoer.
+
 ```powershell
-uv run bump-my-version show-bump
-uv run bump-my-version bump patch    # of minor / major
+$env:PYTHONIOENCODING = "utf-8"
+uvx bump-my-version show-bump
+uvx bump-my-version bump patch    # of minor / major
 ```
 
 Dat past de versie in alle vier de `pyproject.toml`-bestanden tegelijk aan,
@@ -111,7 +127,7 @@ maakt een commit en zet een git-tag.
 De server is een gewone ASGI-toepassing en blijft onbeperkt draaien.
 
 ```powershell
-uv run --package jwies-server jwies-server `
+uv run --project jwies-server jwies-server `
     --config /etc/jwies/server.yaml `
     --log-file /var/log/jwies.log
 ```

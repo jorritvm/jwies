@@ -28,6 +28,10 @@ opties in die de server aanbiedt.
 | `widgets.py` | Graphics items en dialogen (kaarten, knoppen). |
 | `cards.py` | Kaartcode → SVG-element-id. |
 
+De kaartenset en de iconen staan in `jwies_qt_client/assets/`. Dat is bewust een
+kopie van wat de webclient uitdeelt: `test_both_clients_ship_the_same_card_sheet`
+faalt zodra de twee uiteenlopen.
+
 ## Communicatieprotocol
 
 Eén websocketverbinding met `jwies-server`, JSON volgens

@@ -54,7 +54,7 @@ flowchart LR
 
 Server en clients zijn drie volledig onafhankelijke uv-projecten, elk met een
 eigen dependency-graph; `uv tree` per project bevestigt dat (zie
-[setup.md](../development/setup.md)).
+[instructions.md](../development/instructions.md)).
 
 
 ## Drie principes die de rest verklaren

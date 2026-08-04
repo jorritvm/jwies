@@ -77,7 +77,7 @@ is geen login, en je komt met dezelfde naam terug aan je stoel.
 
 | veld | type | betekenis |
 |---|---|---|
-| `username` | string | 2 tot 20 tekens uit `A-Za-z0-9_- ` en een spatie. |
+| `username` | string | 2 tot 20 tekens uit `A-Za-z0-9_-` en de spatie. |
 | `resume_token` | string of null | Wat je bij het eerste `hello_ok` kreeg. Mag weg blijven: is de oude verbinding dood, dan volstaat de naam. |
 
 #### `lobby_list`
@@ -483,7 +483,10 @@ op de code alleen als je er iets bijzonders mee doet.
 ```
 → hello {username}
 ← hello_ok {resume_token, rulesets, scorings}
-← lobby_list
+← chat "Welkom Jan!"
+
+→ lobby_list
+← lobby_list {lobbies}
 
 → lobby_create {name, ruleset, scoring}
 ← lobby_state

@@ -10,7 +10,7 @@ iemands verbinding weg, dan pauzeert het spel en wacht het op hem.
 > Todo
 
 ## Documentatie
-- Het spel en zijn regel staat uitgebreid beschreven in [`docs/game/rules.md`](docs/game/rules.md).
+- De spelregel en handleiding staan uitgebreid beschreven in [`docs/game/`](docs/game/)
 - De architectuur (geheel en per module) en het protocol staan beschreven in [`docs/architecture/`](docs/architecture/).
 - De ontwikkelaarsdocumentatie staat in [`docs/development/`](docs/development/).
 

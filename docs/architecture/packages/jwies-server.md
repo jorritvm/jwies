@@ -86,7 +86,7 @@ synchroon: je kan er werken zonder een server te starten.
 
 Voeg je een speler-zichtbare zin toe, dan schrijf je die gewoon uit in
 `presenter.py` of `chat.py` - dat zijn de enige twee plaatsen die zinnen maken.
-Zie [decisions.md](decisions.md) voor de afweging.
+Zie [decisions.md](../../development/decisions.md) voor de afweging.
 
 ## Een nieuw berichttype
 
@@ -102,10 +102,9 @@ Is het echt een mededeling:
    via `to_action()`.
 2. Afhandelen in `jwies_server/connection.py` (lobbyniveau) of
    `jwies_server/lobby.py` (spelniveau).
-3. Beschrijven in [`architecture/protocol.md`](../architecture/protocol.md),
-   met een `#### `naam``-kop en een tabelrij per veld.
-   `tests/server/test_protocol_docs.py` faalt tot je dat doet - dat is de
-   bedoeling.
+3. Beschrijven in [`protocol.md`](../protocol.md), met een `#### `naam``-kop en
+   een tabelrij per veld. `tests/server/test_protocol_docs.py` faalt tot je dat
+   doet - dat is de bedoeling.
 4. Tonen in beide clients. Alleen de drie slagberichten mogen toestand
    veranderen; al de rest hoort in de chat of in een melding thuis.
 
@@ -119,7 +118,7 @@ bij: `PROTOCOL_VERSION` in `jwies_server/protocol.py`, en als los getal in
 `jwies_qt_client/net.py` en `js/net.js`. Vergeet je er een, dan weigert de
 server die client met een nette Nederlandse melding - de envelop zelf negeert
 onbekende velden juist zodat een oude client tot aan die melding geraakt.
-Vergeet je [`architecture/protocol.md`](../architecture/protocol.md), dan faalt
+Vergeet je [`protocol.md`](../protocol.md), dan faalt
 `test_the_documented_version_matches_the_code`.
 
 
