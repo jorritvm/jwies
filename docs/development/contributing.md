@@ -1,24 +1,19 @@
-# Installatie instructies
+# Developer instructies
 
 <!-- TOC -->
-* [Installatie instructies](#installatie-instructies)
-  * [Development](#development)
-    * [Vereisten](#vereisten)
+* [Developer instructies](#developer-instructies)
+  * [Vereisten](#vereisten)
+  * [Lokale versie opzetten](#lokale-versie-opzetten)
     * [jwies-server opzetten](#jwies-server-opzetten)
     * [jwies-qt-client opzetten](#jwies-qt-client-opzetten)
     * [jwies-web-client opzetten](#jwies-web-client-opzetten)
     * [Alles tegelijk opstarten](#alles-tegelijk-opstarten)
-    * [Testing](#testing)
-    * [Linting en formatting](#linting-en-formatting)
-    * [Bumping](#bumping)
-  * [Production](#production)
-    * [jwies-server](#jwies-server)
-    * [jwies-qt-client](#jwies-qt-client)
-    * [jwies-web-client](#jwies-web-client)
+  * [Linting en formatting](#linting-en-formatting)
+  * [Bumping](#bumping)
+  * [Testing](#testing)
 <!-- TOC -->
 
-## Development
-### Vereisten
+## Vereisten
 - Je hebt [uv](https://docs.astral.sh/uv/) en Python 3.13 nodig.
 - Je hebt een lokale kopie van de code nodig
     ```powershell
@@ -27,6 +22,7 @@
     ```
 - Server en client kunnen tegelijk draaien, maar in aparte vensters.
 
+## Lokale versie opzetten
 
 ### jwies-server opzetten
 - Kies je regelset:  
@@ -69,7 +65,32 @@ Als test kan je alles tegelijk opstarten dankzij:
 .\scripts\run_dev.ps1
 ```
 
-### Testing
+## Linting en formatting
+Elk project draagt zijn eigen ruff-instellingen in zijn `pyproject.toml`, dus
+lint je per project (of in één keer met `check_all.ps1` hierboven):
+
+```powershell
+cd jwies-server
+uv run ruff check .
+uv run ruff format .
+uv run mypy jwies_core jwies_server
+```
+
+## Bumping
+`bump-my-version` staat in geen enkel project als afhankelijkheid; draai het met
+`uvx`. Zet eerst de output op UTF-8, anders struikelt het over de pijltjes in
+zijn eigen uitvoer.
+
+```powershell
+$env:PYTHONIOENCODING = "utf-8"
+uvx bump-my-version show-bump
+uvx bump-my-version bump patch    # of minor / major
+```
+
+Dat past de versie in alle vier de `pyproject.toml`-bestanden tegelijk aan,
+maakt een commit en zet een git-tag.
+
+## Testing
 
 Elk project heeft zijn eigen venv, dus je test per project:
 
@@ -96,51 +117,3 @@ Alles in één keer (sync, ruff, pytest per project, en mypy):
 | `tests` | checks die meer dan één project tegelijk nodig hebben, bv. kaart-ids die JS en Python delen |
 
 De Qt-tests draaien met `QT_QPA_PLATFORM=offscreen`.
-
-### Linting en formatting
-Elk project draagt zijn eigen ruff-instellingen in zijn `pyproject.toml`, dus
-lint je per project (of in één keer met `check_all.ps1` hierboven):
-
-```powershell
-cd jwies-server
-uv run ruff check .
-uv run ruff format .
-uv run mypy jwies_core jwies_server
-```
-
-### Bumping
-`bump-my-version` staat in geen enkel project als afhankelijkheid; draai het met
-`uvx`. Zet eerst de output op UTF-8, anders struikelt het over de pijltjes in
-zijn eigen uitvoer.
-
-```powershell
-$env:PYTHONIOENCODING = "utf-8"
-uvx bump-my-version show-bump
-uvx bump-my-version bump patch    # of minor / major
-```
-
-Dat past de versie in alle vier de `pyproject.toml`-bestanden tegelijk aan,
-maakt een commit en zet een git-tag.
-
-
-## Production
-### jwies-server
-De server is een gewone ASGI-toepassing en blijft onbeperkt draaien.
-
-```powershell
-uv run --project jwies-server jwies-server `
-    --config /etc/jwies/server.yaml `
-    --log-file /var/log/jwies.log
-```
-
-Om online te spelen zonder netwerkproblemen zijn meerdere mogelijkheden:
-- open poort 8000 in je firewall
-- zet een reverse proxy op
-
-> todo: docker
-
-### jwies-qt-client
-> todo
- 
-### jwies-web-client
-> todo

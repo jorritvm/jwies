@@ -86,7 +86,7 @@ synchroon: je kan er werken zonder een server te starten.
 
 Voeg je een speler-zichtbare zin toe, dan schrijf je die gewoon uit in
 `presenter.py` of `chat.py` - dat zijn de enige twee plaatsen die zinnen maken.
-Zie [decisions.md](../../development/decisions.md) voor de afweging.
+Zie [decisions.md](../../development/contributing.md) voor de afweging.
 
 ## Een nieuw berichttype
 

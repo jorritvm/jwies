@@ -2,6 +2,13 @@
 old/
 .idea/
 
+# De hoofdmap is geen uv-project, dus een uv.lock daar beschrijft niets. De
+# lockfiles van de vier echte projecten blijven wel in versiebeheer.
+/uv.lock
+
+
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
