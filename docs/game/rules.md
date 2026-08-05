@@ -79,9 +79,12 @@ elke ronde één plaats met de klok mee op.
 - De kaarten worden **enkel voor het allereerste spel geschud**. Daarna worden de kaarten
   van de vorige ronde gewoon opgeraapt en opnieuw gedeeld ("de slagen blijven liggen zoals
   ze gewonnen zijn"). Dat maakt geheugen en aftelling een deel van het spel.
-- Vóór het delen **coupeert** (splitst) de speler rechts van de deler het pak in twee
-  stapels, waarna de stapels omgedraaid op elkaar worden gelegd. Meestal geldt de regel dat
-  elke stapel minstens 4 kaarten moet bevatten.
+- Is er **wel** geschud, dan **coupeert** (splitst) de speler rechts van de deler het pak in
+  twee stapels, waarna de stapels omgedraaid op elkaar worden gelegd. Meestal geldt de regel
+  dat elke stapel minstens 4 kaarten moet bevatten.
+- Is er **niet** geschud, dan wordt er ook **niet gecoupeerd**: het pak wordt gedeeld zoals
+  het van tafel komt. Couperen is er om een schudbeurt die niemand gezien heeft te
+  controleren, en het zou net de volgorde breken waarop het aftellen steunt.
 
 ### 3.3 Delen
 

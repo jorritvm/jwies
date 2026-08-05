@@ -16,9 +16,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 pytest.importorskip("PyQt6.QtWidgets")
 
+from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import QApplication, QInputDialog, QMessageBox
 
-from jwies_qt_client.main_window import CHAT_MINIMUM_WIDTH, MainWindow
+from jwies_qt_client.main_window import CHAT_MINIMUM_WIDTH, CHAT_TABLE_COLUMNS, MainWindow
 from jwies_qt_client.settings import ClientSettings
 
 
@@ -263,6 +264,28 @@ class TestTheChatIsUsable:
 
     def test_the_handle_can_be_grabbed(self, window: MainWindow) -> None:
         assert window.splitter.handleWidth() >= 6
+
+    def test_the_chat_font_is_fixed_width(self, window: MainWindow) -> None:
+        """!counting and !ruleset are columns padded with spaces.
+
+        In the proportional UI font those columns landed wherever the letters
+        happened to end, which is no table at all.
+        """
+        metrics = QFontMetrics(window.chat_log.font())
+        assert metrics.horizontalAdvance("i") == metrics.horizontalAdvance("W")
+
+    def test_the_chat_opens_wide_enough_for_a_table(self, window: MainWindow) -> None:
+        """A fixed-width font buys nothing if the row wraps halfway anyway.
+
+        Measured against the requested width rather than the realised one: the
+        offscreen platform decides how wide the window really gets, and the
+        ceiling on the chat share would be what is under test then.
+        """
+        metrics = QFontMetrics(window.chat_log.font())
+        scrollbar = window.chat_log.verticalScrollBar().sizeHint().width()
+        row = metrics.horizontalAdvance("0" * CHAT_TABLE_COLUMNS)
+        window.resize(row * 3, 720)  # roomy enough that the ceiling is not it
+        assert window.chat_opening_width() >= row + scrollbar, "de puntentabel wikkelt"
 
     def test_the_split_is_set_explicitly(self, window: MainWindow) -> None:
         """Left to its own devices the splitter gave the chat about 9%.

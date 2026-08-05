@@ -133,7 +133,9 @@ Antwoord op een `prompt` van soort `shuffle`.
 
 #### `answer_cut`
 
-Antwoord op een `prompt` van soort `cut`.
+Antwoord op een `prompt` van soort `cut`. Die prompt komt er enkel op een pak dat
+geschud is: is er niet geschud, dan wordt er ook niet gecoupeerd en volgt de deal
+meteen. Ga er dus niet van uit dat er na `answer_shuffle` altijd een `cut` komt.
 
 | veld | type | betekenis |
 |---|---|---|
@@ -498,7 +500,9 @@ op de code alleen als je er iets bijzonders mee doet.
 ← snapshot        (de deler krijgt prompt {kind: shuffle}, de rest niet)
 
 → answer_shuffle {shuffle: false}
-← snapshot        (nu met prompt {kind: cut} voor wie rechts van de deler zit)
+← snapshot        (het openingspak is geschud, dus toch een prompt {kind: cut}
+                   voor wie rechts van de deler zit; op een ongeschud pak wordt
+                   er niet gecoupeerd en volgt de deal meteen)
 → answer_cut {count: 12}
 ← chat "De geblekte troefkaart is AH."
 ← snapshot        (prompt {kind: bid, bid_options: [...]})

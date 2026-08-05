@@ -51,7 +51,11 @@ def seed_without_troel(ruleset: Ruleset, scale: ScoringScale) -> int:
 
 
 def bid_script(engine: GameEngine, script: list[Bid]) -> list[Event]:
-    """Feed bids in turn order; anyone not scripted passes."""
+    """Feed bids in turn order; anyone not scripted passes.
+
+    Stops at a redeal: an unshuffled pack is not cut, so the next deal follows
+    immediately and the script would otherwise run straight on into it.
+    """
     events: list[Event] = []
     index = 0
     guard = 0
@@ -77,7 +81,10 @@ def bid_script(engine: GameEngine, script: list[Bid]) -> list[Event]:
             option = next(o for o in prompt.bid_options if o.type is BidType.PASS)
         else:
             option = Bid(option.type, option.tricks, wanted.suit or option.suit)
-        events += engine.apply(prompt.seat, PlaceBid(bid=option))
+        placed = engine.apply(prompt.seat, PlaceBid(bid=option))
+        events += placed
+        if any(isinstance(event, RedealRequired) for event in placed):
+            break
     return events
 
 

@@ -174,6 +174,9 @@ class GameEngine:
         self.totals: dict[Seat, Decimal] = {seat: Decimal(0) for seat in ALL_SEATS}
         self.phase = Phase.WAITING_FOR_SHUFFLE
         self._deck: list[Card] = shuffled_deck(self.rng)
+        # The opening deck comes out of the box shuffled, so the first deal is
+        # cut. After that the cut only follows a shuffle - see _cut_or_deal.
+        self._deck_is_shuffled = True
         self._next_multiplier = Decimal(1)
         self.round = _RoundState(dealer=dealer)
         self._started = False
@@ -204,8 +207,9 @@ class GameEngine:
 
         if self.ruleset.deal.dealer_may_shuffle:
             self.phase = Phase.WAITING_FOR_SHUFFLE
-        else:
-            self.phase = Phase.WAITING_FOR_CUT
+            return events
+
+        events.extend(self._cut_or_deal())
         return events
 
     def _redeal(self, reason: RedealReason) -> list[Event]:
@@ -371,8 +375,21 @@ class GameEngine:
     def _apply_shuffle(self, action: Shuffle) -> list[Event]:
         if action.shuffle:
             self.rng.shuffle(self._deck)
-        self.phase = Phase.WAITING_FOR_CUT
-        return []
+            self._deck_is_shuffled = True
+        return self._cut_or_deal()
+
+    def _cut_or_deal(self) -> list[Event]:
+        """Offer the cut, but only on a deck that has been shuffled.
+
+        Cutting is what protects the table against a shuffle nobody saw. A pack
+        that was not shuffled - the tricks of the previous round, picked up as
+        they lie - is dealt straight away: cutting it would only break the order
+        that counting the cards depends on.
+        """
+        if self._deck_is_shuffled:
+            self.phase = Phase.WAITING_FOR_CUT
+            return []
+        return self._deal()
 
     def _apply_cut(self, seat: Seat, action: Cut) -> list[Event]:
         low = self.ruleset.deal.cut_minimum
@@ -390,6 +407,8 @@ class GameEngine:
         # Index 0 is the turned trump; dealing works backwards from the end
         # of the deck so it's never touched by a packet.
         self.round.turned_trump = self._deck[0]
+        # Whatever comes back on the table after this round is unshuffled.
+        self._deck_is_shuffled = False
 
         hands: dict[Seat, list[Card]] = {seat: [] for seat in ALL_SEATS}
         order = seat_order_from(left_of(self.round.dealer))

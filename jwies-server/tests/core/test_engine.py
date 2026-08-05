@@ -17,6 +17,7 @@ from jwies_core.events import (
     IllegalAction,
     PlaceBid,
     PlayCard,
+    RedealRequired,
     RoundScored,
     Shuffle,
     TrickCompleted,
@@ -28,6 +29,13 @@ def make_engine(ruleset: Ruleset, scale: ScoringScale, seed: int = 42) -> GameEn
     engine = GameEngine(ruleset, scale, rng=random.Random(seed))
     engine.start_round()
     return engine
+
+
+def _with_shuffling_dealer(ruleset: Ruleset) -> Ruleset:
+    """The same ruleset, but the dealer is asked whether he wants to shuffle."""
+    return ruleset.model_copy(
+        update={"deal": ruleset.deal.model_copy(update={"dealer_may_shuffle": True})}
+    )
 
 
 def advance_to_bidding(engine: GameEngine) -> list[Event]:
@@ -97,6 +105,59 @@ class TestDealing:
             dealt.extend(engine.hand_of(seat))
         assert len(dealt) == DECK_SIZE
         assert len(set(dealt)) == DECK_SIZE
+
+    def test_the_opening_deck_is_cut(self, klassiek: Ruleset, schaal_a: ScoringScale) -> None:
+        engine = make_engine(klassiek, schaal_a)
+        prompt = engine.pending()
+        assert prompt is not None
+        assert prompt.kind is PromptKind.CUT
+
+    def test_an_unshuffled_deck_is_not_cut(self, klassiek: Ruleset, schaal_a: ScoringScale) -> None:
+        """The tricks are picked up as they lie, so there is nothing to cut."""
+        engine = make_engine(klassiek, schaal_a)
+        advance_to_bidding(engine)
+        bid_until_playing(engine)
+        play_out_round(engine)
+
+        engine.start_round()
+        assert engine.phase is not Phase.WAITING_FOR_CUT
+        for seat in ALL_SEATS:
+            assert len(engine.hand_of(seat)) == CARDS_PER_HAND
+
+    def test_declining_the_shuffle_skips_the_cut(
+        self, klassiek: Ruleset, schaal_a: ScoringScale
+    ) -> None:
+        engine = make_engine(_with_shuffling_dealer(klassiek), schaal_a)
+        advance_to_bidding(engine)
+        bid_until_playing(engine)
+        play_out_round(engine)
+        engine.start_round()
+
+        prompt = engine.pending()
+        assert prompt is not None
+        assert prompt.kind is PromptKind.SHUFFLE
+        engine.apply(prompt.seat, Shuffle(shuffle=False))
+
+        assert engine.phase is not Phase.WAITING_FOR_CUT
+        for seat in ALL_SEATS:
+            assert len(engine.hand_of(seat)) == CARDS_PER_HAND
+
+    def test_accepting_the_shuffle_still_cuts(
+        self, klassiek: Ruleset, schaal_a: ScoringScale
+    ) -> None:
+        engine = make_engine(_with_shuffling_dealer(klassiek), schaal_a)
+        advance_to_bidding(engine)
+        bid_until_playing(engine)
+        play_out_round(engine)
+        engine.start_round()
+
+        prompt = engine.pending()
+        assert prompt is not None
+        engine.apply(prompt.seat, Shuffle(shuffle=True))
+
+        prompt = engine.pending()
+        assert prompt is not None
+        assert prompt.kind is PromptKind.CUT
 
     def test_the_turned_trump_is_a_dealt_card(
         self, klassiek: Ruleset, schaal_a: ScoringScale
@@ -287,9 +348,13 @@ class TestDeterminism:
             guard += 1
             prompt = engine.pending()
             assert prompt is not None
-            engine.apply(
+            events = engine.apply(
                 prompt.seat,
                 PlaceBid(bid=next(o for o in prompt.bid_options if o.type is BidType.PASS)),
             )
+            # The redeal deals straight away when there is no cut to answer, so
+            # passing on would double the stake over and over.
+            if any(isinstance(event, RedealRequired) for event in events):
+                break
         # Everyone passing triggers a redeal; the stake carries over doubled.
         assert engine.round.multiplier in (Decimal(1), Decimal(2))

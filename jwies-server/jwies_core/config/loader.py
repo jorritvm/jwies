@@ -116,7 +116,11 @@ def describe_ruleset(ruleset: Ruleset) -> str:
 
 
 def describe_scoring_scale(scale: ScoringScale) -> str:
-    """Render a scoring scale as a Dutch table for the ``!counting`` chat command."""
+    """Render a scoring scale as a Dutch table for the ``!counting`` chat command.
+
+    The columns below are 52 characters wide in total, which the Qt client sizes
+    its chat pane on (``CHAT_TABLE_COLUMNS``). Widen them and the rows wrap.
+    """
     payment = (
         "elke tegenstander betaalt het volledige bedrag"
         if scale.solo_payment.value == "per_tegenstander"

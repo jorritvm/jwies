@@ -10,7 +10,7 @@ import logging
 from typing import Any
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction, QIcon
+from PyQt6.QtGui import QAction, QFontDatabase, QFontMetrics, QIcon
 from PyQt6.QtSvg import QSvgRenderer
 from PyQt6.QtWidgets import (
     QDialog,
@@ -55,9 +55,15 @@ BID_LABELS = {
 
 SUIT_CHOOSING_BIDS = {"ask", "abondance", "solo"}
 
-# Enough for a wrapped chat line plus the scrollbar. Also the width the chat
-# opens at, three times over for the table beside it.
+# Enough for a wrapped chat line plus the scrollbar. The floor under the width
+# the chat opens at, and the narrowest the splitter will let it get.
 CHAT_MINIMUM_WIDTH = 260
+
+# The server lays out !counting and !ruleset in columns padded with spaces, so
+# the chat needs a fixed-width font to line them up - and room for the widest
+# row, or the columns wrap and the fixed-width font buys nothing. Prose lines
+# are longer than this and go on wrapping, which is what you want for prose.
+CHAT_TABLE_COLUMNS = 52
 
 
 def bid_label(bid: dict[str, Any]) -> str:
@@ -140,6 +146,7 @@ class MainWindow(QMainWindow):
 
         self.chat_log = QPlainTextEdit()
         self.chat_log.setReadOnly(True)
+        self.chat_log.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont))
         self.chat_input = QLineEdit()
         self.chat_input.setPlaceholderText("Typ een bericht of !help")
         chat = QWidget()
@@ -160,12 +167,36 @@ class MainWindow(QMainWindow):
         # white chat box, which makes the split look fixed when it is not.
         self.splitter.setHandleWidth(8)
         self.splitter.setChildrenCollapsible(False)
-        self.splitter.setSizes([CHAT_MINIMUM_WIDTH * 3, CHAT_MINIMUM_WIDTH])
+        opening = self.chat_opening_width()
+        self.splitter.setSizes([self.width() - opening, opening])
 
         page = QWidget()
         page_layout = QVBoxLayout(page)
         page_layout.addWidget(self.splitter)
         return page
+
+    def chat_opening_width(self) -> int:
+        """How wide the chat starts: enough for a server table, within reason.
+
+        How much that is depends on the fixed-width font the system hands out,
+        which on some setups is wide enough to leave the table no room. Two
+        fifths of the window is the ceiling - the table keeps the bigger half,
+        and beyond that the splitter is there to be dragged.
+        """
+        metrics = QFontMetrics(self.chat_log.font())
+        # Everything between the panel edge and the text: none of it is in the
+        # font metrics, and together it is easily a column and a half.
+        chrome = (
+            self.chat_log.verticalScrollBar().sizeHint().width()
+            + 2 * self.chat_log.frameWidth()
+            + 2 * int(self.chat_log.document().documentMargin())
+            + self.splitter.handleWidth()
+        )
+        wanted = metrics.horizontalAdvance("0" * CHAT_TABLE_COLUMNS) + chrome
+        # The page's own margins come off the splitter before it divides what
+        # is left, so ask for a little more than the sum of the parts.
+        wanted += wanted // 20
+        return max(CHAT_MINIMUM_WIDTH, min(wanted, self.width() * 2 // 5))
 
     def _wire(self) -> None:
         self.connection.message_received.connect(self.on_message)
