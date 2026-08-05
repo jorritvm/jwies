@@ -50,6 +50,7 @@ lobby:
 regelsets:
   # De traditionele regels uit docs/game/rules.md.
   klassiek: "ruleset/klassiek.yaml"
+  prom2010: "ruleset/prom2010.yaml"
 
 
 # Welke puntenschalen mogen spelers kiezen bij het maken van een lobby?

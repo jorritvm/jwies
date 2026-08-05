@@ -62,7 +62,9 @@
 ### Alles tegelijk opstarten
 Als test kan je alles tegelijk opstarten dankzij:  
 ```powershell
-.\scripts\run_dev.ps1
+.\scripts\run_dev.ps1              -> server + 4 PyQt-clients
+.\scripts\run_dev.ps1 -Clients 2   -> server + 2 PyQt-clients (de rest via de browser)
+.\scripts\run_dev.ps1 -ServerOnly  -> enkel de server
 ```
 
 ## Linting en formatting

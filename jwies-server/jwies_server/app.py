@@ -54,7 +54,6 @@ def create_app(config: LoadedConfig) -> FastAPI:
     app = FastAPI(
         title="jwies",
         version=__version__,
-        docs_url=None,
         redoc_url=None,
         lifespan=lifespan,
     )
