@@ -63,7 +63,7 @@ def fast_config_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
     # A second scale whose penalty does not depend on how short the declaring
     # side finished. That is the only condition under which folding is offered
     # before the last trick, so it is the only way to exercise it end to end.
-    flat = yaml.safe_load((TEMPLATES / "scoring" / "schaal_a.yaml").read_text(encoding="utf-8"))
+    flat = yaml.safe_load((TEMPLATES / "scoring" / "kaartclubs.yaml").read_text(encoding="utf-8"))
     for entry in flat["contracten"].values():
         entry["per_slag_tekort"] = 0
     (directory / "vlak.yaml").write_text(

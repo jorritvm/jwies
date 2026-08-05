@@ -23,12 +23,12 @@ def jwies_v0_ruleset() -> Ruleset:
 
 @pytest.fixture(scope="session")
 def schaal_a() -> ScoringScale:
-    return load_scoring_scale(TEMPLATES / "scoring" / "schaal_a.yaml")
+    return load_scoring_scale(TEMPLATES / "scoring" / "kaartclubs.yaml")
 
 
 @pytest.fixture(scope="session")
 def schaal_b() -> ScoringScale:
-    return load_scoring_scale(TEMPLATES / "scoring" / "schaal_b.yaml")
+    return load_scoring_scale(TEMPLATES / "scoring" / "sporza.yaml")
 
 
 @pytest.fixture(scope="session")

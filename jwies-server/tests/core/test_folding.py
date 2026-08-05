@@ -110,7 +110,7 @@ def flat_scale(tmp_path: Path) -> ScoringScale:
     spells `per_overslag: 0`, so a string replace silently leaves some of them
     paying per trick - which is exactly the state in which folding is refused.
     """
-    raw = yaml.safe_load((TEMPLATES / "scoring" / "schaal_a.yaml").read_text(encoding="utf-8"))
+    raw = yaml.safe_load((TEMPLATES / "scoring" / "kaartclubs.yaml").read_text(encoding="utf-8"))
     for entry in raw["contracten"].values():
         entry["per_slag_tekort"] = 0
     path = tmp_path / "vlak.yaml"
@@ -192,12 +192,12 @@ class TestWhenTheMoneyIsAlreadyFixed:
     def test_a_bust_contract_is_normally_still_worth_playing(self) -> None:
         # This is the finding that shaped the whole feature: every trick a bust
         # declarer takes back is money, so folding would not be free.
-        scale = load_scoring_scale(TEMPLATES / "scoring" / "schaal_a.yaml")
+        scale = load_scoring_scale(TEMPLATES / "scoring" / "kaartclubs.yaml")
         slim = contract(ContractKey.SOLO_SLIM, 13)
         assert not payout_is_settled(slim, taken=2, remaining=6, scale=scale)
 
     def test_the_last_trick_settles_it(self) -> None:
-        scale = load_scoring_scale(TEMPLATES / "scoring" / "schaal_a.yaml")
+        scale = load_scoring_scale(TEMPLATES / "scoring" / "kaartclubs.yaml")
         slim = contract(ContractKey.SOLO_SLIM, 13)
         assert payout_is_settled(slim, taken=2, remaining=0, scale=scale)
 
@@ -308,7 +308,7 @@ class TestSayingSoWhenTheContractDies:
     """
 
     def test_it_is_announced_once_and_once_only(self) -> None:
-        scale = load_scoring_scale(TEMPLATES / "scoring" / "schaal_a.yaml")
+        scale = load_scoring_scale(TEMPLATES / "scoring" / "kaartclubs.yaml")
         klassiek = load_ruleset(TEMPLATES / "ruleset" / "klassiek.yaml")
         engine, _ = play_until_contract_dies(klassiek, scale)
 
@@ -318,7 +318,7 @@ class TestSayingSoWhenTheContractDies:
         assert later == 0, "de aankondiging kwam meer dan een keer"
 
     def test_it_knows_the_table_must_play_on(self) -> None:
-        scale = load_scoring_scale(TEMPLATES / "scoring" / "schaal_a.yaml")
+        scale = load_scoring_scale(TEMPLATES / "scoring" / "kaartclubs.yaml")
         klassiek = load_ruleset(TEMPLATES / "ruleset" / "klassiek.yaml")
         _, event = play_until_contract_dies(klassiek, scale)
         assert event.folding_offered is False

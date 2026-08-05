@@ -63,8 +63,8 @@ def test_jwies_v0_reproduces_the_old_controller_ini() -> None:
 
 
 def test_the_two_published_scales_differ_only_structurally_in_payment() -> None:
-    schaal_a = load_scoring_scale(TEMPLATES / "scoring" / "schaal_a.yaml")
-    schaal_b = load_scoring_scale(TEMPLATES / "scoring" / "schaal_b.yaml")
+    schaal_a = load_scoring_scale(TEMPLATES / "scoring" / "kaartclubs.yaml")
+    schaal_b = load_scoring_scale(TEMPLATES / "scoring" / "sporza.yaml")
     assert schaal_a.solo_payment is SoloPayment.PER_OPPONENT
     assert schaal_b.solo_payment is SoloPayment.SHARED
     assert schaal_a.contracts.keys() == schaal_b.contracts.keys()

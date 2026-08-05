@@ -50,17 +50,14 @@ lobby:
 regelsets:
   # De traditionele regels uit docs/game/rules.md.
   klassiek: "ruleset/klassiek.yaml"
-  # 3-3-3-4 deling, de jwies_v0-variant.
-  jwies_v0: "ruleset/jwies_v0.yaml"
+
 
 # Welke puntenschalen mogen spelers kiezen bij het maken van een lobby?
 puntenschalen:
   # Kleine schaal: elke tegenstander betaalt het volledige bedrag.
-  schaal_a: "scoring/schaal_a.yaml"
+  kaartclubs: "scoring/kaartclubs.yaml"
   # Grote schaal (o.a. Sporza): het bedrag wordt over de tegenstanders verdeeld.
-  schaal_b: "scoring/schaal_b.yaml"
-  # Puntenschaal bij de jwies_v0-regelset.
-  jwies_v0: "scoring/jwies_v0.yaml"
+  sporza: "scoring/sporza.yaml"
 
 # Welke regelset wordt voorgesteld wanneer een speler niets kiest?
 # Moet hierboven bij 'regelsets' gedefinieerd zijn.
@@ -68,7 +65,7 @@ standaard_regelset: klassiek
 
 # Welke puntenschaal wordt voorgesteld wanneer een speler niets kiest?
 # Moet hierboven bij 'puntenschalen' gedefinieerd zijn.
-standaard_puntenschaal: schaal_a
+standaard_puntenschaal: kaartclubs
 
 # ---------------------------------------------------------------------------
 # Logboek.
