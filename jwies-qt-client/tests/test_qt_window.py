@@ -120,28 +120,64 @@ def snapshot(**overrides: Any) -> dict[str, Any]:
     return {"type": "snapshot", "snapshot": {**SNAPSHOT["snapshot"], **overrides}}
 
 
+def duo_snapshot(**overrides: Any) -> dict[str, Any]:
+    """A contract with two declarers, seats 0 and 2.
+
+    The default table is ``alone``, where giving up needs nobody else, so the
+    partner half of the rule needs a contract of its own.
+    """
+    contract = {
+        "key": "alliance",
+        "name": "vragen en meegaan",
+        "tricks_required": 8,
+        "declarers": [0, 2],
+        "trump": "H",
+    }
+    return snapshot(contract=contract, **overrides)
+
+
 class TestFolding:
-    """Stopping a lost round early is offered as a button, never as a dialog.
+    """Giving up a lost round is offered as a button, never as a dialog.
 
     A round nobody can win any more is the worst possible moment to interrupt
     the table with a modal, so this one deliberately does not go through
     ``react_to_prompt``. It is drawn from the snapshot like everything else.
+    The server only sets the flag for the declaring side, so the client shows
+    the button whenever it is set and never works out who may press it.
     """
 
     def test_it_is_hidden_until_the_server_offers_it(self, window: MainWindow) -> None:
         window.on_message(SNAPSHOT)
         assert window.fold_button.isHidden()
 
-    def test_it_appears_with_the_tally(self, window: MainWindow) -> None:
+    def test_a_lone_declarer_gets_no_tally(self, window: MainWindow) -> None:
+        """Nobody to wait for, so a count would only be confusing."""
         window.show()
-        window.on_message(snapshot(folding_offered=True, folded=[1, 3]))
+        window.on_message(snapshot(folding_offered=True, payout_settled=True, folded=[]))
         assert window.fold_button.isVisible()
-        assert "2/4" in window.fold_button.text()
+        assert window.fold_button.text() == "Ronde opgeven"
+
+    def test_a_pair_sees_how_far_the_agreement_got(self, window: MainWindow) -> None:
+        window.show()
+        window.on_message(duo_snapshot(folding_offered=True, payout_settled=True, folded=[2]))
+        assert window.fold_button.isVisible()
+        assert "1/2" in window.fold_button.text()
+
+    def test_it_warns_when_giving_up_costs_tricks(self, window: MainWindow) -> None:
+        """A duo contract pays per missing trick, so conceding is not free."""
+        window.show()
+        window.on_message(duo_snapshot(folding_offered=True, payout_settled=False, folded=[]))
+        assert "kost punten per slag" in window.fold_button.text()
+
+    def test_it_stays_quiet_when_giving_up_is_free(self, window: MainWindow) -> None:
+        window.show()
+        window.on_message(duo_snapshot(folding_offered=True, payout_settled=True, folded=[]))
+        assert "kost punten" not in window.fold_button.text()
 
     def test_it_shows_whether_you_agreed(self, window: MainWindow) -> None:
-        window.on_message(snapshot(folding_offered=True, folded=[1, 3]))
+        window.on_message(duo_snapshot(folding_offered=True, folded=[2]))
         assert not window.fold_button.isChecked(), "stoel 0 heeft niet opgegeven"
-        window.on_message(snapshot(folding_offered=True, folded=[0, 1, 3]))
+        window.on_message(duo_snapshot(folding_offered=True, folded=[0, 2]))
         assert window.fold_button.isChecked()
 
     def test_the_server_has_the_last_word(self, window: MainWindow) -> None:

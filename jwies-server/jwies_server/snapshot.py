@@ -109,9 +109,12 @@ def build_snapshot(
         prompt=presenter.prompt(pending) if on_turn and pending else None,
         paused=paused,
         missing_players=tuple(sorted(missing)),
-        # Everyone sees the same offer and the same tally: it is a decision the
-        # table takes together, so there is nothing private about it.
-        folding_offered=engine.folding_is_offered(),
+        # Only the declaring side can give up, so the offer is addressed to you
+        # personally. The tally is not private: everyone sees who has agreed.
+        folding_offered=(
+            engine.folding_is_offered() and contract is not None and your_seat in contract.declarers
+        ),
+        payout_settled=engine.payout_is_settled(),
         folded=tuple(sorted(int(seat) for seat in engine.round.folded)),
     )
 

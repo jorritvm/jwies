@@ -164,13 +164,14 @@ class TestTheDeadContractAnnouncement:
     """The one sentence that has to change a player's mind.
 
     Seeing "solo slim is niet meer te halen" and then being made to play on
-    looks like the game is wasting your time. It is not: the penalty is charged
-    per missing trick, so the rest of the round is still worth money. If that
-    sentence does not say why, nobody will believe it.
+    looks like the game is wasting your time. Whether it is depends on the
+    contract: a duo contract is charged per missing trick, so the rest of the
+    round is still worth money and giving up costs you. If the sentence does
+    not say which case this is, nobody will believe it either way.
     """
 
     @staticmethod
-    def _lost(*, folding_offered: bool) -> object:
+    def _lost(*, folding_offered: bool, payout_settled: bool) -> object:
         from jwies_core.contracts import CONTRACT_CATALOG, Contract, ContractKey
         from jwies_core.events import ContractLost
 
@@ -183,25 +184,37 @@ class TestTheDeadContractAnnouncement:
             tricks_required=13,
             leader=0,
         )
-        return ContractLost(contract=contract, folding_offered=folding_offered)
+        return ContractLost(
+            contract=contract,
+            folding_offered=folding_offered,
+            payout_settled=payout_settled,
+        )
 
-    def _sentence(self, *, folding_offered: bool) -> str:
+    def _sentence(self, *, folding_offered: bool = True, payout_settled: bool) -> str:
         from jwies_server.presenter import Presenter
 
-        messages = Presenter({}).messages_for(self._lost(folding_offered=folding_offered))
+        messages = Presenter({}).messages_for(
+            self._lost(folding_offered=folding_offered, payout_settled=payout_settled)
+        )
         assert len(messages) == 1
         return str(messages[0].text)
 
-    def test_it_explains_why_the_round_carries_on(self) -> None:
-        sentence = self._sentence(folding_offered=False)
+    def test_it_warns_that_giving_up_is_not_free(self) -> None:
+        sentence = self._sentence(payout_settled=False)
         assert "solo slim" in sentence
         assert "niet meer te halen" in sentence
+        assert "mag opgeven" in sentence
         assert "per ontbrekende slag" in sentence, "zonder de reden is het gewoon vervelend"
 
-    def test_it_offers_the_way_out_when_there_is_one(self) -> None:
-        sentence = self._sentence(folding_offered=True)
-        assert "mag de ronde stoppen" in sentence
+    def test_it_says_so_when_there_is_nothing_left_to_lose(self) -> None:
+        sentence = self._sentence(payout_settled=True)
+        assert "punten liggen vast" in sentence
+        assert "mag de ronde opgeven" in sentence
         assert "per ontbrekende slag" not in sentence
+
+    def test_a_ruleset_that_forbids_folding_just_states_the_fact(self) -> None:
+        sentence = self._sentence(folding_offered=False, payout_settled=True)
+        assert sentence == "solo slim is niet meer te halen."
 
 
 class TestDutchSentences:

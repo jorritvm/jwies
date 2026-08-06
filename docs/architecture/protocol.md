@@ -161,16 +161,18 @@ Antwoord op een `prompt` van soort `play`.
 
 #### `fold`
 
-Akkoord gaan om een verloren ronde hier te stoppen, of dat weer intrekken. Het
-enige bericht dat niet op je beurt wacht: de tafel beslist dit samen.
+Een verloren ronde opgeven, of dat weer intrekken. Het enige bericht dat niet op
+je beurt wacht.
 
-Enkel toegelaten zolang `snapshot.folding_offered` aan staat. Zodra alle vier de
-spelers akkoord zijn, wordt de ronde afgerekend zoals ze er op dat moment voor
-staat en begint de volgende. Zie [Opgeven](#opgeven).
+Enkel de **spelende partij** mag dit sturen, en enkel zolang
+`snapshot.folding_offered` aan staat. Bij twee spelers moeten ze het allebei
+zenden - opgeven kost de partner ook punten. Zodra de hele spelende partij
+akkoord is, wordt de ronde afgerekend zoals ze er op dat moment voor staat en
+begint de volgende. Zie [Opgeven](#opgeven).
 
 | veld | type | betekenis |
 |---|---|---|
-| `fold` | bool | `true` = akkoord, `false` = toch doorspelen. |
+| `fold` | bool | `true` = opgeven, `false` = toch doorspelen. |
 
 ## Server → client
 
@@ -323,8 +325,9 @@ Wie de tafel verlaat, laat ook zijn stoel achter - vandaar geen `seat`.
 | `prompt` | `Prompt` of null | Wat er van *jou* verwacht wordt. Alleen ingevuld als jij aan zet bent. |
 | `paused` | bool | Wacht de tafel op iemand? |
 | `missing_players` | lijst van string | Op wie dan. |
-| `folding_offered` | bool | Mag er nu opgegeven worden? Zie [Opgeven](#opgeven). |
-| `folded` | lijst van int | Welke stoelen al akkoord zijn. Bij vier: de ronde stopt. |
+| `folding_offered` | bool | Mag **jij** nu opgeven? Enkel aan bij de spelende partij. Zie [Opgeven](#opgeven). |
+| `payout_settled` | bool | Kost opgeven niets? `false` = de boete loopt per ontbrekende slag. |
+| `folded` | lijst van int | Welke stoelen al opgegeven hebben. Zodra de hele spelende partij er staat, stopt de ronde. |
 
 #### `Prompt`
 
@@ -426,29 +429,33 @@ Eén regel in de tafellijst.
 
 ## Opgeven
 
-Een tafel kan een verloren ronde vroegtijdig stoppen. De kaarten worden dan
+De spelende partij kan een verloren ronde opgeven. De kaarten worden dan
 opgeraapt zoals ze liggen en de volgende ronde begint.
 
-Dat mag **niet zomaar**, en de reden is de puntentelling. Een contract dat
-gesneuveld is, wordt per ontbrekende slag betaald: elke slag die de spelende
-partij nog binnenhaalt, scheelt geld. Vroeg stoppen zou dat geld dus van de ene
-kant naar de andere schuiven.
+Opgeven betekent: **alle resterende slagen gaan naar de tegenpartij**. De ronde
+wordt dus afgerekend op de slagen die de spelende partij op dat moment heeft,
+en dat is het slechtste resultaat dat ze nog kon halen. Daarom hoeft de
+tegenpartij niets goed te keuren - zij kan er nooit op achteruitgaan.
 
-Daarom staat `folding_offered` maar aan wanneer alle drie deze dingen kloppen:
+`folding_offered` staat aan wanneer deze drie dingen kloppen:
 
 1. de regelset laat het toe (`opgeven_toegelaten`, standaard aan),
 2. het contract kan niet meer gehaald worden, en
-3. de punten liggen al vast - geen enkele verdeling van de resterende slagen
-   verandert de afrekening nog.
+3. jij hoort bij de spelende partij.
 
-Punt 3 is de strenge: met de meegeleverde puntenschalen is dat pas zo bij de
-laatste slag. Een tafel die hier echt gebruik van wil maken, zet
-`per_slag_tekort: 0` bij de contracten waar het om gaat - dan ligt de boete
-vast zodra het contract sneuvelt, en verschijnt het aanbod meteen.
+Of opgeven ook *gratis* is, staat los daarvan, in `payout_settled`. De
+solocontracten (solo, solo slim, miserie, miserie op tafel, abondance) kosten
+bij verlies een **vast** bedrag - zie de kolom "Mislukt" in hoofdstuk 7.2 van
+[de spelregels](../game/rules.md) - dus daar verandert opgeven niets aan de
+afrekening. De duocontracten (vragen & meegaan, alleen gaan, troel) betalen per
+ontbrekende slag: daar kost elke weggegeven slag punten, en `payout_settled`
+staat op `false` zodat de client kan waarschuwen. Een tafel die dat verschil
+niet wil, zet `per_slag_tekort: 0` bij die contracten.
 
-Iedereen ziet dezelfde stand van zaken: `folded` bevat de stoelen die al
-akkoord zijn, en dat is geen geheim. Een stem kan ingetrokken worden met
-`fold: false` zolang de ronde loopt.
+Bij een contract met twee spelers moeten ze het **allebei** sturen: opgeven kost
+de partner ook punten. `folded` bevat de stoelen die al opgegeven hebben en is
+geen geheim - iedereen ziet dezelfde stand van zaken. Een stem kan ingetrokken
+worden met `fold: false` zolang de ronde loopt.
 
 ## Kaartcodes
 

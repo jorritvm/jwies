@@ -1,15 +1,17 @@
-"""Stopping a lost round early, by unanimous agreement.
+"""Giving up a lost round.
 
-The rule the table wants is "this round is decided, let's deal again". The rule
-the engine can safely offer is narrower, and the difference matters: a contract
-that has gone down is paid *per missing trick*, so a bust declarer is normally
-still playing for real money with every trick he claws back. Stopping early
-would hand that money to the defenders.
+Once a contract can no longer be made, the declaring side may stop playing it
+out. Giving up concedes every remaining trick to the defenders, so the round is
+settled on the tricks the declaring side already has - the worst total still
+reachable for them. That is what makes it theirs alone to offer: the defenders
+cannot come out behind, so nobody asks them. With two declarers both partners
+must agree, because conceding spends the partner's points too.
 
-So folding is only offered when the payout is already fixed whatever happens -
-then agreeing costs nobody anything. On the shipped scales that means the last
-trick and little else; a table that wants to use this in earnest sets
-``per_slag_tekort: 0`` on the contracts it cares about.
+Whether it *costs* anything is a separate question, kept in
+``payout_is_settled``. On the shipped scales the solo contracts (solo, solo
+slim, misere, abondance) are fined a flat amount, so conceding changes nothing;
+the duo contracts pay per missing trick, so every trick given up is real money
+and the client warns before the player commits.
 """
 
 from __future__ import annotations
@@ -36,20 +38,28 @@ from jwies_core.events import (
     RoundScored,
     Shuffle,
 )
-from jwies_core.scoring import payout_is_settled
-from jwies_core.seats import ALL_SEATS, Seat
+from jwies_core.scoring import RoundResult, payout_is_settled, score_round
+from jwies_core.seats import Seat
 
 TEMPLATES = Path(__file__).resolve().parents[3] / "config"
 
 
-def _choose_bid(options: tuple[Bid, ...]) -> Bid:
+DUO_BIDS = (BidType.ASK, BidType.ALONE, BidType.JOIN)
+# Abondance and solo need a trump chosen with the bid; these three do not, so a
+# policy can pick them blind.
+SOLO_BIDS = (BidType.MISERE, BidType.MISERE_OUVERTE, BidType.SOLO_SLIM)
+
+
+def _choose_bid(options: tuple[Bid, ...], preference: tuple[BidType, ...] = DUO_BIDS) -> Bid:
     """Bid something rather than nothing.
 
     Taking ``options[0]`` would be simpler but it is always ``pass``, and four
     passes redeal - forever. The same policy as ``tests/e2e/conftest.py``.
+    ``preference`` picks which family of contract the table steers towards,
+    which is what decides whether folding can come up at all.
     """
     by_type = {option.type: option for option in options}
-    for wanted in (BidType.ASK, BidType.ALONE, BidType.JOIN):
+    for wanted in preference:
         if wanted in by_type:
             return by_type[wanted]
     return by_type[BidType.PASS]
@@ -73,7 +83,11 @@ def _answer(engine: GameEngine) -> bool:
 
 
 def play_until_bust(
-    ruleset: Ruleset, scale: ScoringScale, *, stop_early: bool = False
+    ruleset: Ruleset,
+    scale: ScoringScale,
+    *,
+    stop_early: bool = False,
+    declarer_count: int | None = None,
 ) -> GameEngine:
     """An engine parked at the first moment folding is on offer.
 
@@ -82,8 +96,14 @@ def play_until_bust(
     spare is luck, so seeds are tried until one does. With ``stop_early`` the
     engine is handed back as soon as a contract exists instead, which is a
     position where folding must be refused.
+
+    ``declarer_count`` narrows the search to a contract played by that many
+    seats. It matters because a lone declarer conceding ends the round on the
+    spot, while a pair needs both partners to agree. Two declarers are the rare
+    case under this policy - the first bust troel turns up around seed 58 -
+    which is why the search runs a good deal wider than it looks like it needs.
     """
-    for seed in range(50):
+    for seed in range(400):
         engine = GameEngine(ruleset, scale, rng=random.Random(seed))
         engine.start_round()
         # Bounded rather than `while True`: a policy that cannot reach a
@@ -92,6 +112,11 @@ def play_until_bust(
             if engine.phase is Phase.PLAYING or not _answer(engine):
                 break
         if engine.phase is not Phase.PLAYING:
+            continue
+        contract = engine.round.contract
+        if declarer_count is not None and (
+            contract is None or len(contract.declarers) != declarer_count
+        ):
             continue
         if stop_early:
             return engine
@@ -189,29 +214,53 @@ class TestWhenAContractIsBeyondSaving:
 
 
 class TestWhenTheMoneyIsAlreadyFixed:
-    def test_a_bust_contract_is_normally_still_worth_playing(self) -> None:
-        # This is the finding that shaped the whole feature: every trick a bust
-        # declarer takes back is money, so folding would not be free.
+    def test_a_bust_duo_contract_is_still_worth_playing(self) -> None:
+        # The duo contracts are the ones charged per missing trick, so every
+        # trick a bust declaring pair claws back is money and folding is refused.
         scale = load_scoring_scale(TEMPLATES / "scoring" / "kaartclubs.yaml")
-        slim = contract(ContractKey.SOLO_SLIM, 13)
-        assert not payout_is_settled(slim, taken=2, remaining=6, scale=scale)
+        alliance = contract(ContractKey.ALLIANCE, 8, declarers=(0, 2))
+        assert not payout_is_settled(alliance, taken=2, remaining=4, scale=scale)
 
     def test_the_last_trick_settles_it(self) -> None:
         scale = load_scoring_scale(TEMPLATES / "scoring" / "kaartclubs.yaml")
+        alliance = contract(ContractKey.ALLIANCE, 8, declarers=(0, 2))
+        assert payout_is_settled(alliance, taken=2, remaining=0, scale=scale)
+
+    def test_a_bust_solo_contract_settles_immediately(self) -> None:
+        """The whole point of the flat penalties: nothing left to play for.
+
+        Per docs/game/rules.md section 7.2 a failed solo slim costs a flat 20 a
+        head however the rest of the tricks fall, so the table may stop at once.
+        """
+        scale = load_scoring_scale(TEMPLATES / "scoring" / "kaartclubs.yaml")
         slim = contract(ContractKey.SOLO_SLIM, 13)
-        assert payout_is_settled(slim, taken=2, remaining=0, scale=scale)
+        assert payout_is_settled(slim, taken=2, remaining=6, scale=scale)
 
-    def test_a_flat_penalty_settles_it_immediately(self, tmp_path: Path) -> None:
-        """The configuration this feature is actually for."""
-        slim = contract(ContractKey.SOLO_SLIM, 13)
-        assert payout_is_settled(slim, taken=2, remaining=6, scale=flat_scale(tmp_path))
+    def test_a_flat_penalty_settles_a_duo_contract_too(self, tmp_path: Path) -> None:
+        """A table that wants to stop early on the duo contracts as well."""
+        alliance = contract(ContractKey.ALLIANCE, 8, declarers=(0, 2))
+        assert payout_is_settled(alliance, taken=2, remaining=4, scale=flat_scale(tmp_path))
 
 
-class TestTheTableAgreeing:
-    """Driving a real engine to a folded round.
+def declarers_of(engine: GameEngine) -> tuple[Seat, ...]:
+    contract = engine.round.contract
+    assert contract is not None
+    return tuple(Seat(seat) for seat in contract.declarers)
 
-    ``klassiek`` plus a flat penalty, because that is the only configuration in
-    which the offer appears early enough to be worth testing.
+
+def defenders_of(engine: GameEngine) -> tuple[Seat, ...]:
+    contract = engine.round.contract
+    assert contract is not None
+    return tuple(Seat(seat) for seat in contract.defenders)
+
+
+class TestTheDeclaringSideGivingUp:
+    """Driving a real engine to a conceded round.
+
+    Giving up hands the defenders every trick that is left, so it is the
+    declaring side's call alone and nobody else is asked. ``klassiek`` plus a
+    flat penalty keeps these tests on a position where conceding is also free,
+    so what they check is the mechanism rather than the arithmetic.
     """
 
     @pytest.fixture
@@ -225,52 +274,105 @@ class TestTheTableAgreeing:
     def test_folding_is_not_offered_while_the_contract_lives(
         self, klassiek: Ruleset, flat: ScoringScale
     ) -> None:
-        engine = play_until_bust(klassiek, flat_scale, stop_early=True)
+        engine = play_until_bust(klassiek, flat, stop_early=True)
         assert not engine.folding_is_offered()
         with pytest.raises(IllegalAction, match="niets op te geven"):
-            engine.apply(Seat(0), Fold())
+            engine.apply(declarers_of(engine)[0], Fold())
 
-    def test_one_vote_is_not_enough(self, klassiek: Ruleset, flat: ScoringScale) -> None:
+    def test_a_defender_may_not_give_up(self, klassiek: Ruleset, flat: ScoringScale) -> None:
+        """It is not their contract, and it would be their gift to refuse."""
         engine = play_until_bust(klassiek, flat)
-        assert engine.folding_is_offered()
-        events = engine.apply(Seat(0), Fold())
+        with pytest.raises(IllegalAction, match="enkel de spelende partij"):
+            engine.apply(defenders_of(engine)[0], Fold())
+        assert engine.round.folded == set()
+
+    def test_a_lone_declarer_ends_it_on_his_own(
+        self, klassiek: Ruleset, flat: ScoringScale
+    ) -> None:
+        """Nobody else's points are his to spend, so nobody else is asked."""
+        engine = play_until_bust(klassiek, flat, declarer_count=1)
+        events = engine.apply(declarers_of(engine)[0], Fold())
+        assert any(isinstance(event, RoundScored) for event in events)
+
+    def test_one_of_two_declarers_is_not_enough(
+        self, klassiek: Ruleset, flat: ScoringScale
+    ) -> None:
+        """Conceding costs the partner points too, so he gets a say."""
+        engine = play_until_bust(klassiek, flat, declarer_count=2)
+        declarers = declarers_of(engine)
+        events = engine.apply(declarers[0], Fold())
         assert [type(event) for event in events] == [FoldingChanged]
-        assert engine.round.folded == {Seat(0)}
+        assert engine.round.folded == {declarers[0]}
         assert not any(isinstance(event, RoundScored) for event in events)
 
     def test_a_repeated_vote_changes_nothing(self, klassiek: Ruleset, flat: ScoringScale) -> None:
-        engine = play_until_bust(klassiek, flat)
-        engine.apply(Seat(0), Fold())
-        assert engine.apply(Seat(0), Fold()) == []
+        engine = play_until_bust(klassiek, flat, declarer_count=2)
+        first = declarers_of(engine)[0]
+        engine.apply(first, Fold())
+        assert engine.apply(first, Fold()) == []
 
     def test_a_vote_can_be_withdrawn(self, klassiek: Ruleset, flat: ScoringScale) -> None:
-        engine = play_until_bust(klassiek, flat)
-        engine.apply(Seat(0), Fold())
-        engine.apply(Seat(0), Fold(fold=False))
+        engine = play_until_bust(klassiek, flat, declarer_count=2)
+        first = declarers_of(engine)[0]
+        engine.apply(first, Fold())
+        engine.apply(first, Fold(fold=False))
         assert engine.round.folded == set()
 
     def test_you_may_fold_out_of_turn(self, klassiek: Ruleset, flat: ScoringScale) -> None:
-        """The table is deciding together, so nobody waits for the prompt."""
+        """Giving up is not a move, so nobody waits for the prompt."""
         engine = play_until_bust(klassiek, flat)
         on_turn = engine.pending()
         assert on_turn is not None
-        off_turn = next(seat for seat in ALL_SEATS if seat != on_turn.seat)
+        off_turn = next(seat for seat in declarers_of(engine) if seat != on_turn.seat)
         engine.apply(off_turn, Fold())
         assert off_turn in engine.round.folded
 
-    def test_all_four_ends_the_round(self, klassiek: Ruleset, flat: ScoringScale) -> None:
+    def test_the_whole_declaring_side_ends_the_round(
+        self, klassiek: Ruleset, flat: ScoringScale
+    ) -> None:
         engine = play_until_bust(klassiek, flat)
         before = engine.round.declarer_tricks
 
         events: list[object] = []
-        for seat in ALL_SEATS:
+        for seat in declarers_of(engine):
             events = engine.apply(seat, Fold())
 
         scored = [event for event in events if isinstance(event, RoundScored)]
         assert len(scored) == 1
         assert scored[0].folded is True
         assert scored[0].made is False
-        assert scored[0].tricks_made == before, "de stand bevriest zoals ze was"
+        assert scored[0].tricks_made == before, "de resterende slagen zijn voor de tegenpartij"
+
+    def test_conceding_is_settled_as_the_declaring_sides_worst_case(
+        self, klassiek: Ruleset, flat: ScoringScale
+    ) -> None:
+        """ "Remaining tricks to the defenders", stated in points.
+
+        The tricks themselves are not handed over - no cards changed hands, and
+        the deck order for the next deal follows what was really won. What is
+        conceded is the score: the round is settled on the tricks the declaring
+        side has, which is the worst total still reachable for them.
+        """
+        engine = play_until_bust(klassiek, flat)
+        contract = engine.round.contract
+        assert contract is not None
+        reachable = contract.reachable_tricks(
+            engine.round.declarer_tricks, engine.tricks_remaining()
+        )
+
+        events: list[object] = []
+        for seat in declarers_of(engine):
+            events = engine.apply(seat, Fold())
+        scored = next(event for event in events if isinstance(event, RoundScored))
+
+        assert scored.tricks_made == min(reachable), "afgerekend op het slechtste bereikbare aantal"
+        worst = min(
+            score_round(RoundResult(contract, total, engine.round.multiplier), flat)[
+                declarers_of(engine)[0]
+            ]
+            for total in reachable
+        )
+        assert scored.deltas[declarers_of(engine)[0]] == worst
 
     def test_the_deck_survives_a_fold_mid_trick(
         self, klassiek: Ruleset, flat: ScoringScale
@@ -286,14 +388,14 @@ class TestTheTableAgreeing:
         engine.apply(prompt.seat, PlayCard(card=prompt.legal_cards[0]))
         assert engine.round.trick, "er ligt nu een onvolledige slag"
 
-        for seat in ALL_SEATS:
+        for seat in declarers_of(engine):
             engine.apply(seat, Fold())
         assert len(engine._deck) == 52
         assert len(set(engine._deck)) == 52
 
     def test_the_totals_still_sum_to_zero(self, klassiek: Ruleset, flat: ScoringScale) -> None:
         engine = play_until_bust(klassiek, flat)
-        for seat in ALL_SEATS:
+        for seat in declarers_of(engine):
             engine.apply(seat, Fold())
         assert sum(engine.totals.values()) == Decimal(0)
 
@@ -301,8 +403,8 @@ class TestTheTableAgreeing:
 class TestSayingSoWhenTheContractDies:
     """A dead contract is announced once, because a dead round it is not.
 
-    Players reasonably assume there is nothing left to play for. With the
-    shipped scales there very much is - the penalty runs per missing trick - and
+    Players reasonably assume there is nothing left to play for. On a duo
+    contract there very much is - the penalty runs per missing trick - and
     nothing else in the game would tell them. The Dutch wording lives in the
     server's presenter and is checked there.
     """
@@ -317,16 +419,89 @@ class TestSayingSoWhenTheContractDies:
             later += sum(isinstance(e, ContractLost) for e in _answer_and_collect(engine))
         assert later == 0, "de aankondiging kwam meer dan een keer"
 
-    def test_it_knows_the_table_must_play_on(self) -> None:
+    def test_giving_up_is_offered_as_soon_as_the_contract_dies(self) -> None:
         scale = load_scoring_scale(TEMPLATES / "scoring" / "kaartclubs.yaml")
         klassiek = load_ruleset(TEMPLATES / "ruleset" / "klassiek.yaml")
         _, event = play_until_contract_dies(klassiek, scale)
-        assert event.folding_offered is False
+        assert event.folding_offered is True
 
-    def test_it_knows_when_the_table_may_stop(self, tmp_path: Path) -> None:
+    def test_it_warns_that_a_duo_contract_still_pays_per_trick(self) -> None:
+        """Giving up is allowed here, but it is not free - hence the warning."""
+        scale = load_scoring_scale(TEMPLATES / "scoring" / "kaartclubs.yaml")
+        klassiek = load_ruleset(TEMPLATES / "ruleset" / "klassiek.yaml")
+        _, event = play_until_contract_dies(klassiek, scale)
+        assert event.contract.spec.key in {ContractKey.ALLIANCE, ContractKey.ALONE}
+        assert event.payout_settled is False
+
+    def test_a_flat_penalty_costs_nothing_to_concede(self, tmp_path: Path) -> None:
         klassiek = load_ruleset(TEMPLATES / "ruleset" / "klassiek.yaml")
         _, event = play_until_contract_dies(klassiek, flat_scale(tmp_path))
         assert event.folding_offered is True
+        assert event.payout_settled is True
+
+
+class TestASoloContractCanBeGivenUpOnTheShippedScales:
+    """The case that motivated the flat penalties, driven end to end.
+
+    No hand-built scale here: plain ``kaartclubs.yaml``. The seed found lands on
+    a solo slim that drops the very first trick - a flat 20 a head however the
+    other twelve fall, so there is genuinely nothing left to play for and the
+    offer arrives at once instead of at the last trick. This is the position the
+    old scale handled worst: twelve pointless tricks, and a bill that grew with
+    every one of them.
+    """
+
+    def _bust_solo(self) -> GameEngine:
+        klassiek = load_ruleset(TEMPLATES / "ruleset" / "klassiek.yaml")
+        scale = load_scoring_scale(TEMPLATES / "scoring" / "kaartclubs.yaml")
+        for seed in range(50):
+            engine = GameEngine(klassiek, scale, rng=random.Random(seed))
+            engine.start_round()
+            for _ in range(400):
+                prompt = engine.pending()
+                if prompt is None:
+                    break
+                if prompt.kind is PromptKind.BID:
+                    engine.apply(
+                        prompt.seat,
+                        PlaceBid(bid=_choose_bid(prompt.bid_options, SOLO_BIDS)),
+                    )
+                    continue
+                if engine.folding_is_offered() and engine.tricks_remaining() > 1:
+                    return engine
+                _answer(engine)
+        raise AssertionError("geen zaad gevonden met een gesneuveld solocontract")
+
+    def test_the_offer_arrives_with_tricks_still_to_play(self) -> None:
+        engine = self._bust_solo()
+        assert engine.tricks_remaining() > 1
+        assert engine.folding_is_offered()
+
+    def test_the_table_can_actually_stop(self) -> None:
+        engine = self._bust_solo()
+        events: list[object] = []
+        for seat in declarers_of(engine):
+            events = engine.apply(seat, Fold())
+        scored = [event for event in events if isinstance(event, RoundScored)]
+        assert len(scored) == 1
+        assert scored[0].folded is True
+        assert sum(engine.totals.values()) == Decimal(0)
+
+    def test_stopping_early_costs_exactly_the_same_as_playing_on(self) -> None:
+        """The property that makes it safe, on the scale players actually use.
+
+        ``_bust_solo`` is deterministic, so the two engines start from the
+        same position and the only difference is what happens next.
+        """
+        stopped = self._bust_solo()
+        for seat in declarers_of(stopped):
+            stopped.apply(seat, Fold())
+
+        played_out = self._bust_solo()
+        while played_out.phase is Phase.PLAYING:
+            _answer(played_out)
+
+        assert stopped.totals == played_out.totals
 
 
 def test_a_ruleset_can_forbid_folding(tmp_path: Path) -> None:

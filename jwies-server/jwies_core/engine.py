@@ -334,28 +334,47 @@ class GameEngine:
         return CARDS_PER_HAND - self.round.tricks_played
 
     def folding_is_offered(self) -> bool:
-        """Whether stopping early is on the table right now.
+        """Whether the declaring side may give up right now.
 
-        Three things must hold at once: the ruleset allows it, the contract can
-        no longer be made, and the money is already fixed however the rest falls.
-        That last one is what makes agreeing to stop free of consequence - and
-        also what makes the offer rare, since a contract that has gone down is
-        normally paid per missing trick. See ``payout_is_settled``.
+        Two things must hold: the ruleset allows it, and the contract can no
+        longer be made. Giving up concedes every remaining trick to the
+        defenders, so the declaring side is choosing its own worst case - the
+        defenders cannot come out behind, which is why their consent is not
+        asked for. Whether conceding actually costs anything is a separate
+        question, and the answer is in ``payout_is_settled``.
         """
         contract = self.round.contract
         if not self.ruleset.play.folding_allowed or contract is None:
             return False
         if self.phase is not Phase.PLAYING:
             return False
+        return not contract.can_still_be_made(self.round.declarer_tricks, self.tricks_remaining())
 
-        taken, remaining = self.round.declarer_tricks, self.tricks_remaining()
-        if contract.can_still_be_made(taken, remaining):
+    def payout_is_settled(self) -> bool:
+        """Whether giving up now would cost the declaring side nothing.
+
+        True for the solo contracts, which are fined a flat amount, and false
+        for the duo contracts, which pay per missing trick. Clients use it to
+        warn before conceding tricks that are still worth something.
+        """
+        contract = self.round.contract
+        if contract is None:
             return False
-        return payout_is_settled(contract, taken, remaining, self.scale, self.round.multiplier)
+        return payout_is_settled(
+            contract,
+            self.round.declarer_tricks,
+            self.tricks_remaining(),
+            self.scale,
+            self.round.multiplier,
+        )
 
     def _apply_fold(self, seat: Seat, action: Fold) -> list[Event]:
         if not self.folding_is_offered():
             raise IllegalAction("er valt op dit moment niets op te geven")
+        contract = self.round.contract
+        assert contract is not None  # folding_is_offered checked it
+        if seat not in contract.declarers:
+            raise IllegalAction("enkel de spelende partij kan opgeven")
 
         before = set(self.round.folded)
         if action.fold:
@@ -366,10 +385,13 @@ class GameEngine:
             return []
 
         events: list[Event] = [FoldingChanged(folded=frozenset(self.round.folded))]
-        if len(self.round.folded) < len(ALL_SEATS):
+        if not self.round.folded.issuperset(contract.declarers):
+            # A partner still has to agree: conceding costs him points too.
             return events
 
-        # Everyone agreed. The cards are gathered up exactly as they lie.
+        # The declaring side gave up. Every remaining trick goes to the
+        # defenders, which is exactly the score as it already stands, so the
+        # cards are simply gathered up as they lie.
         return events + self._score_round(folded=True)
 
     def _apply_shuffle(self, action: Shuffle) -> list[Event]:
@@ -581,9 +603,10 @@ class GameEngine:
         """Say so once, the first trick after the contract becomes unmakeable.
 
         Players reasonably assume a dead contract makes the rest of the round
-        pointless. It usually is not: the penalty is charged per missing trick,
-        so what happens next still moves money. Nothing else in the game would
-        tell them that.
+        pointless. For a solo contract it is, and the declaring side may stop
+        there and then. For a duo contract it is not: the penalty is charged per
+        missing trick, so what happens next still moves money, and nothing else
+        would tell them that. The event carries which of the two it is.
         """
         contract = self.round.contract
         if contract is None or self.round.contract_lost_announced:
@@ -591,7 +614,13 @@ class GameEngine:
         if contract.can_still_be_made(self.round.declarer_tricks, self.tricks_remaining()):
             return []
         self.round.contract_lost_announced = True
-        return [ContractLost(contract=contract, folding_offered=self.folding_is_offered())]
+        return [
+            ContractLost(
+                contract=contract,
+                folding_offered=self.folding_is_offered(),
+                payout_settled=self.payout_is_settled(),
+            )
+        ]
 
     def _score_round(self, *, folded: bool = False) -> list[Event]:
         contract = self.round.contract

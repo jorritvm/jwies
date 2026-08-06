@@ -267,6 +267,7 @@ class MainWindow(QMainWindow):
             contract=None,
             seats=[],
             folding_offered=False,
+            payout_settled=False,
             folded=[],
         )
         self._selected_card = None
@@ -378,10 +379,12 @@ class MainWindow(QMainWindow):
             self.play_button.setEnabled(self._selected_card is not None)
 
     def refresh_fold_button(self, state: dict[str, Any]) -> None:
-        """Show the fold offer, and how many have agreed so far.
+        """Show the offer to give up, and whether a partner still has to agree.
 
-        The server decides whether folding is on the table at all - the client
-        neither knows nor guesses when a contract is beyond saving.
+        The server decides whether giving up is on the table at all - the client
+        neither knows nor guesses when a contract is beyond saving - and only
+        sets the flag for the declaring side, so the button appears for exactly
+        the players who may press it.
         """
         offered = bool(state.get("folding_offered"))
         self.fold_button.setVisible(offered)
@@ -395,7 +398,16 @@ class MainWindow(QMainWindow):
         # only user interaction emits that - but the state must still follow the
         # server rather than the last click, in case the vote was refused.
         self.fold_button.setChecked(mine in folded)
-        self.fold_button.setText(f"Ronde opgeven ({len(folded)}/4)")
+
+        contract = state.get("contract") or {}
+        needed = len(contract.get("declarers") or ()) or 1
+        # Alone in the contract, so pressing it settles the round at once.
+        label = "Ronde opgeven" if needed == 1 else f"Ronde opgeven ({len(folded)}/{needed})"
+        if not state.get("payout_settled"):
+            # Conceding hands over the remaining tricks, and on a duo contract
+            # every one of them is money.
+            label += " - kost punten per slag"
+        self.fold_button.setText(label)
 
     # --- reacting ----------------------------------------------------------
 

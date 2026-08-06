@@ -212,9 +212,7 @@ class Presenter:
                 return [self.chat(self.contract_sentence(event.contract))]
 
             case CardPlayed():
-                return [
-                    protocol.CardPlayed(seat=int(event.seat), card=event.card.code)
-                ]
+                return [protocol.CardPlayed(seat=int(event.seat), card=event.card.code)]
 
             case TrickCompleted():
                 text = f"{self.name_of(event.winner)} wint de slag."
@@ -235,30 +233,30 @@ class Presenter:
 
             case ContractLost():
                 name = self.contract_name(event.contract)
-                if event.folding_offered:
+                if not event.folding_offered:
+                    return [self.chat(f"{name} is niet meer te halen.")]
+                if event.payout_settled:
                     return [
                         self.chat(
                             f"{name} is niet meer te halen. De punten liggen vast, "
-                            "dus de tafel mag de ronde stoppen."
+                            "dus de spelende partij mag de ronde opgeven."
                         )
                     ]
                 # The counter-intuitive case, and the reason to say anything at
                 # all: a dead contract is not a dead round.
                 return [
                     self.chat(
-                        f"{name} is niet meer te halen. Er wordt toch uitgespeeld: "
-                        "de boete wordt per ontbrekende slag gerekend, dus elke slag "
-                        "die de spelende partij nog binnenhaalt, scheelt punten."
+                        f"{name} is niet meer te halen. De spelende partij mag opgeven, "
+                        "maar de boete wordt per ontbrekende slag gerekend: elke slag "
+                        "die ze nog binnenhaalt, scheelt punten."
                     )
                 ]
 
             case FoldingChanged():
                 if not event.folded:
-                    return [self.chat("De ronde wordt toch uitgespeeld.")]
+                    return [self.chat("Er wordt toch verder gespeeld.")]
                 names = ", ".join(sorted(self.name_of(seat) for seat in event.folded))
-                return [
-                    self.chat(f"Wil stoppen: {names} ({len(event.folded)} van de 4).")
-                ]
+                return [self.chat(f"Wil opgeven: {names}.")]
 
             case RoundScored():
                 return self._round_scored(event)
@@ -276,7 +274,9 @@ class Presenter:
             "beloofde slagen.",
         ]
         if event.folded:
-            lines.append("De tafel is akkoord om de ronde hier te stoppen.")
+            lines.append(
+                "De spelende partij heeft opgegeven: de rest van de slagen is voor de tegenpartij."
+            )
         lines.append("Punten deze ronde:")
         for seat, delta in event.deltas.items():
             lines.append(

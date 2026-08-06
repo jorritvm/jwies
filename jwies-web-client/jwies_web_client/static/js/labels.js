@@ -33,8 +33,10 @@ export const LABELS = {
   },
 
   playCard: "Speel kaart",
-  fold: "Ronde opgeven ({aantal}/4)",
-  foldWaiting: "Opgegeven - wachten op de rest ({aantal}/4)",
+  fold: "Ronde opgeven",
+  foldTogether: "Ronde opgeven ({aantal}/{nodig})",
+  foldWaiting: "Opgegeven - wachten op je maat ({aantal}/{nodig})",
+  foldCostsTricks: "Let op: de boete loopt per ontbrekende slag. Elke slag die je nog haalt, scheelt punten.",
   shuffleQuestion: "Wil je de kaarten schudden?",
   yes: "Ja",
   no: "Nee",

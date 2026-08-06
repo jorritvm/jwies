@@ -169,6 +169,12 @@
 #fold-box:empty { display: none; }
 #fold-box button { width: 100%; }
 #fold-box button.pressed { background: #4a5a4a; color: #dfe7df; }
+#fold-box .fold-warning {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: #c8b98a;
+}
 
 #scoreboard table { width: 100%; border-collapse: collapse; }
 #scoreboard td { padding: 0.15rem 0; }

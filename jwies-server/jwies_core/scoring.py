@@ -69,11 +69,12 @@ def payout_is_settled(
     exactly the same, nobody can be worse off for agreeing to stop, so consent
     costs nothing.
 
-    Be warned that it is rarely true. A contract that has gone down is paid per
-    missing trick, and ``per_slag_tekort`` defaults to the full ``basis`` - so on
-    all three shipped scales a bust declarer is still playing for real money
-    with every trick he claws back. It settles only where a scale sets
-    ``per_slag_tekort: 0``, or on the last trick.
+    Which contracts settle is a property of the scale, not of this function. On
+    the shipped scales the solo contracts (solo, solo slim, misere, abondance)
+    cost a flat amount when they fail, so they settle the moment they die; the
+    duo contracts are charged per missing trick, so a bust declaring pair is
+    still playing for real money with every trick it claws back and this stays
+    false until the last trick.
     """
     values = {
         _contract_value(RoundResult(contract, total, multiplier), scale)

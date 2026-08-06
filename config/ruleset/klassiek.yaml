@@ -135,10 +135,11 @@ spel:
   # Enkel wanneer het contract niet meer gehaald kan worden en de punten al
   # vastliggen, en enkel als alle vier de spelers akkoord gaan. De kaarten
   # worden dan opgeraapt zoals ze liggen.
-  # Let op: met de meegeleverde puntenschalen liggen de punten pas vast bij de
-  # laatste slag, want een gesneuveld contract betaalt per ontbrekende slag.
-  # Zet 'per_slag_tekort: 0' in je puntenschaal als je hier echt gebruik van
-  # wil maken.
+  # Met de meegeleverde puntenschalen liggen de punten vast zodra een solo-,
+  # miserie- of abondancecontract sneuvelt: die betalen een vast bedrag. De
+  # duocontracten (vragen & meegaan, alleen gaan, troel) betalen per ontbrekende
+  # slag, dus daar wordt uitgespeeld tot de laatste slag. Zet 'per_slag_tekort: 0'
+  # bij die contracten als je ook daar vroeg wil kunnen stoppen.
   # Toegelaten waarden: true of false
   opgeven_toegelaten: true
 

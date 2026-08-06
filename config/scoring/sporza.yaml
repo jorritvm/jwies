@@ -61,43 +61,52 @@ contracten:
   abondance_9:
     basis: 15
     per_overslag: 0
+    per_slag_tekort: 0
 
   # Abondance in troef: 9 slagen in de geblekte troef.
   abondance_9_trump:
     basis: 15
     per_overslag: 0
+    per_slag_tekort: 0
 
   # Abondance 10 slagen.
   abondance_10:
     basis: 19
     per_overslag: 0
+    per_slag_tekort: 0
 
   # Abondance 11 slagen.
   abondance_11:
     basis: 23
     per_overslag: 0
+    per_slag_tekort: 0
 
   # Abondance 12 slagen.
   abondance_12:
     basis: 27
     per_overslag: 0
+    per_slag_tekort: 0
 
   # Miserie: geen enkele slag halen, zonder troef.
   misere:
     basis: 21
     per_overslag: 0
+    per_slag_tekort: 0
 
   # Miserie op tafel: geen enkele slag halen, met open kaarten.
   misere_ouverte:
     basis: 42
     per_overslag: 0
+    per_slag_tekort: 0
 
   # Solo: alle 13 slagen in een zelfgekozen troef.
   solo:
     basis: 75
     per_overslag: 0
+    per_slag_tekort: 0
 
   # Solo slim: alle 13 slagen in de geblekte troef.
   solo_slim:
     basis: 90
     per_overslag: 0
+    per_slag_tekort: 0

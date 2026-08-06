@@ -292,10 +292,14 @@ class Snapshot(ProtocolModel):
     prompt: Prompt | None = None
     paused: bool = False
     missing_players: tuple[Username, ...] = ()
-    # Stopping a lost round early. Only offered when the contract can no
-    # longer be made *and* the payout is already fixed, so agreeing costs
-    # nobody anything; see jwies_core.scoring.payout_is_settled.
+    # Giving up a lost round. Set only for the declaring side, and only once
+    # the contract can no longer be made: conceding hands every remaining trick
+    # to the defenders, so it is theirs alone to offer.
     folding_offered: bool = False
+    # Whether conceding is free. False means the contract pays per missing
+    # trick and giving up now costs real points - worth a warning before the
+    # player commits. See jwies_core.scoring.payout_is_settled.
+    payout_settled: bool = False
     folded: tuple[SeatIndex, ...] = ()
 
 
@@ -404,10 +408,11 @@ class PlayCard(GameAction):
 
 
 class FoldVote(GameAction):
-    """Agree to stop a lost round early, or take that back.
+    """Give up a lost round, or take that back.
 
-    The one action not taken in turn: the table is deciding something together.
-    Only accepted while ``Snapshot.folding_offered`` is set.
+    The one action not taken in turn, and only the declaring side may send it.
+    With two declarers both must agree, since conceding costs the partner
+    points too. Only accepted while ``Snapshot.folding_offered`` is set.
     """
 
     type: Literal["fold"] = "fold"

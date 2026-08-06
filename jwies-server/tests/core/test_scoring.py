@@ -80,6 +80,47 @@ class TestSchaalA:
         assert result[Seat(2)] == -4
 
 
+class TestTheSoloContractsCostAFlatAmountWhenTheyFail:
+    """Section 7.2 gives one "Mislukt" figure for these, not a per-trick rate.
+
+    Only the duo contracts (vragen & meegaan, alleen gaan, troel) are charged
+    per missing trick. Getting this wrong is expensive in the literal sense: a
+    solo slim that drops five tricks once cost 120 a head instead of 20.
+    """
+
+    @pytest.mark.parametrize("tricks", [0, 5, 8, 12])
+    def test_a_failed_solo_slim_costs_twenty_however_far_down(
+        self, tricks: int, schaal_a: ScoringScale
+    ) -> None:
+        result = deltas(ContractKey.SOLO_SLIM, tricks, schaal_a)
+        assert result[Seat(1)] == 20, "elke tegenstander krijgt de vaste 20"
+        assert result[Seat(0)] == -60  # de "-60" van de kolom Mislukt
+
+    @pytest.mark.parametrize("tricks", [1, 4, 13])
+    def test_a_failed_misere_costs_five_however_many_tricks_it_took(
+        self, tricks: int, schaal_a: ScoringScale
+    ) -> None:
+        result = deltas(ContractKey.MISERE, tricks, schaal_a)
+        assert result[Seat(1)] == 5
+        assert result[Seat(0)] == -15
+
+    @pytest.mark.parametrize("tricks", [0, 4, 8])
+    def test_a_failed_abondance_costs_five(self, tricks: int, schaal_a: ScoringScale) -> None:
+        assert deltas(ContractKey.ABONDANCE_9, tricks, schaal_a)[Seat(1)] == 5
+
+    def test_a_failed_misere_ouverte_costs_thirty_over_the_table(
+        self, schaal_a: ScoringScale
+    ) -> None:
+        result = deltas(ContractKey.MISERE_OUVERTE, 3, schaal_a)
+        assert result[Seat(1)] == 10
+        assert result[Seat(0)] == -30  # de "-30" van de kolom Mislukt
+
+    def test_the_duo_contracts_are_still_charged_per_trick(self, schaal_a: ScoringScale) -> None:
+        """The other half of the rule, so a blanket fix would fail here."""
+        assert deltas(ContractKey.ALLIANCE, 6, schaal_a)[Seat(0)] == -6
+        assert deltas(ContractKey.ALLIANCE, 5, schaal_a)[Seat(0)] == -8
+
+
 class TestSchaalB:
     """Grote schaal: the tabulated value is the total, split over the opponents."""
 
@@ -101,6 +142,13 @@ class TestSchaalB:
         result = deltas(ContractKey.ALONE, 13, schaal_b, required=5)
         assert result[Seat(0)] == 60
         assert result[Seat(1)] == -20
+
+    @pytest.mark.parametrize("tricks", [0, 5, 12])
+    def test_a_failed_solo_slim_costs_a_flat_ninety(
+        self, tricks: int, schaal_b: ScoringScale
+    ) -> None:
+        """Flat on this scale too - only the split across seats differs."""
+        assert deltas(ContractKey.SOLO_SLIM, tricks, schaal_b)[Seat(0)] == -90
 
 
 class TestProperties:

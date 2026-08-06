@@ -242,11 +242,12 @@ export class TableView {
     }
   }
 
-  /** De knop om een verloren ronde vroegtijdig te stoppen.
+  /** De knop om een verloren ronde op te geven.
    *
    * Bewust een knop naast de tafel en geen dialoogvenster: een ronde die
    * niemand nog kan winnen is precies het verkeerde moment om de tafel te
-   * onderbreken. De server beslist of opgeven uberhaupt aan de orde is.
+   * onderbreken. De server zet foldingOffered enkel aan bij de spelende
+   * partij, dus de knop verschijnt vanzelf bij de juiste spelers.
    */
   renderFold(state) {
     this.foldBox.replaceChildren();
@@ -254,12 +255,26 @@ export class TableView {
 
     const folded = state.folded ?? [];
     const mine = folded.includes(state.yourSeat);
-    const button = actionButton(
-      fill(mine ? LABELS.foldWaiting : LABELS.fold, { aantal: folded.length }),
-      () => this.actions.fold(!mine),
-    );
+    // Bij twee spelers moeten ze allebei akkoord zijn: opgeven kost de maat
+    // ook punten. Alleen gaan is meteen beslist, dus dan geen teller.
+    const needed = state.contract?.declarers?.length ?? 1;
+    const counts = { aantal: folded.length, nodig: needed };
+    let label = LABELS.fold;
+    if (needed > 1) {
+      label = fill(mine ? LABELS.foldWaiting : LABELS.foldTogether, counts);
+    }
+    const button = actionButton(label, () => this.actions.fold(!mine));
     button.classList.toggle("pressed", mine);
     this.foldBox.appendChild(button);
+
+    // Opgeven geeft de resterende slagen weg. Bij een duocontract kost dat
+    // echt punten, en dat mag je niet per ongeluk doen.
+    if (!state.payoutSettled) {
+      const warning = document.createElement("p");
+      warning.className = "fold-warning";
+      warning.textContent = LABELS.foldCostsTricks;
+      this.foldBox.appendChild(warning);
+    }
   }
 
   renderScoreboard(state) {

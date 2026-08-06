@@ -36,6 +36,7 @@ SNAPSHOT_FIELDS = {
     "paused",
     "missing_players",
     "folding_offered",
+    "payout_settled",
     "folded",
 }
 

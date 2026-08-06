@@ -76,11 +76,12 @@ class PlayCard:
 
 @dataclass(frozen=True, slots=True)
 class Fold:
-    """Vote to stop a lost round early, or withdraw that vote.
+    """Give up a lost round, or take that back.
 
-    Unlike every other action this one is not taken in turn: the table is
-    deciding something together, so any seat may cast or change its vote at any
-    moment while the offer stands.
+    Unlike every other action this one is not taken in turn: a seat may cast or
+    change its vote at any moment while the offer stands. Only the declaring
+    side may send it, and with two declarers both must agree - conceding the
+    remaining tricks costs the partner points too.
     """
 
     fold: bool = True
@@ -162,15 +163,17 @@ class TrickCompleted:
 class ContractLost:
     """The contract can no longer be made. Emitted once, the moment it happens.
 
-    Worth saying out loud because what follows is counter-intuitive: the round
-    normally carries on, and it still matters. A contract that goes down is paid
-    per missing trick, so every trick the declaring side claws back from here
-    lowers what they owe. ``folding_offered`` says whether this table is instead
-    free to stop, which it only is when the penalty does not vary.
+    Worth saying out loud, because what follows is not obvious. The declaring
+    side may now give up (``folding_offered``), which hands the defenders every
+    remaining trick. Whether that is free is the second question:
+    ``payout_settled`` is true for the solo contracts, fined a flat amount, and
+    false for the duo contracts, which pay per missing trick - there every trick
+    still clawed back lowers the bill, so playing on is worth something.
     """
 
     contract: Contract
     folding_offered: bool
+    payout_settled: bool
 
 
 @dataclass(frozen=True, slots=True)
