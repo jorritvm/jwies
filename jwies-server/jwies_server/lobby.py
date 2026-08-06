@@ -318,21 +318,20 @@ class LobbyRuntime:
 
     async def _handle_chat(self, session: Session, message: protocol.ChatSend) -> None:
         text = message.text.strip()
-        if is_command(text):
-            replies = handle_chat_command(
-                text,
-                ChatContext(lobby=self, session=session),
-            )
-            for reply in replies:
-                await self._send(
-                    session,
-                    protocol.Chat(kind=protocol.ChatKind.SERVER, text=reply),
-                )
-            return
-
+        # A command is an ordinary line in the channel first: the table sees who
+        # asked, the way it did on IRC.
         await self.broadcast(
             protocol.Chat(kind=protocol.ChatKind.PLAYER, text=text, sender=session.username)
         )
+        if not is_command(text):
+            return
+
+        # And the answer is spoken out loud too. Answered privately it left the
+        # rest of the table looking at a question with no reply, and anyone who
+        # wanted the same thing had to ask for it again himself.
+        replies = handle_chat_command(text, ChatContext(lobby=self, session=session))
+        for reply in replies:
+            await self.broadcast(protocol.Chat(kind=protocol.ChatKind.SERVER, text=reply))
 
     async def start_game(self) -> None:
         """Begin play. Called once all four seats are filled.
