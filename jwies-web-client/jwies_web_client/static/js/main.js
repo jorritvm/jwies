@@ -219,8 +219,11 @@ document.getElementById("chat-form").addEventListener("submit", (event) => {
 
 // --- troefkeuze --------------------------------------------------------------
 
+// Alleen deze bieden kiezen zelf een troef. Vragen en meegaan spelen in de
+// geblekte troef - de server negeert een kleur die er toch bij komt - dus
+// daarvoor is de kleurkeuze een vraag zonder antwoord.
 function needsSuit(bid) {
-  return bid.type === "abondance" || bid.type === "solo" || bid.type === "ask";
+  return bid.type === "abondance" || bid.type === "solo";
 }
 
 function chooseSuit(allowNoTrump) {

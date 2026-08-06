@@ -135,11 +135,13 @@ export class TableView {
   renderTrick(state) {
     this.trickArea.replaceChildren();
     const cards = state.showLastTrick && state.lastTrick ? state.lastTrick : state.trick;
-    for (const entry of cards) {
+    // De kaarten liggen op elkaar; de speelvolgorde bepaalt wie bovenop ligt.
+    cards.forEach((entry, position) => {
       const card = cardElement(entry.card);
       card.classList.add(`pos-${directionOf(entry.seat, state.yourSeat)}`);
+      card.style.zIndex = String(position + 1);
       this.trickArea.appendChild(card);
-    }
+    });
   }
 
   renderTrump(state) {

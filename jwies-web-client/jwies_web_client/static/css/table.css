@@ -75,17 +75,34 @@
   position: absolute;
   inset: 30% 30% 30% 30%;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, 1fr);
   place-items: center;
   pointer-events: none;
 }
 
-#trick-area .card { width: 3.8rem; height: 5.4rem; }
-#trick-area .pos-south { grid-area: 3 / 2; }
-#trick-area .pos-west  { grid-area: 2 / 1; }
-#trick-area .pos-north { grid-area: 1 / 2; }
-#trick-area .pos-east  { grid-area: 2 / 3; }
+/* De vier kaarten liggen op eenzelfde punt in het midden, elk een stukje naar
+   hun eigen kant geschoven. Ze happen dus een hoek uit hun buren, en wie later
+   speelde ligt bovenop (de z-index komt uit de speelvolgorde) - zo is aan
+   "toon laatste slag" af te lezen wie op wie speelde. Een slag gaat de tafel
+   rond, dus twee kaarten die na elkaar komen zijn altijd buren op het scherm;
+   overburen hoeven elkaar niet te raken.
+
+   De verschuiving is in procenten van de kaart zelf, zodat de overlap
+   meeschaalt, en ze is ruim genoeg gekozen dat elke kaart minstens een van
+   haar twee hoekindexen buiten de stapel houdt: noord en west hun
+   linkerbovenhoek, zuid en oost hun rechteronderhoek. Schuif je ze dichter
+   naar elkaar, dan verdwijnt zuid onder west en oost. */
+#trick-area .card {
+  grid-area: 1 / 1;
+  width: 3.8rem;
+  height: 5.4rem;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.45),
+    2px 3px 7px rgba(0, 0, 0, 0.45);
+}
+#trick-area .pos-south { transform: translateY(62%); }
+#trick-area .pos-north { transform: translateY(-62%); }
+#trick-area .pos-west  { transform: translateX(-64%); }
+#trick-area .pos-east  { transform: translateX(64%); }
 
 #trump-area {
   position: absolute;
