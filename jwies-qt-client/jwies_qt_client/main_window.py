@@ -53,7 +53,10 @@ BID_LABELS = {
     "pico": "Pico",
 }
 
-SUIT_CHOOSING_BIDS = {"ask", "abondance", "solo"}
+# Only these name their own trump. Vragen and meegaan are played in the turned
+# trump, alone and solo slim too - the server ignores any suit sent with them,
+# so asking for one is a question with no answer.
+SUIT_CHOOSING_BIDS = {"abondance", "solo"}
 
 # Enough for a wrapped chat line plus the scrollbar. The floor under the width
 # the chat opens at, and the narrowest the splitter will let it get.

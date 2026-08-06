@@ -17,8 +17,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 pytest.importorskip("PyQt6.QtWidgets")
 
 from PyQt6.QtGui import QFontMetrics
-from PyQt6.QtWidgets import QApplication, QInputDialog, QMessageBox
+from PyQt6.QtWidgets import QApplication, QDialog, QInputDialog, QMessageBox
 
+from jwies_qt_client import main_window
 from jwies_qt_client.main_window import CHAT_MINIMUM_WIDTH, CHAT_TABLE_COLUMNS, MainWindow
 from jwies_qt_client.settings import ClientSettings
 
@@ -422,6 +423,69 @@ class TestPromptsThatAskAQuestion:
         window.on_message(snapshot(prompt=prompt("shuffle"), paused=True, missing_players=["Jo"]))
         window.on_message(snapshot(prompt=prompt("shuffle")))
         assert asked == ["shuffle", "shuffle"]
+
+
+class TestChoosingATrump:
+    """Only a bid that names its own trump may ask for one.
+
+    Vragen is played in the turned trump whatever the bidder answers - the
+    server drops the suit on the floor - so the dialog was putting a question
+    to the player that his answer could not settle.
+    """
+
+    @pytest.fixture
+    def bidding(
+        self, window: MainWindow, monkeypatch: pytest.MonkeyPatch
+    ) -> tuple[list[bool], list[dict[str, Any]]]:
+        """Record every suit dialog opened and every bid that went out."""
+        opened: list[bool] = []
+        sent: list[dict[str, Any]] = []
+
+        class FakeSuitDialog:
+            def __init__(self, *, allow_no_trump: bool, parent: object = None) -> None:
+                opened.append(allow_no_trump)
+
+            def exec(self) -> int:
+                return QDialog.DialogCode.Accepted
+
+            def selected_suit(self) -> str:
+                return "S"
+
+        monkeypatch.setattr(main_window, "ChooseSuitDialog", FakeSuitDialog)
+        monkeypatch.setattr(
+            window.connection, "send", lambda _type, **fields: sent.append(fields)
+        )
+        return opened, sent
+
+    def test_vragen_never_asks_for_a_trump(
+        self, window: MainWindow, bidding: tuple[list[bool], list[dict[str, Any]]]
+    ) -> None:
+        opened, sent = bidding
+        window.on_bid_clicked({"type": "ask", "tricks": None, "suit": None})
+        assert opened == []
+        assert sent == [{"bid": {"type": "ask", "tricks": None, "suit": None}}]
+
+    def test_meegaan_never_asks_for_a_trump(
+        self, window: MainWindow, bidding: tuple[list[bool], list[dict[str, Any]]]
+    ) -> None:
+        opened, _sent = bidding
+        window.on_bid_clicked({"type": "join", "tricks": None, "suit": None})
+        assert opened == []
+
+    def test_abondance_picks_its_own_trump(
+        self, window: MainWindow, bidding: tuple[list[bool], list[dict[str, Any]]]
+    ) -> None:
+        opened, sent = bidding
+        window.on_bid_clicked({"type": "abondance", "tricks": 10, "suit": None})
+        assert opened == [False], "abondance kiest een kleur, maar niet 'zonder troef'"
+        assert sent[0]["bid"]["suit"] == "S"
+
+    def test_solo_may_also_go_without_a_trump(
+        self, window: MainWindow, bidding: tuple[list[bool], list[dict[str, Any]]]
+    ) -> None:
+        opened, _sent = bidding
+        window.on_bid_clicked({"type": "solo", "tricks": None, "suit": None})
+        assert opened == [True]
 
 
 def test_the_lobby_list_renders(window: MainWindow) -> None:
