@@ -77,7 +77,7 @@ is geen login, en je komt met dezelfde naam terug aan je stoel.
 
 | veld | type | betekenis |
 |---|---|---|
-| `username` | string | 2 tot 20 tekens uit `A-Za-z0-9_-` en de spatie. |
+| `username` | string | 2 tot 20 tekens: letters, cijfers en `_` uit gelijk welk schrift, plus de spatie, `.`, `-` en de apostrof. Minstens één letter of cijfer. Wordt genormaliseerd (NFC, zonder spaties ervoor of erna) voor hij bewaard wordt. |
 | `resume_token` | string of null | Wat je bij het eerste `hello_ok` kreeg. Mag weg blijven: is de oude verbinding dood, dan volstaat de naam. |
 
 #### `lobby_list`
@@ -466,7 +466,7 @@ op de code alleen als je er iets bijzonders mee doet.
 |---|---|
 | `protocol_version` | Je `v` klopt niet met die van de server. De verbinding gaat dicht. |
 | `username_taken` | Die naam is in gebruik door iemand die online is. |
-| `username_invalid` | De naam voldoet niet aan het patroon. |
+| `username_invalid` | De naam voldoet niet aan de regels hierboven. De tekst zegt welke. De verbinding gaat dicht. |
 | `not_in_lobby` | Je stuurde iets dat een tafel veronderstelt. |
 | `lobby_full` | Alle vier de stoelen zijn bezet. |
 | `lobby_not_found` | Die tafel bestaat niet (meer). |

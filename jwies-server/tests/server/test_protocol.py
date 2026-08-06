@@ -24,6 +24,7 @@ from jwies_server.protocol import (
     ServerMessage,
     SuitCode,
 )
+from jwies_server.sessions import SessionRegistry
 
 CLIENT = TypeAdapter(ClientMessage)
 SERVER = TypeAdapter(ServerMessage)
@@ -65,11 +66,26 @@ def test_card_codes_are_validated() -> None:
             CLIENT.validate_python({"type": "play_card", "card": bad})
 
 
-def test_usernames_are_validated() -> None:
-    CLIENT.validate_python({"type": "hello", "username": "Jan-Piet"})
-    for bad in ("x", "a" * 21, "Jan;DROP"):
-        with pytest.raises(ValidationError):
-            CLIENT.validate_python({"type": "hello", "username": bad})
+def test_an_unusable_username_still_parses() -> None:
+    """The one field deliberately not validated by its type, and why.
+
+    ``username`` used to be constrained here, which meant a name that broke the
+    rules never reached the code that knows what the rules are: the envelope
+    failed validation and the player was answered "onbegrijpelijk bericht" - for
+    typing one letter, or an accent. Parsing has to succeed so ``_handshake``
+    can refuse it with ``username_invalid`` and say what it expected.
+    """
+    for bad in ("x", "a" * 21, "Jan;DROP", "<script>", ""):
+        message = CLIENT.validate_python({"type": "hello", "username": bad})
+        assert message.username == bad
+        assert not SessionRegistry.is_valid_username(bad)
+
+
+def test_a_name_does_not_have_to_be_ascii() -> None:
+    for name in ("Jan-Piet", "José", "O'Brien", "Жан"):
+        message = CLIENT.validate_python({"type": "hello", "username": name})
+        assert message.username == name
+        assert SessionRegistry.is_valid_username(name)
 
 
 def test_a_browser_style_raw_dict_parses() -> None:

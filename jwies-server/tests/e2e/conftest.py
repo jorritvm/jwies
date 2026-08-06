@@ -38,27 +38,26 @@ def fast_config_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
     The shipped templates linger two seconds on every trick so players can see
     it, which would make the end-to-end suite spend most of its time asleep.
     Generating a config here also exercises the real loading path.
+
+    The two maps are rewritten as data rather than by patching the YAML text.
+    Doing it by string replacement meant every entry had to be named here, so
+    renaming a scale in ``config/`` left this file quietly pointing at a file
+    that no longer exists - and the whole suite errored in its fixture, which
+    reads nothing like "the config was renamed".
     """
     directory = tmp_path_factory.mktemp("config")
+    server = yaml.safe_load((TEMPLATES / "server.yaml").read_text(encoding="utf-8"))
+
+    # Shipped paths are relative to config/, and this config lives in a temp dir.
+    for key in ("regelsets", "puntenschalen"):
+        assert server[key], f"geen {key} in de sjabloon-config"
+        server[key] = {name: (TEMPLATES / path).as_posix() for name, path in server[key].items()}
+
     ruleset = (TEMPLATES / "ruleset" / "klassiek.yaml").read_text(encoding="utf-8")
     ruleset = ruleset.replace("pauze_na_slag_seconden: 2", "pauze_na_slag_seconden: 0")
     assert "pauze_na_slag_seconden: 0" in ruleset, "pauze-instelling niet gevonden"
     (directory / "snel.yaml").write_text(ruleset, encoding="utf-8")
-
-    server_yaml = (TEMPLATES / "server.yaml").read_text(encoding="utf-8")
-    server_yaml = server_yaml.replace(
-        '  klassiek: "ruleset/klassiek.yaml"', '  klassiek: "snel.yaml"'
-    )
-    server_yaml = server_yaml.replace(
-        '  jwies_v0: "ruleset/jwies_v0.yaml"',
-        f'  jwies_v0: "{(TEMPLATES / "ruleset" / "jwies_v0.yaml").as_posix()}"',
-    )
-    for name in ("schaal_a", "schaal_b", "jwies_v0"):
-        server_yaml = server_yaml.replace(
-            f'  {name}: "scoring/{name}.yaml"',
-            f'  {name}: "{(TEMPLATES / "scoring" / f"{name}.yaml").as_posix()}"',
-        )
-    (directory / "server.yaml").write_text(server_yaml, encoding="utf-8")
+    server["regelsets"]["klassiek"] = "snel.yaml"
 
     # A second scale whose penalty does not depend on how short the declaring
     # side finished. That is the only condition under which folding is offered
@@ -66,21 +65,19 @@ def fast_config_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
     flat = yaml.safe_load((TEMPLATES / "scoring" / "kaartclubs.yaml").read_text(encoding="utf-8"))
     for entry in flat["contracten"].values():
         entry["per_slag_tekort"] = 0
-    (directory / "vlak.yaml").write_text(
-        yaml.safe_dump(flat, allow_unicode=True), encoding="utf-8"
-    )
-    server_yaml = server_yaml.replace(
-        "puntenschalen:", 'puntenschalen:\n  vlak: "vlak.yaml"', 1
-    )
+    (directory / "vlak.yaml").write_text(yaml.safe_dump(flat, allow_unicode=True), encoding="utf-8")
+    server["puntenschalen"]["vlak"] = "vlak.yaml"
 
     # A ruleset that stops after one round. The shipped ones play forever, so
     # this is the only way to reach the end of a game at all.
     short = ruleset.replace("aantal_rondes: 0", "aantal_rondes: 1")
     assert "aantal_rondes: 1" in short, "rondeteller niet gevonden"
     (directory / "kort.yaml").write_text(short, encoding="utf-8")
-    server_yaml = server_yaml.replace("regelsets:", 'regelsets:\n  kort: "kort.yaml"', 1)
+    server["regelsets"]["kort"] = "kort.yaml"
 
-    (directory / "server.yaml").write_text(server_yaml, encoding="utf-8")
+    (directory / "server.yaml").write_text(
+        yaml.safe_dump(server, allow_unicode=True), encoding="utf-8"
+    )
     return directory
 
 

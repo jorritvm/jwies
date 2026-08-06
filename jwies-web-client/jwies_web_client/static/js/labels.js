@@ -10,7 +10,9 @@ export const LABELS = {
   disconnected: "Verbinding verbroken - opnieuw proberen...",
   notConnected: "Niet verbonden",
 
-  nameRequired: "Vul een naam in van 2 tot 20 tekens.",
+  nameRequired:
+    "Vul een naam in van 2 tot 20 tekens: letters, cijfers, spaties, " +
+    "en '.', '-', '_' of een apostrof.",
   serverRequired: "Vul het adres van de spelserver in (ws://... of wss://...).",
   serverUnreachable:
     "Geen verbinding met de spelserver op {adres}. Draait hij, en klopt het adres?",

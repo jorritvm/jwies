@@ -20,7 +20,13 @@ from starlette.websockets import WebSocketDisconnect, WebSocketState
 from jwies_server import protocol
 from jwies_server.lobby_manager import LobbyError, LobbyManager
 from jwies_server.protocol import PROTOCOL_VERSION, ErrorCode
-from jwies_server.sessions import HelloOutcome, Session, SessionRegistry
+from jwies_server.sessions import (
+    USERNAME_MAX_LENGTH,
+    USERNAME_MIN_LENGTH,
+    HelloOutcome,
+    Session,
+    SessionRegistry,
+)
 
 __all__ = ["WebsocketAgent", "handle_connection"]
 
@@ -28,6 +34,7 @@ log = logging.getLogger(__name__)
 
 WRITE_QUEUE_LIMIT = 256
 CLOSE_PROTOCOL_VERSION = 4400
+CLOSE_USERNAME_INVALID = 4401
 CLOSE_USERNAME_TAKEN = 4409
 
 
@@ -197,10 +204,13 @@ async def _handshake(
             websocket,
             protocol.Error(
                 code=ErrorCode.USERNAME_INVALID,
-                text=("Ongeldige naam. Gebruik 2 tot 20 letters, cijfers, spaties, '-' of '_'."),
+                text=(
+                    f"Ongeldige naam. Gebruik {USERNAME_MIN_LENGTH} tot {USERNAME_MAX_LENGTH} "
+                    "tekens: letters, cijfers, spaties, en '.', '-', '_' of een apostrof."
+                ),
             ),
         )
-        await websocket.close(code=CLOSE_USERNAME_TAKEN)
+        await websocket.close(code=CLOSE_USERNAME_INVALID)
         return None, None
 
     session, outcome = sessions.resolve_hello(hello.username, hello.resume_token)

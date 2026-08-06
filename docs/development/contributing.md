@@ -111,7 +111,7 @@ Alles in één keer (sync, ruff, pytest per project, en mypy):
 | Map | Wat |
 |---|---|
 | `jwies-server/tests/core` | kaarten, biedladder, troel, contracten, slagen, puntentelling, de state machine |
-| `jwies-server/tests/config` | de meegeleverde configbestanden laden, en elke instelling heeft uitleg |
+| `jwies-server/tests/config` | de meegeleverde configbestanden laden, en foute instellingen worden in het Nederlands afgekeurd |
 | `jwies-server/tests/server` | sessies, chatcommando's, de Nederlandse zinnen, en het berichtenschema |
 | `jwies-server/tests/e2e` | volledige rondes, herverbinden, en of geen van beide clients achterloopt op het protocol |
 | `jwies-qt-client/tests` | stoelafbeelding, de state reducer, en het venster offscreen |

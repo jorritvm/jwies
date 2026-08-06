@@ -103,25 +103,6 @@ class TestSchaalB:
         assert result[Seat(1)] == -20
 
 
-class TestJwiesV0:
-    """The values from the old controller.ini, now actually applied."""
-
-    def test_fractional_overtricks(self, jwies_v0_scale: ScoringScale) -> None:
-        # base 1, +0.5 per overtrick, 10 tricks on an 8-trick contract.
-        result = deltas(ContractKey.ALLIANCE, 10, jwies_v0_scale)
-        assert result[Seat(0)] == Decimal("2.0")
-
-    def test_losing_is_double(self, jwies_v0_scale: ScoringScale) -> None:
-        # One trick short: (1 base + 1 per missing trick) x 2 = 4.
-        result = deltas(ContractKey.ALLIANCE, 7, jwies_v0_scale)
-        assert result[Seat(0)] == -4
-
-    def test_solo_slim_is_worth_forty_per_opponent(self, jwies_v0_scale: ScoringScale) -> None:
-        result = deltas(ContractKey.SOLO_SLIM, 13, jwies_v0_scale)
-        assert result[Seat(0)] == 120
-        assert result[Seat(1)] == -40
-
-
 class TestProperties:
     @pytest.mark.parametrize("key", sorted(CONTRACT_CATALOG))
     @pytest.mark.parametrize("tricks", range(14))

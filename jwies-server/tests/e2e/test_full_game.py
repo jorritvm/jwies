@@ -47,7 +47,7 @@ async def seat_four(server: str) -> list[ScriptedClient]:
         await client.__aenter__()
 
     await clients[0].send(
-        "lobby_create", name="Testtafel", ruleset="klassiek", scoring="schaal_a", rng_seed=42
+        "lobby_create", name="Testtafel", ruleset="klassiek", scoring="kaartclubs", rng_seed=42
     )
     state = await clients[0].wait_for("lobby_state")
     lobby_id = state["lobby"]["id"]

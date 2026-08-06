@@ -121,7 +121,14 @@ PROTOCOL_VERSION: Final = 2
 CardCode: TypeAlias = Annotated[str, Field(pattern=r"^(?:[2-9]|10|[JQKA])[CDHS]$")]
 SeatIndex: TypeAlias = Annotated[int, Field(ge=0, le=3)]
 LobbyId: TypeAlias = Annotated[str, Field(min_length=1, max_length=64)]
-Username: TypeAlias = Annotated[str, Field(pattern=r"^[A-Za-z0-9_\- ]{2,20}$")]
+# Only a length bound, on purpose. Which characters make a name is decided in
+# exactly one place, ``SessionRegistry.is_valid_username``, and repeating that
+# rule here as a pattern would put two regex engines - pydantic's and Python's -
+# in charge of the same question. The day they disagreed, the server would go
+# back to answering "onbegrijpelijk bericht" for a name it can describe
+# perfectly well. Every name that reaches a server message has already passed
+# the door.
+Username: TypeAlias = Annotated[str, Field(min_length=1, max_length=64)]
 # The ``*Code`` names are aliases of the engine's own enums, not copies: the
 # alias is the guarantee that they can't drift apart. The names are kept
 # because they read better at the wire boundary.
@@ -311,10 +318,17 @@ class Hello(ProtocolModel):
 
     ``resume_token`` is what a returning player presents to rebind to a seat.
     The username alone also works when the previous connection is dead.
+
+    ``username`` is a bare ``str``: the one wire field whose contents its type
+    does not police. A name that breaks the rules must still *parse*, because a
+    rejected envelope is answered with "onbegrijpelijk bericht" - and a player
+    who typed one character too few has no way to guess that this is what the
+    sentence means. ``_handshake`` asks ``SessionRegistry.is_valid_username``
+    instead, which answers ``username_invalid`` and says what the rules are.
     """
 
     type: Literal["hello"] = "hello"
-    username: Username
+    username: str
     resume_token: str | None = None
 
 

@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QRegularExpression, Qt, pyqtSignal
+from PyQt6.QtGui import QRegularExpressionValidator
 from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -32,6 +33,15 @@ __all__ = ["DEFAULT_TABLE_NAME", "STATUS_LABELS", "ConnectDialog", "LobbyPage"]
 # Replaced with "Tafel van <naam>" as soon as the server tells us who we are.
 DEFAULT_TABLE_NAME = "Onze tafel"
 
+# The server's rule for a name, as far as a line edit can express it: letters,
+# marks and digits from any script, plus the punctuation real names use.
+#
+# This only spares the player a round trip - the server decides, and says so in
+# Dutch when it refuses. Kept deliberately no *stricter* than the server: a
+# dialog that silently swallows a character the server would have accepted is
+# worse than one that never checked, because there is nothing to read.
+USERNAME_CHARACTERS = QRegularExpression(r"^[\p{L}\p{M}\p{N}_ .'\-]{0,20}$")
+
 STATUS_LABELS = {
     "waiting": "wacht op spelers",
     "running": "bezig",
@@ -49,6 +59,7 @@ class ConnectDialog(QDialog):
         self.url_field = QLineEdit(settings.server_url)
         self.name_field = QLineEdit(settings.username)
         self.name_field.setMaxLength(20)
+        self.name_field.setValidator(QRegularExpressionValidator(USERNAME_CHARACTERS, self))
 
         form = QFormLayout()
         form.addRow("Serveradres", self.url_field)

@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from tests.e2e.conftest import ScriptedClient, play_until
+from tests.e2e.conftest import PROTOCOL_VERSION, ScriptedClient, play_until
 
 
 async def seat_four(server: str) -> list[ScriptedClient]:
@@ -19,7 +19,7 @@ async def seat_four(server: str) -> list[ScriptedClient]:
         await client.__aenter__()
 
     await clients[0].send(
-        "lobby_create", name="Testtafel", ruleset="klassiek", scoring="schaal_a", rng_seed=7
+        "lobby_create", name="Testtafel", ruleset="klassiek", scoring="kaartclubs", rng_seed=7
     )
     state = await clients[0].wait_for("lobby_state")
     lobby_id = state["lobby"]["id"]
@@ -169,6 +169,50 @@ async def test_an_outdated_client_is_told_to_update(server: str) -> None:
     assert message["type"] == "error"
     assert message["code"] == "protocol_version"
     assert "versie 1" in message["text"] and "versie 2" in message["text"]
+
+
+async def test_a_refused_name_says_which_rule_it_broke(server: str) -> None:
+    """Not "onbegrijpelijk bericht" either - the server knows exactly what is wrong.
+
+    The trap this guards: ``Hello.username`` used to carry the constrained
+    ``Username`` type, so a name outside the pattern failed validation of the
+    whole envelope and came back as ``bad_message``. The friendly branch in
+    ``_handshake`` was unreachable, and the player saw a sentence about an
+    unreadable message for the crime of typing one letter. Worse, the socket
+    then closed, so the client never received ``hello_ok`` and sat in front of
+    empty regelset and puntentelling dropdowns with no idea why.
+    """
+    import json
+
+    import websockets
+
+    async with websockets.connect(server) as socket:
+        await socket.send(
+            json.dumps({"v": PROTOCOL_VERSION, "msg": {"type": "hello", "username": "J"}})
+        )
+        message = json.loads(await asyncio.wait_for(socket.recv(), timeout=10))["msg"]
+
+    assert message["type"] == "error"
+    assert message["code"] == "username_invalid"
+    assert "2 tot 20" in message["text"]
+
+
+async def test_an_accented_name_is_welcome(server: str) -> None:
+    """The rules are about characters that break renderers, not about being Dutch."""
+    import json
+
+    import websockets
+
+    async with websockets.connect(server) as socket:
+        await socket.send(
+            json.dumps({"v": PROTOCOL_VERSION, "msg": {"type": "hello", "username": "José"}})
+        )
+        message = json.loads(await asyncio.wait_for(socket.recv(), timeout=10))["msg"]
+
+    assert message["type"] == "hello_ok"
+    assert message["username"] == "José"
+    # The point of getting this far: this is what fills the two dropdowns.
+    assert message["rulesets"] and message["scorings"]
 
 
 async def test_a_second_client_cannot_steal_a_live_username(server: str) -> None:

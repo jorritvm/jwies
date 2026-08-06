@@ -213,9 +213,7 @@ class MainWindow(QMainWindow):
 
         self.card_signals.selected.connect(self.on_card_selected)
         self.play_button.clicked.connect(self.on_play_clicked)
-        self.fold_button.clicked.connect(
-            lambda checked: self.connection.send("fold", fold=checked)
-        )
+        self.fold_button.clicked.connect(lambda checked: self.connection.send("fold", fold=checked))
         self.last_trick_button.toggled.connect(self.on_last_trick_toggled)
         self.chat_input.returnPressed.connect(self.on_chat_entered)
 
@@ -304,7 +302,19 @@ class MainWindow(QMainWindow):
             self.append_chat(message)
         elif kind == "error":
             self.append_chat({"text": message["text"], "kind": "system"})
-            if message["code"] in ("username_taken", "username_invalid"):
+            if message["code"] == "username_invalid":
+                # Reconnecting cannot help: the name will be just as wrong next
+                # time, and the backoff would pop this dialog again every few
+                # seconds forever. Stop, and ask for a name that can work.
+                #
+                # Only this code. ``username_taken`` looks similar but is often
+                # temporary - the server has not noticed the old socket died yet
+                # - and retrying is exactly what gets that player back to their
+                # seat.
+                self.connection.close()
+                QMessageBox.warning(self, "jwies", message["text"])
+                self.ask_to_connect()
+            elif message["code"] == "username_taken":
                 QMessageBox.warning(self, "jwies", message["text"])
             elif self.stack.currentIndex() == 0:
                 # The chat log is on the table page, so on the lobby page that

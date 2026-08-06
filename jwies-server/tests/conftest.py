@@ -17,11 +17,6 @@ def klassiek() -> Ruleset:
 
 
 @pytest.fixture(scope="session")
-def jwies_v0_ruleset() -> Ruleset:
-    return load_ruleset(TEMPLATES / "ruleset" / "jwies_v0.yaml")
-
-
-@pytest.fixture(scope="session")
 def schaal_a() -> ScoringScale:
     return load_scoring_scale(TEMPLATES / "scoring" / "kaartclubs.yaml")
 
@@ -29,8 +24,3 @@ def schaal_a() -> ScoringScale:
 @pytest.fixture(scope="session")
 def schaal_b() -> ScoringScale:
     return load_scoring_scale(TEMPLATES / "scoring" / "sporza.yaml")
-
-
-@pytest.fixture(scope="session")
-def jwies_v0_scale() -> ScoringScale:
-    return load_scoring_scale(TEMPLATES / "scoring" / "jwies_v0.yaml")

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import unicodedata
 from typing import ClassVar
 
 import pytest
@@ -50,13 +51,71 @@ class TestSessions:
         assert second is first
         assert outcome is HelloOutcome.REBOUND
 
-    @pytest.mark.parametrize("name", ["Jan", "Jan-Piet", "speler 1", "a_b", "ab"])
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "Jan",
+            "Jan-Piet",
+            "speler 1",
+            "a_b",
+            "ab",
+            # People are not spelled in ASCII: these are the ones that used to be
+            # refused, and refused with the wrong sentence at that.
+            "José",
+            "O'Brien",
+            "Jorrit.VM",
+            "Ann-Sofie",
+            "Жан",
+            "山田",
+            "  Jan  ",  # trimmed, not refused
+        ],
+    )
     def test_valid_usernames(self, name: str) -> None:
         assert SessionRegistry.is_valid_username(name)
 
-    @pytest.mark.parametrize("name", ["a", "", "x" * 21, "Jan;drop", "<script>"])
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "a",
+            "",
+            "   ",
+            "x" * 21,
+            "Jan;drop",
+            "<script>",
+            "Jan&Co",
+            'zeg "hallo"',
+            "regel\nbreuk",
+            "...",  # punctuation is not a name
+        ],
+    )
     def test_invalid_usernames(self, name: str) -> None:
         assert not SessionRegistry.is_valid_username(name)
+
+    def test_the_two_spellings_of_an_accent_are_one_player(self) -> None:
+        """``é`` is one character or two, depending on who typed it.
+
+        A Mac hands over the decomposed form and Windows the composed one, so
+        without normalising, the same player returning on the other machine is a
+        stranger to the registry - new session, new seat, and the old one left
+        sitting there waiting for someone who is already back.
+
+        Both forms are derived rather than typed as literals: they look
+        identical on screen, so an editor that helpfully normalised this file
+        would turn the test into a tautology without anyone noticing.
+        """
+        composed = unicodedata.normalize("NFC", "José")  # one character
+        decomposed = unicodedata.normalize("NFD", "José")  # e + combining acute
+        assert composed != decomposed
+        assert (len(composed), len(decomposed)) == (4, 5)
+
+        registry = SessionRegistry()
+        first, _ = registry.resolve_hello(composed, None)
+        first.disconnect()
+        again, outcome = registry.resolve_hello(decomposed, None)
+        assert again is first
+        assert outcome is HelloOutcome.REBOUND
+        assert first.username == composed
+        assert SessionRegistry.is_valid_username(decomposed)
 
 
 class TestChatCommands:
@@ -84,12 +143,16 @@ class TestChatCommands:
 
         context = ChatContext(lobby=FakeLobby(), session=None)  # type: ignore[arg-type]
 
+        # Taken from the fixtures rather than spelled out: what is under test is
+        # that the command renders the configured name at all. Hardcoding it
+        # meant renaming a scale in config/ failed this test, which says nothing
+        # about the command and everything about the assertion.
         ruleset_text = "\n".join(handle_chat_command("!ruleset", context))
-        assert "Klassiek wiezen" in ruleset_text
+        assert klassiek.name in ruleset_text
         assert "pakjes" in ruleset_text  # Dutch aliases, not English field names
 
         counting_text = "\n".join(handle_chat_command("!counting", context))
-        assert "Schaal A" in counting_text
+        assert schaal_a.name in counting_text
         assert "tegenstander" in counting_text
         assert "solo_slim" in counting_text
 

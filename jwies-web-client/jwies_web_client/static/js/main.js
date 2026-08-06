@@ -64,8 +64,12 @@ const serverInput = document.getElementById("input-server");
 const connectError = document.getElementById("connect-error");
 
 document.getElementById("btn-connect").addEventListener("click", () => {
-  const username = usernameInput.value.trim();
-  if (!/^[A-Za-z0-9_\- ]{2,20}$/.test(username)) {
+  // Genormaliseerd zoals de server het doet: e + accent en e-met-accent zijn
+  // dezelfde naam, en dus dezelfde stoel bij het terugkomen.
+  const username = usernameInput.value.normalize("NFC").trim();
+  // Spaart enkel een heen-en-weer: de server beslist, en zegt in het Nederlands
+  // waarom als hij weigert. Bewust niet strenger dan de server.
+  if (!/^[\p{L}\p{M}\p{N}_ .'-]{2,20}$/u.test(username)) {
     connectError.textContent = LABELS.nameRequired;
     connectError.hidden = false;
     return;

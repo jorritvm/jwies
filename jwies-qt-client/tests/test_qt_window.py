@@ -195,6 +195,51 @@ class TestErrorsOnTheLobbyPage:
         window.on_message({"type": "lobby_list", "lobbies": []})
         assert window.lobby_page.error_label.isHidden()
 
+    def test_a_refused_name_stops_reconnecting(
+        self, window: MainWindow, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A name the server will never accept must not be offered again forever.
+
+        The reconnect loop exists for dropped connections, where trying again is
+        the whole point. A name that broke the rules is not that: every retry
+        gets the same refusal, and the player collects one modal dialog every
+        few seconds with no way to reach the field that would fix it.
+        """
+        shown: list[str] = []
+        asked: list[bool] = []
+        monkeypatch.setattr(
+            QMessageBox, "warning", staticmethod(lambda *args, **kw: shown.append(args[2]))
+        )
+        monkeypatch.setattr(window, "ask_to_connect", lambda: asked.append(True))
+
+        window.on_message(
+            {
+                "type": "error",
+                "code": "username_invalid",
+                "text": "Ongeldige naam. Gebruik 2 tot 20.",
+            }
+        )
+
+        assert shown == ["Ongeldige naam. Gebruik 2 tot 20."]
+        assert asked == [True], "de speler moet een nieuwe naam kunnen invullen"
+        assert not window.connection._wanted, "de client mag niet blijven herverbinden"
+
+    def test_a_taken_name_keeps_reconnecting(
+        self, window: MainWindow, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The lookalike that must keep retrying.
+
+        "Die naam is in gebruik" is usually temporary: the server has not yet
+        noticed the old socket died. Retrying is exactly what puts that player
+        back in their seat, so this one must not stop.
+        """
+        monkeypatch.setattr(QMessageBox, "warning", staticmethod(lambda *args, **kw: None))
+        window.connection._wanted = True
+
+        window.on_message({"type": "error", "code": "username_taken", "text": "Bezet."})
+
+        assert window.connection._wanted
+
     def test_at_the_table_it_still_goes_to_the_chat(self, window: MainWindow) -> None:
         window.on_message(SNAPSHOT)  # switches to the table page
         window.on_message({"type": "error", "code": "illegal_move", "text": "Mag niet."})
@@ -204,16 +249,28 @@ class TestErrorsOnTheLobbyPage:
     def test_the_suggested_table_name_is_your_own(self, window: MainWindow) -> None:
         """Everybody starting from the same name is what caused the clash."""
         window.on_message(
-            {"type": "hello_ok", "username": "Korneel", "resume_token": "t",
-             "current_lobby": None, "rulesets": [], "scorings": []}
+            {
+                "type": "hello_ok",
+                "username": "Korneel",
+                "resume_token": "t",
+                "current_lobby": None,
+                "rulesets": [],
+                "scorings": [],
+            }
         )
         assert window.lobby_page.new_name.text() == "Tafel van Korneel"
 
     def test_a_name_you_typed_yourself_is_left_alone(self, window: MainWindow) -> None:
         window.lobby_page.new_name.setText("De Kaartclub")
         window.on_message(
-            {"type": "hello_ok", "username": "Korneel", "resume_token": "t",
-             "current_lobby": None, "rulesets": [], "scorings": []}
+            {
+                "type": "hello_ok",
+                "username": "Korneel",
+                "resume_token": "t",
+                "current_lobby": None,
+                "rulesets": [],
+                "scorings": [],
+            }
         )
         assert window.lobby_page.new_name.text() == "De Kaartclub"
 
@@ -452,9 +509,7 @@ class TestChoosingATrump:
                 return "S"
 
         monkeypatch.setattr(main_window, "ChooseSuitDialog", FakeSuitDialog)
-        monkeypatch.setattr(
-            window.connection, "send", lambda _type, **fields: sent.append(fields)
-        )
+        monkeypatch.setattr(window.connection, "send", lambda _type, **fields: sent.append(fields))
         return opened, sent
 
     def test_vragen_never_asks_for_a_trump(
