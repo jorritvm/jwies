@@ -7,7 +7,15 @@ Een headless server host meerdere tafels tegelijk. Spelers sluiten aan met de
 iemands verbinding weg, dan pauzeert het spel en wacht het op hem.
 
 ## Screenshots
-> Todo
+
+| Wat              | Screenshot                                                                                |
+|------------------|-------------------------------------------------------------------------------------------|
+| server cli       | [<img src="docs/screenshots/server.png" width="300"/>](docs/screenshots/server.png)       |
+| qt client lobby  | [<img src="docs/screenshots/qt_lobby.png" width="300"/>](docs/screenshots/qt_lobby.png)   |
+| qt client game   | [<img src="docs/screenshots/qt_game.png" width="300"/>](docs/screenshots/qt_game.png)     |
+| web client lobby | [<img src="docs/screenshots/web_lobby.png" width="300"/>](docs/screenshots/web_lobby.png) |
+| web client game  | [<img src="docs/screenshots/web_game.png" width="300"/>](docs/screenshots/web_game.png)   |
+
 
 ## Documentatie
 - De spelregel en handleiding staan uitgebreid beschreven in [`docs/game/`](docs/game/)
